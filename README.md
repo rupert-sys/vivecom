@@ -37,9 +37,13 @@ terraform apply
 - `alcance_vivecom.md` — alcance del producto, historias de usuario, decisiones de negocio.
 - `modelo_datos_vivecom.md` — modelo de datos completo (ERD).
 - `plan_de_trabajo_vivecom.xlsx` — backlog de las 4 fases del proyecto.
+- `CONTRIBUTING.md` — estrategia de branching y convención de commits (F0-13).
 
 ## Pendiente de configurar (requiere acción humana, no se puede automatizar desde aquí)
-- Crear el repositorio real en GitHub/GitLab y hacer el primer push de este contenido.
+- Crear el repositorio real en GitHub/GitLab y hacer el primer push de este contenido
+  (ya es un repo git local, con `main` como rama inicial — ver `CONTRIBUTING.md`).
+- Configurar la protección de la rama `main` en el repositorio real, según la política
+  documentada en `CONTRIBUTING.md`.
 - Crear la cuenta de AWS y el bucket S3 para el state de Terraform.
 - Configurar los secrets de GitHub Actions: `AWS_DEPLOY_ROLE_ARN`.
 - Crear la cuenta con el proveedor de recepción SPEI (STP o Fintoc) y agregar sus credenciales como secreto.
