@@ -1,0 +1,483 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bitácora del proyecto — Vivecom México</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F6F4EE;
+    --paper-2:#EFEBE1;
+    --ink:#1C2A39;
+    --ink-soft:#5C6773;
+    --line:#D8D3C4;
+    --line-strong:#B9B2A0;
+    --teal:#2F6F5E;
+    --teal-soft:#E1EEE9;
+    --amber:#9A6B1F;
+    --amber-soft:#F3E7D2;
+    --brick:#A6432F;
+    --brick-soft:#F4E1DC;
+    --stone:#6B6558;
+    --stone-soft:#E8E4D8;
+    --dustblue:#3E5C76;
+    --dustblue-soft:#E1E7EE;
+    --radius:10px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;
+    font-size:15px;
+    line-height:1.6;
+  }
+  .serif{font-family:"Source Serif 4",Georgia,serif;}
+  .mono{font-family:"IBM Plex Mono",monospace;}
+
+  .wrap{max-width:980px;margin:0 auto;padding:28px 20px 60px;}
+
+  header.top{
+    display:flex;justify-content:space-between;align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:16px;margin-bottom:22px;flex-wrap:wrap;gap:12px;
+  }
+  header.top .title{
+    font-family:"Source Serif 4",Georgia,serif;
+    font-weight:700;font-size:26px;color:var(--ink);
+  }
+  header.top .sub{
+    color:var(--ink-soft);font-size:13px;margin-top:4px;
+  }
+  header.top .stamp{
+    font-family:"IBM Plex Mono",monospace;font-size:11px;letter-spacing:.03em;
+    color:var(--ink-soft);text-align:right;
+  }
+
+  .summary{
+    display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:24px;
+  }
+  @media (max-width:640px){.summary{grid-template-columns:repeat(2,1fr);}}
+  .stat{
+    background:var(--paper-2);border:1px solid var(--line);border-radius:var(--radius);
+    padding:14px 16px;
+  }
+  .stat .num{font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:600;color:var(--ink);}
+  .stat .lbl{font-size:12px;color:var(--ink-soft);margin-top:2px;}
+
+  .progress-track{
+    height:8px;background:var(--paper-2);border:1px solid var(--line);border-radius:5px;overflow:hidden;margin-top:6px;
+  }
+  .progress-fill{height:100%;background:var(--teal);transition:width .35s ease;}
+
+  .tabs{display:flex;gap:6px;margin-bottom:18px;flex-wrap:wrap;}
+  .tab{
+    font-family:"IBM Plex Mono",monospace;font-size:12.5px;
+    padding:8px 14px;border:1px solid var(--line-strong);border-radius:999px;
+    background:var(--paper);color:var(--ink-soft);cursor:pointer;
+    display:flex;align-items:center;gap:8px;
+  }
+  .tab .dot{width:7px;height:7px;border-radius:50%;background:var(--line-strong);}
+  .tab.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+  .tab.active .dot{background:var(--teal);}
+  .tab .count{font-size:11px;opacity:.75;}
+
+  .module-group{margin-bottom:26px;}
+  .module-title{
+    font-family:"IBM Plex Mono",monospace;font-size:12px;letter-spacing:.04em;
+    color:var(--ink-soft);text-transform:uppercase;
+    display:flex;align-items:center;gap:10px;margin-bottom:8px;
+  }
+  .module-title::after{content:"";flex:1;height:1px;background:var(--line);}
+
+  .task-row{
+    display:flex;gap:12px;align-items:flex-start;
+    padding:12px 10px;border-bottom:1px solid var(--line);
+    transition:background .15s ease;
+  }
+  .task-row:hover{background:var(--paper-2);}
+  .task-row.done{opacity:.55;}
+  .task-row.done .task-name{text-decoration:line-through;text-decoration-color:var(--line-strong);}
+  .task-row.inprogress .task-id{color:var(--amber);}
+  .task-row.inprogress .checkbox{border-color:var(--amber);}
+
+  .checkbox{
+    width:20px;height:20px;flex:none;border-radius:5px;
+    border:1.5px solid var(--line-strong);background:var(--paper);
+    cursor:pointer;display:flex;align-items:center;justify-content:center;
+    margin-top:2px;
+  }
+  .checkbox svg{width:13px;height:13px;opacity:0;transition:opacity .15s ease;stroke:var(--paper);}
+  .task-row.done .checkbox{background:var(--teal);border-color:var(--teal);}
+  .task-row.done .checkbox svg{opacity:1;}
+
+  .task-body{flex:1;min-width:0;}
+  .task-top{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap;}
+  .task-id{font-family:"IBM Plex Mono",monospace;font-size:11px;color:var(--ink-soft);}
+  .task-name{font-weight:600;font-size:14.5px;color:var(--ink);}
+  .task-desc{font-size:13px;color:var(--ink-soft);margin-top:3px;}
+  .task-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+  .tag{
+    font-family:"IBM Plex Mono",monospace;font-size:10.5px;padding:2px 8px;border-radius:999px;
+    border:1px solid transparent;
+  }
+  .tag.role{background:var(--dustblue-soft);color:var(--dustblue);}
+  .tag.days{background:var(--stone-soft);color:var(--stone);}
+  .tag.prio-alta{background:var(--brick-soft);color:var(--brick);}
+  .tag.prio-media{background:var(--amber-soft);color:var(--amber);}
+  .tag.prio-baja{background:var(--teal-soft);color:var(--teal);}
+  .tag.dep{background:transparent;color:var(--ink-soft);border-color:var(--line-strong);}
+  .tag.note-toggle{cursor:pointer;background:var(--amber-soft);color:var(--amber);border-color:transparent;}
+
+  .task-note{
+    margin-top:8px;padding:8px 10px;background:var(--amber-soft);border-left:3px solid var(--amber);
+    border-radius:4px;font-size:12.5px;color:#5c4415;
+  }
+  .task-note textarea{
+    width:100%;border:none;background:transparent;resize:vertical;
+    font-family:inherit;font-size:12.5px;color:#5c4415;min-height:36px;outline:none;
+  }
+  .task-note .note-label{font-family:"IBM Plex Mono",monospace;font-size:10px;text-transform:uppercase;color:var(--amber);display:block;margin-bottom:3px;}
+
+  footer{margin-top:36px;padding-top:16px;border-top:1px solid var(--line);font-size:12px;color:var(--ink-soft);}
+  .reset-link{color:var(--brick);cursor:pointer;text-decoration:underline;}
+
+  .loading{color:var(--ink-soft);font-size:13px;padding:20px 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <div class="title">Bitácora del proyecto — Vivecom México</div>
+      <div class="sub">Plan de trabajo con seguimiento. Marca cada tarea conforme la completes.</div>
+    </div>
+    <div class="stamp" id="stamp">— 85 tareas registradas —</div>
+  </header>
+
+  <div class="summary">
+    <div class="stat">
+      <div class="num" id="statDone">0 / 76</div>
+      <div class="lbl">Tareas completadas</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="statPct">0%</div>
+      <div class="lbl">Avance general</div>
+      <div class="progress-track"><div class="progress-fill" id="statBar" style="width:0%"></div></div>
+    </div>
+    <div class="stat">
+      <div class="num" id="statDays">0 / 275</div>
+      <div class="lbl">Días-persona completados</div>
+    </div>
+    <div class="stat">
+      <div class="num" id="statPhase">Fase 0</div>
+      <div class="lbl">Fase con más avance abierto</div>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs"></div>
+  <div id="taskList"><div class="loading">Cargando bitácora…</div></div>
+
+  <footer>
+    Tu avance se guarda automáticamente en este navegador. <span class="reset-link" id="resetBtn">Reiniciar bitácora</span>
+  </footer>
+
+</div>
+
+<script>
+const TASKS = [{"id": "F0-01", "fase": "Fase 0", "modulo": "Producto", "tarea": "Definir alcance detallado del MVP", "desc": "Documentar historias de usuario y criterios de aceptación para Fase 1.", "rol": "PM / Producto", "dias": 3, "prioridad": "Alta", "dep": null, "semana": "1"}, {"id": "F0-02", "fase": "Fase 0", "modulo": "Producto", "tarea": "Investigación de competidores", "desc": "Analizar Comunidad Feliz, TrustCondo, Kiper y similares: features, precios, huecos de mercado.", "rol": "PM / Producto", "dias": 3, "prioridad": "Media", "dep": null, "semana": "1"}, {"id": "F0-03", "fase": "Fase 0", "modulo": "Producto", "tarea": "Entrevistas con administradores potenciales", "desc": "5-10 entrevistas para validar dolor real y disposición de pago.", "rol": "PM / Producto", "dias": 4, "prioridad": "Alta", "dep": null, "semana": "1"}, {"id": "F0-04", "fase": "Fase 0", "modulo": "Producto", "tarea": "Definir modelo de negocio y pricing", "desc": "Cobro por vivienda, periodicidad mensual, sin periodo de prueba gratuito (ya definido en el alcance).", "rol": "PM / Producto", "dias": 2, "prioridad": "Alta", "dep": null, "semana": "2"}, {"id": "F0-05", "fase": "Fase 0", "modulo": "Arquitectura", "tarea": "Elegir stack tecnológico definitivo", "desc": "Confirmar backend, frontend, mobile, BD, infraestructura cloud y proveedor de recepción SPEI.", "rol": "Tech Lead", "dias": 2, "prioridad": "Alta", "dep": null, "semana": "1"}, {"id": "F0-06", "fase": "Fase 0", "modulo": "Arquitectura", "tarea": "Diseñar estrategia multi-tenant", "desc": "Definir schema-por-tenant en PostgreSQL, aislamiento de datos y ruteo por tenant.", "rol": "Tech Lead", "dias": 3, "prioridad": "Alta", "dep": null, "semana": "2"}, {"id": "F0-07", "fase": "Fase 0", "modulo": "Arquitectura", "tarea": "Diseñar modelo de datos (ERD) completo", "desc": "Modelar Tenant, Property, Resident, Fee, Payment, AccessLog, Incident, Announcement, Poll, Reservation.", "rol": "Tech Lead", "dias": 4, "prioridad": "Alta", "dep": null, "semana": "2"}, {"id": "F0-08", "fase": "Fase 0", "modulo": "UX/UI", "tarea": "Mapear flujos de usuario", "desc": "Flujos clave: residente paga cuota, admin envía aviso, guardia registra visitante.", "rol": "UX/UI", "dias": 3, "prioridad": "Alta", "dep": null, "semana": "1"}, {"id": "F0-09", "fase": "Fase 0", "modulo": "UX/UI", "tarea": "Wireframes de baja fidelidad", "desc": "Wireframes de app residente, panel admin y app caseta.", "rol": "UX/UI", "dias": 5, "prioridad": "Alta", "dep": null, "semana": "2"}, {"id": "F0-10", "fase": "Fase 0", "modulo": "UX/UI", "tarea": "Sistema de diseño y UI kit", "desc": "Paleta, tipografía, componentes reutilizables para las 3 plataformas.", "rol": "UX/UI", "dias": 4, "prioridad": "Media", "dep": null, "semana": "2"}, {"id": "F0-11", "fase": "Fase 0", "modulo": "UX/UI", "tarea": "Prototipo navegable en Figma", "desc": "Prototipo de alta fidelidad de los flujos críticos del MVP.", "rol": "UX/UI", "dias": 5, "prioridad": "Alta", "dep": "F0-09", "semana": "3"}, {"id": "F0-12", "fase": "Fase 0", "modulo": "UX/UI", "tarea": "Validación de prototipo con administradores", "desc": "Sesiones de usabilidad con 3-5 administradores reales.", "rol": "UX/UI", "dias": 2, "prioridad": "Media", "dep": "F0-11", "semana": "3"}, {"id": "F0-13", "fase": "Fase 0", "modulo": "Infraestructura", "tarea": "Configurar repositorios y estrategia de branching", "desc": "Monorepo o multi-repo, convenciones de commits, protección de ramas.", "rol": "DevOps", "dias": 1, "prioridad": "Alta", "dep": null, "semana": "1"}, {"id": "F0-14", "fase": "Fase 0", "modulo": "Infraestructura", "tarea": "Configurar CI/CD", "desc": "Pipelines de build, test y deploy automático a staging.", "rol": "DevOps", "dias": 3, "prioridad": "Alta", "dep": "F0-13", "semana": "2"}, {"id": "F0-15", "fase": "Fase 0", "modulo": "Infraestructura", "tarea": "Levantar entornos dev/staging/producción", "desc": "Infraestructura en AWS/GCP región LATAM (México).", "rol": "DevOps", "dias": 4, "prioridad": "Alta", "dep": null, "semana": "2"}, {"id": "F0-16", "fase": "Fase 0", "modulo": "Infraestructura", "tarea": "Definir infraestructura como código (Terraform)", "desc": "Scripts reproducibles para levantar entornos.", "rol": "DevOps", "dias": 3, "prioridad": "Media", "dep": "F0-15", "semana": "3"}, {"id": "F0-17", "fase": "Fase 0", "modulo": "Backend", "tarea": "Implementar autenticación multi-tenant", "desc": "JWT, roles (admin, tesorero, comité, vocero, residente, guardia) y aislamiento por tenant.", "rol": "Backend", "dias": 5, "prioridad": "Alta", "dep": "F0-06,F0-07", "semana": "3"}, {"id": "F1-01", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "CRUD de Tenant, Property y Resident", "desc": "Alta de condominios, viviendas y residentes con relación N:N (propietario/inquilino); cada vivienda se administra de forma independiente.", "rol": "Backend", "dias": 5, "prioridad": "Alta", "dep": "F0-07,F0-17", "semana": "4"}, {"id": "F1-02", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Módulo de configuración de cuotas (Fee)", "desc": "Definir monto y periodicidad por condominio; el recargo por mora es una regla global de la plataforma.", "rol": "Backend", "dias": 4, "prioridad": "Alta", "dep": "F1-01", "semana": "4"}, {"id": "F1-03", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Generación automática de cargos mensuales", "desc": "Job programado que crea FeeCharge por vivienda cada ciclo.", "rol": "Backend", "dias": 3, "prioridad": "Alta", "dep": "F1-02", "semana": "5"}, {"id": "F1-04", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Cálculo de recargos por mora", "desc": "Regla global: 10% aplicado a partir del minuto 1 del día 6 de cada mes (5 días de gracia).", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F1-03", "semana": "5"}, {"id": "F1-05", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Configuración de cuenta CLABE de destino", "desc": "El administrador define/cambia la CLABE del condominio con confirmación explícita y bitácora de auditoría.", "rol": "Backend", "dias": 3, "prioridad": "Alta", "dep": "F1-01", "semana": "5"}, {"id": "F1-06", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Integración de recepción de pagos vía SPEI", "desc": "Proveedor de recepción SPEI (ej. STP/Arcus) para generar cobro por CLABE y detectar depósitos entrantes (sin Open Banking ni iniciación de transferencia).", "rol": "Backend", "dias": 6, "prioridad": "Alta", "dep": "F1-05", "semana": "6"}, {"id": "F1-07", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Conciliación automática de pagos", "desc": "Procesar notificaciones del proveedor SPEI y marcar cada transferencia como confirmada, pendiente o rechazada, conciliando contra FeeCharge.", "rol": "Backend", "dias": 4, "prioridad": "Alta", "dep": "F1-06,F1-03", "semana": "6"}, {"id": "F1-08", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Pago anticipado (1 a 12 meses)", "desc": "Permitir aplicar un pago a varios cargos futuros en una sola operación, evitando recargos futuros.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F1-07", "semana": "7"}, {"id": "F1-09", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Cálculo y aplicación de saldo a favor", "desc": "Si el monto transferido excede lo debido, el excedente se guarda y aplica automáticamente al siguiente cargo.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F1-07", "semana": "7"}, {"id": "F1-10", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Panel de validación de pagos (tesorero)", "desc": "Vista para que el tesorero confirme pagos detectados y resuelva casos especiales (rechazos, ajustes).", "rol": "Backend", "dias": 3, "prioridad": "Alta", "dep": "F1-07", "semana": "7"}, {"id": "F1-11", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Generación de recibo de pago simple (no fiscal)", "desc": "PDF de recibo automático por cada pago confirmado; no es comprobante fiscal.", "rol": "Backend", "dias": 2, "prioridad": "Media", "dep": "F1-07", "semana": "7"}, {"id": "F1-12", "fase": "Fase 1", "modulo": "Comunicación", "tarea": "Integración de canal de notificaciones (WhatsApp + SMS)", "desc": "WhatsApp Business API (Twilio/360dialog) como canal principal junto con la app; SMS como respaldo si los anteriores fallan. Sin correo electrónico.", "rol": "Backend", "dias": 5, "prioridad": "Alta", "dep": "F0-17", "semana": "5"}, {"id": "F1-13", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Recordatorios automáticos de pago", "desc": "Job que envía recordatorios desde el día 1 del mes hasta que se registre el pago, y confirmación al pagarse.", "rol": "Backend", "dias": 3, "prioridad": "Alta", "dep": "F1-04,F1-12", "semana": "7"}, {"id": "F1-14", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Generación de estado de cuenta por vivienda", "desc": "Vista/PDF con historial de cargos, pagos, recargos y saldo (a favor o en contra).", "rol": "Backend", "dias": 3, "prioridad": "Alta", "dep": "F1-04,F1-09", "semana": "8"}, {"id": "F1-15", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Módulo de gastos y categorías", "desc": "Registro de gastos del condominio por categoría, con comprobante obligatorio en todos los casos.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F1-01", "semana": "7"}, {"id": "F1-16", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Módulo de presupuesto (mensual/anual)", "desc": "Presupuesto mensual por defecto; ciertas actividades pueden definirse a nivel anual.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F1-15", "semana": "8"}, {"id": "F1-17", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Exportación de reportes a Excel", "desc": "Exportar estados de cuenta, gastos y presupuesto de forma asíncrona.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F1-14,F1-16", "semana": "8"}, {"id": "F1-18", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Panel admin: gestión de viviendas y residentes", "desc": "Pantallas CRUD conectadas al backend.", "rol": "Frontend", "dias": 4, "prioridad": "Alta", "dep": "F1-01", "semana": "5"}, {"id": "F1-19", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Panel admin: configuración de cuotas", "desc": "Pantalla para definir monto y periodicidad de la cuota (el recargo es global, no editable aquí).", "rol": "Frontend", "dias": 3, "prioridad": "Alta", "dep": "F1-02", "semana": "5"}, {"id": "F1-20", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Panel admin: cambio seguro de cuenta CLABE", "desc": "Pantalla con confirmación explícita para cambiar la cuenta de destino, con historial de cambios visible.", "rol": "Frontend", "dias": 2, "prioridad": "Alta", "dep": "F1-05", "semana": "6"}, {"id": "F1-21", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Panel admin: dashboard financiero", "desc": "Vista de cobrado vs. pendiente, con filtros por vivienda y periodo.", "rol": "Frontend", "dias": 4, "prioridad": "Alta", "dep": "F1-14", "semana": "8"}, {"id": "F1-22", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Panel admin: gestión de gastos y presupuesto", "desc": "Alta y consulta de gastos por categoría, y carga de presupuesto mensual/anual.", "rol": "Frontend", "dias": 3, "prioridad": "Media", "dep": "F1-16", "semana": "8"}, {"id": "F1-23", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "Panel admin: exportación de reportes", "desc": "Botón de exportar con selección de rango de fechas.", "rol": "Frontend", "dias": 2, "prioridad": "Media", "dep": "F1-17", "semana": "8"}, {"id": "F1-24", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "App residente: estado de cuenta", "desc": "Pantalla con historial de cargos, saldo actual y saldo a favor.", "rol": "Mobile", "dias": 4, "prioridad": "Alta", "dep": "F1-14", "semana": "8"}, {"id": "F1-25", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "App residente: ver cuenta CLABE del condominio", "desc": "Muestra el banco y CLABE vigentes para hacer la transferencia desde el banco del residente.", "rol": "Mobile", "dias": 2, "prioridad": "Alta", "dep": "F1-05", "semana": "8"}, {"id": "F1-26", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "App residente: estado del pago y pago anticipado", "desc": "Muestra pago pendiente/confirmado/rechazado, y permite elegir pagar 1-12 meses por adelantado.", "rol": "Mobile", "dias": 5, "prioridad": "Alta", "dep": "F1-07,F1-08", "semana": "9"}, {"id": "F1-27", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "App residente: historial de pagos y recibos", "desc": "Listado de pagos realizados con recibo simple descargable.", "rol": "Mobile", "dias": 2, "prioridad": "Media", "dep": "F1-11", "semana": "9"}, {"id": "F1-28", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "App residente: transparencia de gastos", "desc": "Vista de solo lectura de los gastos del condominio (categoría, monto, comprobante), filtrable por periodo. Motivo principal de adopción según entrevistas (HU-A12).", "rol": "Mobile", "dias": 3, "prioridad": "Alta", "dep": "F1-15", "semana": "9"}, {"id": "F1-29", "fase": "Fase 1", "modulo": "Administrativo", "tarea": "QA: pruebas del flujo de cobro completo", "desc": "Pruebas end-to-end: transferencia, detección, conciliación, saldo a favor y rechazo.", "rol": "QA", "dias": 4, "prioridad": "Alta", "dep": "F1-07,F1-09,F1-26", "semana": "9"}, {"id": "F1-30", "fase": "Fase 1", "modulo": "Comunicación", "tarea": "Módulo de avisos y circulares", "desc": "Backend para crear, editar y programar avisos por condominio.", "rol": "Backend", "dias": 3, "prioridad": "Alta", "dep": "F0-07", "semana": "6"}, {"id": "F1-31", "fase": "Fase 1", "modulo": "Comunicación", "tarea": "Confirmación de lectura de avisos", "desc": "Registro de qué residentes han leído cada aviso.", "rol": "Backend", "dias": 2, "prioridad": "Media", "dep": "F1-30", "semana": "6"}, {"id": "F1-32", "fase": "Fase 1", "modulo": "Comunicación", "tarea": "Envío de notificaciones de avisos", "desc": "Notificación por app y WhatsApp cuando se publica un aviso; SMS como respaldo.", "rol": "Backend", "dias": 3, "prioridad": "Alta", "dep": "F1-30,F1-12", "semana": "7"}, {"id": "F1-33", "fase": "Fase 1", "modulo": "Comunicación", "tarea": "Panel admin: creación y envío de avisos", "desc": "Editor de avisos con vista previa y programación de envío.", "rol": "Frontend", "dias": 3, "prioridad": "Alta", "dep": "F1-30", "semana": "7"}, {"id": "F1-34", "fase": "Fase 1", "modulo": "Comunicación", "tarea": "App residente: bandeja de avisos", "desc": "Listado de avisos con estado de leído/no leído.", "rol": "Mobile", "dias": 3, "prioridad": "Alta", "dep": "F1-31,F1-32", "semana": "8"}, {"id": "F1-35", "fase": "Fase 1", "modulo": "Comunicación", "tarea": "QA: pruebas de entrega de notificaciones", "desc": "Validar entrega por app, WhatsApp y SMS en distintos dispositivos y condiciones de red.", "rol": "QA", "dias": 2, "prioridad": "Media", "dep": "F1-32", "semana": "9"}, {"id": "F1-36", "fase": "Fase 1", "modulo": "Infraestructura", "tarea": "Logging y monitoreo en producción", "desc": "Configurar Sentry para errores y Datadog/Grafana para métricas.", "rol": "DevOps", "dias": 3, "prioridad": "Alta", "dep": "F0-16", "semana": "8"}, {"id": "F1-37", "fase": "Fase 1", "modulo": "Infraestructura", "tarea": "Pruebas de carga del módulo financiero", "desc": "Simular generación masiva de cargos y detección de pagos concurrentes.", "rol": "QA", "dias": 3, "prioridad": "Media", "dep": "F1-29", "semana": "9"}, {"id": "F1-38", "fase": "Fase 1", "modulo": "Documentación", "tarea": "Documentación técnica de la API", "desc": "Swagger/OpenAPI de todos los endpoints del MVP.", "rol": "Backend", "dias": 2, "prioridad": "Media", "dep": "F1-29,F1-35", "semana": "9"}, {"id": "F1-39", "fase": "Fase 1", "modulo": "Producto", "tarea": "Beta cerrada con condominios piloto", "desc": "Lanzar con 2-3 condominios reales y recolectar feedback estructurado.", "rol": "PM / Producto", "dias": 5, "prioridad": "Alta", "dep": "F1-29,F1-37", "semana": "9"}, {"id": "F2-01", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "Módulo de control de accesos (AccessLog)", "desc": "Registro de entradas/salidas de residentes, visitantes y proveedores. Sin límite de visitantes ni restricción de horario.", "rol": "Backend", "dias": 4, "prioridad": "Alta", "dep": "F1-01", "semana": "13"}, {"id": "F2-02", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "QR de acceso temporal de un solo uso", "desc": "Generar QR que expira automáticamente al usarse (no por fecha/hora).", "rol": "Backend", "dias": 4, "prioridad": "Alta", "dep": "F2-01", "semana": "13"}, {"id": "F2-03", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "Control vehicular", "desc": "Registro de placas asociadas a un acceso.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F2-01", "semana": "14"}, {"id": "F2-04", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "Gestión de paquetería", "desc": "Notificación al residente cuando llega el paquete, y notificación adicional cuando se marca como recogido.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F2-01,F1-12", "semana": "14"}, {"id": "F2-05", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "Módulo de incidencias compartidas con el comité", "desc": "Máquina de estados (abierta → en proceso → resuelta); toda incidencia es visible para administrador y comité.", "rol": "Backend", "dias": 4, "prioridad": "Alta", "dep": "F0-07", "semana": "14"}, {"id": "F2-06", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "Alertas en tiempo real", "desc": "WebSockets para notificar incidencias al administrador y comité de forma inmediata.", "rol": "Backend", "dias": 4, "prioridad": "Media", "dep": "F2-05", "semana": "15"}, {"id": "F2-07", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "App caseta: arquitectura offline-first", "desc": "Sincronización diferida cuando la conexión de la caseta falla.", "rol": "Mobile", "dias": 6, "prioridad": "Alta", "dep": "F2-01", "semana": "15"}, {"id": "F2-08", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "App caseta: registro de accesos", "desc": "Pantalla rápida para registrar entrada/salida con hora exacta.", "rol": "Mobile", "dias": 4, "prioridad": "Alta", "dep": "F2-07", "semana": "16"}, {"id": "F2-09", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "App caseta: bitácora de incidencias", "desc": "Registro de incidencias desde la caseta con foto adjunta.", "rol": "Mobile", "dias": 3, "prioridad": "Alta", "dep": "F2-05,F2-07", "semana": "16"}, {"id": "F2-10", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "App caseta: escaneo de QR de visitantes", "desc": "Validar el QR de un solo uso generado por el residente para autorizar acceso.", "rol": "Mobile", "dias": 3, "prioridad": "Alta", "dep": "F2-02,F2-07", "semana": "17"}, {"id": "F2-11", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "Alerta al administrador por error de sincronización", "desc": "Si al sincronizar se detecta un conflicto o duplicado, se notifica automáticamente al administrador.", "rol": "Backend", "dias": 2, "prioridad": "Media", "dep": "F2-07", "semana": "17"}, {"id": "F2-12", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "Panel admin: dashboard de seguridad", "desc": "Reportes de accesos, incidencias abiertas y tiempos de resolución.", "rol": "Frontend", "dias": 4, "prioridad": "Media", "dep": "F2-01,F2-05", "semana": "17"}, {"id": "F2-13", "fase": "Fase 2", "modulo": "Seguridad", "tarea": "QA: pruebas de app caseta en modo offline", "desc": "Validar sincronización correcta y alertas al recuperar conectividad.", "rol": "QA", "dias": 3, "prioridad": "Alta", "dep": "F2-08,F2-09,F2-10,F2-11", "semana": "18"}, {"id": "F2-14", "fase": "Fase 2", "modulo": "Comunicación", "tarea": "Módulo de votaciones con quorum", "desc": "Creadas por voceros, con fecha de cierre y mínimo 51% de participación; si no se alcanza, se reactiva automáticamente una semana después con recordatorios a todos los residentes.", "rol": "Backend", "dias": 6, "prioridad": "Alta", "dep": "F1-30,F1-12", "semana": "18"}, {"id": "F2-15", "fase": "Fase 2", "modulo": "Comunicación", "tarea": "Tablón de objetos perdidos con moderación", "desc": "Publicación y búsqueda de objetos; requiere autorización del administrador antes de mostrarse.", "rol": "Backend", "dias": 3, "prioridad": "Media", "dep": "F0-07", "semana": "19"}, {"id": "F2-16", "fase": "Fase 2", "modulo": "Comunicación", "tarea": "Módulo de reservaciones de amenidades", "desc": "Anticipación mínima de 2 días (o menor si sigue disponible), duración configurable (uno o varios días) y expiración automática, con bloqueo anti doble-booking.", "rol": "Backend", "dias": 5, "prioridad": "Alta", "dep": "F0-07", "semana": "19"}, {"id": "F2-17", "fase": "Fase 2", "modulo": "Comunicación", "tarea": "Flujo de aprobación de reservaciones", "desc": "Aprobadores designados por el administrador, notificación por los 3 canales, periodo límite configurable por amenidad y rechazo automático si nadie responde.", "rol": "Backend", "dias": 4, "prioridad": "Alta", "dep": "F2-16,F1-12", "semana": "20"}, {"id": "F2-18", "fase": "Fase 2", "modulo": "Comunicación", "tarea": "Panel admin/vocero: gestión de votaciones y amenidades", "desc": "Configurar amenidades, aprobadores y crear votaciones.", "rol": "Frontend", "dias": 4, "prioridad": "Media", "dep": "F2-14,F2-16", "semana": "20"}, {"id": "F2-19", "fase": "Fase 2", "modulo": "Comunicación", "tarea": "App residente: votaciones, objetos perdidos y reservaciones", "desc": "Nuevas pantallas integradas al menú principal de la app.", "rol": "Mobile", "dias": 6, "prioridad": "Alta", "dep": "F2-14,F2-15,F2-17", "semana": "20"}, {"id": "F2-20", "fase": "Fase 2", "modulo": "Comunicación", "tarea": "QA: pruebas de concurrencia en reservaciones", "desc": "Validar que dos residentes no reserven el mismo horario simultáneamente.", "rol": "QA", "dias": 2, "prioridad": "Alta", "dep": "F2-16", "semana": "21"}, {"id": "F2-21", "fase": "Fase 2", "modulo": "Seguridad de la información", "tarea": "Auditoría de seguridad (pentest básico)", "desc": "Revisión de vulnerabilidades OWASP Top 10 antes de escalar.", "rol": "DevOps", "dias": 5, "prioridad": "Alta", "dep": "F1-29", "semana": "21"}, {"id": "F2-22", "fase": "Fase 2", "modulo": "Infraestructura", "tarea": "Optimización de rendimiento y consultas", "desc": "Revisar queries lentas e índices tras la beta cerrada.", "rol": "Backend", "dias": 4, "prioridad": "Media", "dep": "F1-39", "semana": "21"}, {"id": "F2-23", "fase": "Fase 2", "modulo": "Producto", "tarea": "Beta ampliada con 10-15 condominios", "desc": "Escalar el piloto e iterar sobre feedback antes del lanzamiento comercial.", "rol": "PM / Producto", "dias": 5, "prioridad": "Alta", "dep": "F2-12,F2-19", "semana": "22"}, {"id": "F3-01", "fase": "Fase 3", "modulo": "Financiero", "tarea": "Exportación de pólizas contables", "desc": "Exportar movimientos financieros en formato compatible con software contable (CONTPAQi, Aspel), sin timbrado fiscal.", "rol": "Backend", "dias": 4, "prioridad": "Media", "dep": "F1-17", "semana": "24"}, {"id": "F3-02", "fase": "Fase 3", "modulo": "Cumplimiento legal", "tarea": "Cumplimiento de protección de datos (LFPDPPP)", "desc": "Aviso de privacidad, consentimiento, exportación y borrado de datos personales.", "rol": "Backend", "dias": 4, "prioridad": "Alta", "dep": "F1-01", "semana": "24"}, {"id": "F3-03", "fase": "Fase 3", "modulo": "Infraestructura", "tarea": "Optimización de infraestructura para cobertura nacional", "desc": "Mejorar latencia y disponibilidad para clientes en CDMX, Guadalajara, Monterrey y otras ciudades.", "rol": "DevOps", "dias": 3, "prioridad": "Media", "dep": "F0-16", "semana": "24"}, {"id": "F3-04", "fase": "Fase 3", "modulo": "Datos", "tarea": "Reportes avanzados y BI", "desc": "Dashboards ejecutivos para administradoras que manejan varios condominios.", "rol": "Backend", "dias": 6, "prioridad": "Media", "dep": "F1-14", "semana": "25"}, {"id": "F3-05", "fase": "Fase 3", "modulo": "Innovación", "tarea": "Evaluación de integraciones IoT", "desc": "Explorar cámaras y control de acceso biométrico como add-on.", "rol": "Tech Lead", "dias": 5, "prioridad": "Baja", "dep": "F2-01", "semana": "26"}, {"id": "F3-06", "fase": "Fase 3", "modulo": "Comercial", "tarea": "Onboarding self-service para nuevos condominios", "desc": "Flujo de alta de condominio sin intervención manual del equipo.", "rol": "Frontend", "dias": 5, "prioridad": "Media", "dep": "F1-01", "semana": "25"}];
+const STORAGE_KEY = 'vivecom-plan-progress';
+let progress = {};
+let inProgress = {};
+let notes = {};
+let openNoteId = null;
+let activePhase = 'Fase 0';
+
+const NOTES_KEY = 'vivecom-plan-notes';
+const INPROGRESS_KEY = 'vivecom-plan-inprogress';
+
+const PHASE_ORDER = ['Fase 0','Fase 1','Fase 2','Fase 3'];
+const PHASE_LABEL = {
+  'Fase 0':'Fase 0 · Discovery',
+  'Fase 1':'Fase 1 · MVP',
+  'Fase 2':'Fase 2 · Diferenciación',
+  'Fase 3':'Fase 3 · Escala'
+};
+
+// Notas de avance generadas en la conversación con Claude — solo se aplican
+// la primera vez que se abre la bitácora (si el usuario no ha guardado nada aún).
+const SEED_DONE = { 'F0-01': true, 'F0-02': true, 'F0-03': true, 'F0-04': true, 'F0-05': true, 'F0-06': true, 'F0-07': true, 'F0-08': true, 'F0-09': true, 'F0-10': true, 'F0-11': true, 'F0-14': true, 'F0-16': true, 'F0-17': true, 'F1-01': true, 'F1-02': true, 'F1-03': true, 'F1-04': true, 'F1-05': true, 'F1-06': true, 'F1-07': true, 'F1-08': true, 'F1-09': true, 'F1-10': true, 'F1-11': true, 'F1-12': true, 'F1-13': true, 'F1-14': true, 'F1-15': true, 'F1-16': true, 'F1-17': true, 'F1-30': true, 'F1-31': true, 'F1-32': true, 'F1-36': true, 'F2-01': true, 'F2-02': true, 'F2-03': true, 'F2-04': true, 'F2-05': true, 'F2-06': true, 'F2-14': true, 'F2-15': true, 'F2-16': true, 'F2-17': true, 'F2-20': true, 'F3-01': true, 'F3-02': true, 'F3-05': true };
+const SEED_INPROGRESS = { 'F1-38': true };
+const SEED_NOTES = {
+  'F0-01': 'Cerrado en v3.0 del documento de alcance: 5/5 preguntas, 15/15 pendientes y 25 historias de usuario redactadas (11 Administrativo, 7 Seguridad, 7 Comunicación).',
+  'F0-02': 'Investigación completada (sección 11 del alcance): Koti, ComunidadFeliz, Neivor, AdminCondo, Residentia, Vivook (competidor real), Birrex y Casandra. Diferenciadores identificados: roles tesorero/vocero, quorum de votaciones, sin facturación fiscal, WhatsApp+SMS.',
+  'F0-03': 'Cerrado con 2 entrevistas (resultados_entrevistas.md). Validó HU-A06/A08/A12 y el precio. Los 2 riesgos abiertos (efectivo vs. transferencia, votaciones digitales vs. junta física) se resolvieron sin cambios: se mantiene transferencia y votación digital.',
+  'F0-04': 'Precio definido: $25 MXN/vivienda/mes IVA incluido, cuota mínima equivalente a 50 viviendas ($1,250 MXN/mes). Ver sección 1 del alcance.',
+  'F0-05': 'Stack confirmado (sección 12 del alcance): Python/FastAPI, PostgreSQL, Flutter, React+TS, Redis+Celery, WhatsApp+SMS, STP/Fintoc para SPEI, AWS.',
+  'F0-06': 'Confirmado: schema-por-tenant en PostgreSQL.',
+  'F0-07': 'ERD completo en modelo_datos_vivecom.md: 24 entidades (núcleo, financiero, seguridad, comunicación) con tipos, PKs y FKs, más 4 diagramas ERD visuales.',
+  'F0-08': '3 flujos de usuario mostrados en el chat: pago de cuota (residente), acceso con QR (residente+guardia), votación con quorum (vocero+residentes).',
+  'F0-09': '3 wireframes de baja fidelidad mostrados en el chat: app residente (home/estado de cuenta), panel admin (dashboard financiero), app caseta (registro de acceso offline-first).',
+  'F0-10': 'Sistema de diseño en design/design_system.md dentro del scaffold: paleta, tipografía (Source Serif 4 + IBM Plex Mono) y componentes base.',
+  'F0-11': 'Sustituido Figma por un prototipo HTML clicable real (prototipo_vivecom.html): 3 plataformas, ~14 pantallas navegables, usa el sistema de diseño de F0-10. No requiere cuenta externa.',
+  'F0-14': 'Pipeline real en .github/workflows/ci.yml: lint, tests con Postgres de servicio, build y push a ECR, deploy a ECS staging. Requiere configurar el secret AWS_DEPLOY_ROLE_ARN en GitHub.',
+  'F0-16': 'Terraform completo en infra/ (VPC, RDS Postgres, Redis, S3, ECS, ECR). Escrito pero no ejecutado — requiere cuenta de AWS propia (bloqueado, ver F0-15).',
+  'F0-17': 'Autenticación multi-tenant funcional en backend/app/: JWT con tenant/schema/rol, tabla user_lookup para resolver tenant por email, guardas de autorización por rol. Todo compila sin errores. Entregado en vivecom_fase0_scaffold.zip.',
+  'F1-01': 'CRUD completo de Property, Resident y su relación N:N (respeta la regla de viviendas independientes). VALIDADO DE PUNTA A PUNTA en máquina real (MacBook Intel + Postgres.app): login, autorización con JWT, y creación real de una vivienda con persistencia confirmada. En el camino se encontraron y corrigieron 7 bugs reales (pyproject.toml, email-validator, deprecaciones de Pydantic, incompatibilidad bcrypt/passlib, rediseño de auth a HTTPBearer, y un bug de aislamiento multi-tenant real: el search_path transaccional se perdía tras un commit seguido de refresh()). Guardado en vivecom_fase0_scaffold.zip.',
+  'F1-02': 'Módulo de configuración de cuotas (Fee): monto, periodicidad, fecha de vigencia. Reglas globales (recargo 10%/día 6, quorum 51%, etc.) centralizadas en business_rules.py, expuestas vía /fees/global-rules. VALIDADO: 8/8 pruebas automatizadas pasando en máquina real. Agregado script migrate_add_tables.py para sumar tablas nuevas a tenants ya existentes (sin Alembic todavía — deuda técnica pendiente).',
+  'F1-03': 'Generación automática de cargos (FeeCharge) por vivienda cada ciclo. Lógica idempotente (no duplica cargos, respeta mensual/bimestral saltando el mes intermedio), job periódico con Celery Beat, endpoint manual POST /fees/generate-charges. VALIDADO: 21/21 pruebas de la suite completa pasando en máquina real.',
+  'F1-04': 'Recargo del 10% a partir del día 6 de cada mes (regla global). apply_late_surcharges() idempotente, endpoint manual POST /fees/apply-late-surcharges, job diario en Celery Beat. Simplificación conocida: compara por día completo, no por minuto exacto. VALIDADO: 21/21 pruebas pasando, incluyendo verificación del monto exacto (10%) contra la base de datos.',
+  'F1-05': 'Configuración de la cuenta CLABE de destino con confirmación explícita obligatoria y bitácora de auditoría (ClabeChangeLog). Router /tenant/clabe (GET, PATCH) y /tenant/clabe/historial. VALIDADO: 21/21 pruebas pasando en máquina real.',
+  'F1-06': 'Recepción de depósitos SPEI. Como todos transfieren a la MISMA CLABE del condominio, cada vivienda tiene una "referencia numérica" SPEI (7 dígitos, terminada en su número de casa) para identificar el depósito — campo real de Banxico, confirmado con búsqueda web. Arquitectura: interfaz PaymentProvider + implementación STP (payload NO verificado contra documentación real de STP — pendiente cuando haya acceso al sandbox). Webhook público /payments/webhook/stp con verificación de firma HMAC, idempotente, enruta al tenant por CLABE beneficiaria. VALIDADO: 29/29 pruebas pasando en máquina real. En el proceso se encontró y corrigió un bug real de producción: comparar dict(headers) en vez de mantener el objeto Headers insensible a mayúsculas hacía que NINGUNA firma de webhook, ni siquiera las válidas, se aceptara. NOTA (detectada después, en la sesión de F1-15/F1-16): esto diverge del ERD original en modelo_datos_vivecom.md (Fase 0, previo a cualquier código), que diseñaba Payment.clabe_virtual (una CLABE de cobro por pago, asignada por el proveedor) + Payment.fee_charge_id, más tablas payment_allocation y credit_balance para anticipos/saldo a favor. F1-06 (esta tarea) ya se construyó con el esquema real —referencia_pago por vivienda, FeeCharge.payment_id— y F1-07 a F1-16 siguieron consistentemente ESE esquema, incluyendo Property.saldo_a_favor como balance corriente en vez de un ledger credit_balance. No se tocó nada de esto en ninguna sesión: sería una migración grande y arriesgada que nadie pidió, y el esquema real funciona y está probado de punta a punta. modelo_datos_vivecom.md quedó desactualizado a partir de la sección de pagos — solo eso, el resto del ERD (gastos, presupuesto, núcleo) sí coincide con lo construido.',
+  'F1-07': 'Conciliación automática: cuando un depósito se empareja con una vivienda, se aplica contra sus FeeCharge pendientes/vencidos, del periodo más viejo al más nuevo (incluye el recargo si lo hay), hasta agotar el monto — todo dentro de la misma transacción que crea el Payment (flush() para obtener el id antes del commit final, siguiendo la regla del search_path transaccional de F1-01). Nuevo campo FeeCharge.payment_id enlaza cargo↔pago. Idempotente: reintentar el mismo webhook no re-concilia. Alcance deliberadamente NO cubierto aquí (quedan para F1-08/F1-09): pagos parciales y saldo a favor cuando el depósito excede lo debido — hoy ese excedente simplemente no se aplica a nada. VALIDADO: 35/35 pruebas pasando en máquina real (6 nuevas). Deuda técnica heredada (no introducida aquí): migrate_add_tables.py no hace ALTER TABLE, así que un tenant ya aprovisionado necesita agregar la columna payment_id a mano.',
+  'F1-08': 'Pago anticipado (HU-A05), construido DESPUÉS de F1-09 en esta sesión aunque el número sea menor — se entendió mejor la forma correcta de resolverlo una vez que ya existía el saldo a favor genérico. Extiende reconcile_payment(): si tras saldar todo lo pendiente/vencido de la vivienda sobra un múltiplo EXACTO (1 a 12x, tolerancia de centavos) de la cuota mensual vigente, se crean de inmediato los FeeCharge de esos meses futuros ya marcados como pagados (payment_id del depósito que los originó) — en vez de esperar a que el job periódico los genere y recién ahí consumir crédito genérico. El punto de partida es el mes siguiente al último periodo ya cargado para esa vivienda (o el mes del depósito si no tiene ningún cargo todavía), no "el mes de hoy". Solo aplica a cuotas mensuales (bimestral queda fuera, para no complicar el conteo de periodos con el salto de mes intermedio de F1-03) y SOLO si no queda ningún cargo pendiente/vencido sin cubrir — no tiene sentido adelantar meses futuros mientras la vivienda debe uno anterior; en ese caso el excedente cae al camino genérico de F1-09. Esto cambió el comportamiento de un caso que antes cubría F1-09 (depositar exactamente 1 mes antes de que exista el cargo): antes quedaba como crédito genérico hasta la siguiente generación; ahora F1-08 lo intercepta y crea el cargo pagado de inmediato — se actualizó tests/test_saldo_a_favor.py para reflejarlo y se separaron las pruebas de "crédito genérico" (montos que NO son múltiplo exacto) de las de "anticipo" (tests/test_pago_anticipado.py, 5 nuevas). Se rompía un import circular con fee_charge_service (que ya importaba TOLERANCIA_CENTAVOS de este módulo desde F1-09): se resolvió con un import local de get_active_fee dentro de la función, no al inicio del archivo. VALIDADO: 55/55 pruebas pasando en máquina real.',
+  'F1-09': 'Saldo a favor: el hueco que dejó F1-07 queda cerrado. Nuevo campo Property.saldo_a_favor (crédito corriente por vivienda, no un ledger de movimientos individuales — decisión deliberada para no sobre-construir). Dos puntos de entrada: (1) payment_reconciliation_service.reconcile_payment() acredita el sobrante cuando, tras pagar todos los cargos pendientes/vencidos de la vivienda, queda dinero del depósito sin aplicar; (2) fee_charge_service.generate_charges_for_period() consume ese crédito de inmediato al crear cada cargo nuevo — si alcanza a cubrirlo completo lo marca pagado ahí mismo (sin payment_id, porque no hay un Payment detrás, se pagó con crédito acumulado), si no alcanza el crédito se queda intacto esperando el siguiente cargo o un nuevo depósito. Cubre tanto "depositó de más" como "depositó antes de que existiera el cargo" (pago anticipado de facto para el cargo inmediato siguiente — F1-08 completo, con selección explícita de 1-12 meses, sigue pendiente). VALIDADO: 38/38 pruebas pasando en máquina real (3 nuevas).',
+  'F1-10': 'Panel del tesorero (HU-A06), la mitad backend (rol=Backend en el plan; la vista de frontend es F1-21/dashboard financiero, sigue pendiente). Nuevo router app/api/payments.py, separado de payments_webhook.py (ese es público, sin auth, para STP). Roles tesorero+admin. GET /payments (con filtro ?estado=) para ver la lista de pagos recientes y detectar los que quedaron "pendiente" por referencia no reconocida. POST /payments/{id}/resolve: el tesorero asigna a mano la vivienda correcta a un pago pendiente — reusa reconcile_payment() de F1-07/F1-09 tal cual, así que un pago resuelto a mano se concilia contra cargos y genera saldo a favor exactamente igual que uno automático. POST /payments/{id}/reject: marca un pago pendiente como rechazado cuando no corresponde a ninguna vivienda real. Ambas acciones exigen estado=pendiente (409 si no) — deliberadamente no se contempla deshacer un pago ya confirmado/conciliado, eso no estaba en el alcance de HU-A06. VALIDADO: 45/45 pruebas pasando en máquina real (7 nuevas).',
+  'F1-11': 'Recibo simple (HU-A08), NO fiscal. Nuevo servicio app/services/receipt_service.py (fpdf2, agregada como dependencia nueva — no había ninguna librería de PDF en el proyecto) y endpoint GET /payments/{id}/receipt en el router de F1-10. Se genera al vuelo a partir de los datos ya guardados del Payment/Property/Tenant — sin job en background ni almacenamiento de archivos, porque no hay nada que timbrar. Solo existe recibo para pagos en estado confirmado (409 si no). Control de acceso: admin/tesorero pueden descargar cualquiera; un residente solo el de su propia vivienda (403 si intenta otra) — comparando payment.property_id contra el property_id de su JWT. Bug real encontrado y corregido en el camino, no de producción sino de la propia suite de pruebas: tests/ no tiene __init__.py, así que un test que hacía `import tests.conftest` ejecutaba ese módulo una SEGUNDA vez con su propio TEST_TENANT_ID aleatorio (distinto al que de verdad sembró la base de prueba), y el tenant salía None. Se arregló leyendo el tenant_id del override de admin ya activo en vez de importar la constante. VALIDADO: 50/50 pruebas pasando en máquina real (5 nuevas).',
+  'F1-12': 'Integración de canal de notificaciones (WhatsApp + SMS de respaldo), construida como PRERREQUISITO de F1-13 en esta sesión, no pedida por separado — por eso no tiene su propio ciclo de pruebas dedicado, se valida indirectamente a través de F1-13. Mismo patrón que payment_providers/ (F1-06): interfaz NotificationProvider (app/services/notification_providers/base.py) + implementación TwilioProvider, que intenta WhatsApp primero y cae a SMS si falla. A diferencia de STP, aquí SÍ se siguió documentación pública real de Twilio (su Messages API es abierta, no requiere cuenta dada de alta para consultarla) — el formato del request (Basic Auth Account SID + Auth Token, prefijo "whatsapp:" en From/To) está verificado contra esa documentación, aunque sigue pendiente de una cuenta Twilio real, un número de WhatsApp Business aprobado por Meta (proceso que toma días) y pruebas contra su sandbox antes de producción. Nuevas variables de configuración en core/config.py (con placeholders, como ya existía el patrón para STP). Nueva dependencia httpx en requirements.txt (ya estaba en dev para los tests, ahora también en producción para llamar la API de Twilio).',
+  'F1-13': 'Recordatorios y confirmaciones de pago (dependía de F1-04, hecho, y F1-12, construido junto con esta tarea — ver nota de arriba). Nuevo servicio app/services/reminder_service.py con dos funciones independientes: send_payment_reminders() recorre los FeeCharge pendientes/vencidos cuyo periodo ya empezó y manda un recordatorio a cada residente de esa vivienda — como mucho una vez por día (campo nuevo FeeCharge.recordatorio_enviado_en), pero se REPITE cada día mientras siga sin pagarse, tal como pide el alcance ("desde el día 1 del mes hasta que se registre el pago"); send_payment_confirmations() recorre los cargos que ya pasaron a pagado y manda una sola confirmación (campo nuevo FeeCharge.confirmacion_enviada) — deliberadamente separado de la lógica de conciliación de F1-07/F1-09/F1-10, para que ninguno de esos caminos tenga que saber de WhatsApp/SMS: esta función barre el resultado sin importar qué causó el pago. Dos endpoints de disparo manual en /fees (mismo patrón que generate-charges/apply-late-surcharges) y dos jobs de Celery Beat: recordatorios una vez al día a las 9am (horario razonable para mensajear, a diferencia de los jobs de housekeeping que corren de madrugada), confirmaciones cada 15 minutos (esa sí debe sentirse inmediata). VALIDADO: 68/68 pruebas pasando en máquina real (7 nuevas de F1-13, usando un NotificationProvider falso en las pruebas — nunca se llama a Twilio de verdad).',
+  'F1-14': 'Estado de cuenta por vivienda (HU implícita en alcance sección "Panel admin"/"App residente", dependía de F1-04 y F1-09, ambos hechos). Nuevo servicio app/services/statement_service.py (agregación de solo lectura, sin reglas de negocio propias) y endpoint GET /properties/{id}/statement: historial completo de FeeCharge y Payment de la vivienda, más saldo_a_favor y deuda_total (suma de cargos pendientes/vencidos, incluyendo su recargo si lo tienen). Mismo control de acceso que el recibo de F1-11: admin/tesorero ven cualquiera, un residente solo el de su propia vivienda. Endpoint de solo lectura — el "Vista/PDF" de la descripción del plan se resolvió como JSON (la vista); un PDF de estado de cuenta completo, a diferencia del recibo de un solo pago de F1-11, no se construyó por no estar pedido explícitamente. VALIDADO: 68/68 pruebas pasando en máquina real (6 nuevas).',
+  'F1-15': 'Gastos y categorías (HU-A09/HU-A12). Nuevo modelo Expense (categoria, monto, comprobante_url, fecha) siguiendo el ERD documentado en modelo_datos_vivecom.md tal cual — esta parte del modelo original SÍ coincide con lo que se construyó, a diferencia de la sección de pagos (ver nota en F1-06). comprobante_url es obligatorio de verdad: Field(min_length=1) en el schema, así que un string vacío también lo rechaza (422), no solo la ausencia del campo — "no se puede guardar un gasto sin comprobante" según el alcance. No hay infraestructura de storage todavía (el archivo se sube aparte, aquí solo se guarda la URL resultante). GET /expenses es de lectura abierta a cualquier rol del tenant, no solo admin — HU-A12 pide transparencia de gastos para cualquier residente. Filtros por categoría y rango de fechas. Deliberadamente sin PATCH/DELETE: ninguna historia de usuario pide editar o borrar un gasto ya registrado (solo "registrar" y "ver"), y borrar registros financieros sin que nadie lo haya pedido no parecía razonable. VALIDADO: 79/79 pruebas pasando en máquina real (5 nuevas).',
+  'F1-16': 'Presupuesto (HU-A10), depende de F1-15 (hecho). Nuevo modelo Budget (categoria, periodicidad mensual/anual — enum propio, distinto del periodicidad de Fee que es mensual/bimestral —, periodo, monto_planeado), también tal cual el ERD documentado. El corazón de la tarea es GET /budgets/report: compara planeado vs. real por categoría para el periodo pedido, sumando los Expense de esa categoría dentro del ciclo del presupuesto (todo el mes si es mensual, todo el año si es anual). Deliberadamente filtra en Python en vez de con funciones de fecha del motor (EXTRACT/strftime): esas no son portables entre SQLite (pruebas) y Postgres (producción), y la tabla de presupuestos no es lo bastante grande como para que importe el rendimiento. VALIDADO: 79/79 pruebas pasando en máquina real (6 nuevas).',
+  'F1-17': 'Exportación a Excel (HU-A11), depende de F1-14 y F1-16 (ambos hechos). Tres endpoints en el nuevo router app/api/reports.py (roles tesorero+admin, mismo patrón que payments.py): GET /reports/account-statements/export (todas las viviendas o una sola vía ?property_id=, dos hojas: Cargos y Pagos), GET /reports/expenses/export (mismos filtros que el listado de F1-15: categoría y rango de fechas) y GET /reports/budget/export (el reporte de F1-16 servido como archivo). Nueva dependencia openpyxl. Decisión deliberada de alcance: el plan describe la exportación como "asíncrona", pero se generó SÍNCRONA dentro del propio request y se sirve como descarga directa — igual que el recibo de F1-11 — en vez de construir una cola de jobs con estado y almacenamiento de resultado, porque no existe esa infraestructura en el proyecto todavía (mismo hueco que comprobante_url en F1-15) y el volumen de datos de un condominio no la justifica. Las pruebas abren el .xlsx devuelto con openpyxl (round-trip real, no solo revisan los bytes) para confirmar encabezados y valores de celda. VALIDADO: 83/83 pruebas pasando en máquina real (4 nuevas).',
+  'F1-30': 'Avisos y circulares (HU-C01), primera tarea de Comunicación — módulo nuevo (antes solo existía Administrativo). Nuevo modelo Announcement (titulo, contenido, fecha_publicacion) tal cual el ERD documentado en modelo_datos_vivecom.md (esta sección sí coincide, como gastos/presupuesto — la que diverge es solo pagos, ver nota en F1-06). "Programar" un aviso (parte del alcance de la tarea) se resolvió sin campo de estado aparte: solo importa que fecha_publicacion esté en el futuro — un aviso programado lo ve y gestiona admin, pero no aparece en el listado ni en GET/{id} (404, no 403, para no confirmar ni su existencia) para el resto de roles hasta que su fecha llega. CRUD completo salvo DELETE (mismo criterio que gastos en F1-15: ninguna historia de usuario pide borrar un aviso ya publicado).',
+  'F1-31': 'Confirmación de lectura (HU-C01: "el administrador puede ver qué viviendas ya leyeron cada aviso"), depende de F1-30. Nuevo modelo ReadReceipt (announcement_id, property_id, leido_at) y dos endpoints: POST /announcements/{id}/read (marca leído la vivienda del residente autenticado — exige que su JWT traiga property_id, si no 400; idempotente, no duplica si ya lo había marcado) y GET /announcements/{id}/read-status (admin), que regresa TODAS las viviendas del condominio con su leido:true/false — más útil que solo listar los recibos crudos, mismo espíritu que el estado de cuenta de F1-14.',
+  'F1-32': 'Notificación al publicarse (HU-C01: "notificación por app y WhatsApp; SMS como respaldo"), depende de F1-30 y F1-12 (ambos hechos). Reusa el NotificationProvider de F1-12/F1-13 tal cual. Nuevo campo Announcement.notificacion_enviada (una sola vez, mismo patrón que FeeCharge.confirmacion_enviada de F1-13) y send_announcement_notifications(): a diferencia de los recordatorios de pago (por vivienda), aquí se notifica a TODOS los residentes del condominio — un aviso es comunitario, no financiero. Cubre "programar" de facto: un aviso futuro no se notifica hasta que su fecha_publicacion realmente llega. Job de Celery Beat cada 15 minutos (igual que las confirmaciones de pago) + disparo manual POST /announcements/send-notifications. "Por app" (notificación in-app) no se construyó — no hay app móvil todavía, es un tema del lado mobile, no de este backend. Bug real encontrado y corregido en el camino: guardé fecha_publicacion como datetime "aware" (con timezone, siguiendo el patrón de tenant_config.py) pero la columna es un DateTime plano — al releerlo de la base, SQLAlchemy/SQLite lo regresan "naive" (sin timezone), y comparar aware contra naive truena con TypeError. Se corrigió normalizando SIEMPRE a naive UTC antes de guardar o comparar (datetime.now(timezone.utc).replace(tzinfo=None), no datetime.utcnow() — esa está obsoleta desde Python 3.12). VALIDADO: 92/92 pruebas pasando en máquina real (9 nuevas, entre F1-30/31/32).',
+  'F1-36': 'Logging y monitoreo (rol=DevOps en el plan, pero es código, no infraestructura externa que ejecutar — a diferencia de F0-16/Terraform, esto SÍ corre completo en local). Sentry: sentry_sdk.init() condicionado a que settings.sentry_dsn no esté vacío — el default de desarrollo lo deja inerte (sentry_sdk.get_client().is_active() == False, verificado en la prueba), así que no manda nada a ningún lado hasta que haya un DSN real de producción, mismo patrón "cambia-esto-en-produccion" que STP/Twilio. Métricas: GET /metrics con prometheus-fastapi-instrumentator, formato Prometheus/OpenMetrics — tanto Grafana+Prometheus como Datadog saben scrapear ese formato sin necesitar el agente propietario de Datadog en el código. Lo que de verdad falta y SÍ requiere cuenta real (igual que F0-15/F0-16): el DSN de Sentry, y apuntar un agente/scraper real a /metrics. Nota técnica: prometheus-fastapi-instrumentator más reciente (8.x) jala una versión de starlette incompatible con el fastapi==0.115.0 ya fijado en requirements.txt — se fijó 6.1.0, que sí es compatible. VALIDADO: 95/95 pruebas pasando en máquina real (3 nuevas).',
+  'F1-38': 'Documentación OpenAPI/Swagger. El plan la marca dependiente de F1-29 y F1-35 (QA end-to-end de cobro y de notificaciones) — ninguna de las dos está hecha: F1-29 depende de F1-26 (app residente, mobile, no construido) y F1-35 es QA de entrega real de WhatsApp/SMS en dispositivos físicos, que no se puede ejecutar desde aquí. Lo que SÍ se hizo, sin depender de esas dos: título/descripción/versión en la app de FastAPI, tag "health" para /health y /metrics, y una verificación real (no solo visual) de que /openapi.json genera sin errores, con 35 endpoints documentados y sin operationId duplicados — la mayor parte del trabajo de F1-38 ya la regalaba FastAPI automáticamente gracias a que cada router de esta sesión ya traía tags y response_model consistentes desde F1-07. Formalmente esta tarea sigue bloqueada por F1-29/F1-35 en el plan; lo documentado aquí es lo que no dependía de ellas.',
+  'F2-01': 'Control de accesos (HU-S01), primera tarea de Fase 2 — módulo Seguridad, arranca aquí. Nuevo modelo AccessLog (property_id nullable — un proveedor puede no tener vivienda asociada, ej. mensajería para el condominio en general — tipo, hora_entrada, hora_salida) tal cual el ERD documentado en modelo_datos_vivecom.md, que en esta sección de Seguridad SÍ coincide con lo que se construyó (la única divergencia real sigue siendo pagos, ver nota en F1-06). POST /access-log (entrada) y POST /access-log/{id}/exit (salida) — dos acciones separadas, como pide la HU. Sin límite de visitantes ni restricción de horario (alcance §10.2): no hay ninguna regla de negocio que lo impida, simplemente no se construyó ese límite. Roles guardia+admin.',
+  'F2-02': 'QR de acceso temporal de un solo uso (HU-S02). Nuevo modelo VisitorQR. POST /visitor-qr (residente, exige property_id en el JWT) genera el código con secrets.token_urlsafe(16) — sin campo de vigencia por fecha/hora, porque el alcance es explícito: "expira automáticamente al usarse una sola vez", no por tiempo.',
+  'F2-03': 'Validación del QR por el guardia (HU-S03) + vehículos asociados a un acceso (HU-S04, nuevo modelo Vehicle). POST /visitor-qr/{codigo}/validate consume el código de inmediato (usado=True) y responde 200 con valido:false + motivo ("no_existe" o "ya_usado") en vez de un error HTTP — el guardia necesita distinguir el motivo del rechazo, no solo que falló. Las placas se mandan opcionalmente al crear el AccessLog (placas: list[str]) y se guardan como Vehicle ligados a ese acceso; no hay endpoint para agregarlas después, porque ninguna historia de usuario lo pide.',
+  'F2-04': 'Paquetería (HU-S05): dos notificaciones, cada una una sola vez — al llegar y al recogerse (cierra el registro) — mismo patrón boolean-flag que confirmacion_enviada (F1-13) y notificacion_enviada (F1-32). Nuevo modelo Package y servicio package_notification_service.py, deliberadamente separado de packages.py (mismo criterio que reminder_service/announcement_service: la creación/actualización del Package no sabe de WhatsApp/SMS, un barrido periódico aparte se encarga). Job de Celery Beat cada 15 minutos + disparo manual. Con esto F2-01 a F2-04 completan todo lo de Seguridad que es backend puro y no depende de la app de caseta (F2-07 a F2-11, Mobile, offline-first — no construido). VALIDADO: 113/113 pruebas pasando en máquina real (18 nuevas, entre F2-01/02/03/04).',
+  'F2-05': 'Incidencias con seguimiento (HU-S06). Nuevo modelo Incident (reportado_por, estado, descripcion, created_at) + IncidentUpdate (comentario/seguimiento, tabla separada, ambos tal cual el ERD documentado — esta sección de Seguridad tampoco tiene drift, como F2-01 a F2-04). Máquina de estados abierta→en_proceso→resuelta vía PATCH /incidents/{id}/status: deliberadamente PERMISIVA (cualquier transición, incluso hacia atrás) — el alcance describe la progresión esperada pero no prohíbe explícitamente reabrir una incidencia cerrada por error, así que no se inventó esa restricción. Control de acceso nuevo en el proyecto, más fino que el binario admin/todos-los-demás de todo lo anterior: ver_incidencias = admin+comite_lectura+comite_aprobador+guardia (toda incidencia es visible para admin Y comité, alcance §10.2, más guardia porque las reporta); gestionar_incidencias = admin+comite_aprobador+guardia (comite_lectura, por el nombre del rol, solo lee — validado con una prueba explícita de que intentar crear le da 403). residente no tiene acceso a incidencias en absoluto (a diferencia de avisos, que sí son para residentes).',
+  'F2-06': 'Alertas en tiempo real (HU-S06 completa: "para que quede documentada" implica que admin/comité se enteren sin recargar). Primer WebSocket del proyecto: GET /incidents/ws?token=... (el token va en query param, no en header Authorization — el handshake de WebSocket desde un browser no permite mandar headers personalizados). Autenticación manual con decode_access_token() de F0-17 en vez de la dependencia get_current_user de siempre, porque las dependencias de FastAPI para WebSocket no comparten el mismo mecanismo que las de HTTP normal. Solo admin/comite_lectura/comite_aprobador pueden conectarse (guardia queda fuera deliberadamente: reporta incidencias pero no necesita que le avisen de las suyas en tiempo real). IncidentConnectionManager (app/services/incident_broadcast.py) vive en memoria del proceso — LIMITACIÓN CONOCIDA Y DOCUMENTADA: con más de un worker/proceso en producción, una incidencia creada en el proceso A no le llega a un admin conectado al B. La solución real es pub/sub con Redis (el proyecto ya lo usa como broker de Celery, ver settings.redis_url), pero no se implementó: no hay un Redis real disponible en esta sesión para probarlo de punta a punta, y el manager en memoria sí es 100% probable con el TestClient de FastAPI — hay una prueba que abre una conexión WebSocket real, dispara la creación de una incidencia por HTTP en paralelo, y confirma que el mensaje llega. Antes de tener más de un proceso en producción, esto es lo primero que hay que resolver. VALIDADO: 124/124 pruebas pasando en máquina real (11 nuevas, entre F2-05/06).',
+  'F2-14': 'Votaciones con quorum (HU-C02 crear, HU-C03 votar, HU-C04 quorum y reactivación). Nuevo Poll+PollOption+Vote (UNIQUE(poll_id, property_id) fuerza un voto por vivienda a nivel de base de datos, no solo en el código). Reusa VOTACION_QUORUM_MINIMO (0.51) y VOTACION_REACTIVACION_DIAS (7) de business_rules.py — constantes que YA existían desde Fase 0 sin que nada las usara todavía. process_poll_closures(): participación = votos / total de viviendas del condominio; si alcanza quorum se marca quorum_alcanzado; si no, Y la votación no se había reactivado antes, se corre fecha_cierre +7 días, se marca reactivada=True y se avisa a TODOS los residentes (igual que avisos/F1-32) — decisión explícita de que solo hay UNA reactivación (el campo `reactivada` es un flag de un solo uso, no un contador): si la segunda vuelta tampoco alcanza quorum, se queda así, el alcance solo describe un ciclo de reactivación, no indefinidos. Resultados: visibles en vivo solo si resultados_en_vivo=True (configurable al crear), si no hasta que fecha_cierre pasa o ya se alcanzó quorum — 409 si alguien intenta verlos antes de tiempo. Rol vocero (+admin) para crear, exactamente como pide HU-C02. Job de Celery Beat diario. VALIDADO: 142/142 pruebas pasando en máquina real (13 nuevas de F2-14).',
+  'F2-15': 'Objetos perdidos moderados (HU-C05). Nuevo modelo LostFoundItem, tal cual el ERD (esta sección de Comunicación tampoco tiene drift). Cualquier residente autenticado puede publicar (queda pendiente_autorizacion); GET /lost-found y GET /lost-found/{id} solo muestran autorizado para todos menos admin — un objeto pendiente le da 404 (no 403) a quien no es admin, mismo criterio que un aviso programado de F1-30: no confirmar ni la existencia. PATCH /lost-found/{id}/moderate (admin) para autorizar o rechazar. El módulo más chico de esta sesión de Fase 2 — sin flujos de notificación ni jobs periódicos, porque HU-C05 no los pide. VALIDADO: 142/142 pruebas pasando en máquina real (5 nuevas de F2-15). Con F2-14 y F2-15 hechos, solo queda F2-16/F2-17 (amenidades y su flujo de aprobación) para cerrar todo Comunicación de Fase 2 — es el bloque más grande que queda, se dejó aparte a propósito.',
+  'F2-16': 'Reservación de amenidades con bloqueo anti doble-booking (HU-C06). Nuevo Amenity + Reservation (estado pendiente/aprobada/rechazada/expirada, tal cual el ERD). Decisión importante leída con cuidado en el alcance: "mínimo 2 días de anticipación, SALVO que el horario siga disponible más cerca de la fecha" — releyendo esa cláusula, la única regla real que el sistema debe imponer es disponibilidad, no un conteo de días (si lo fuera, contradiría la propia excepción). Así que NO se rechaza por poca anticipación; RESERVACION_ANTICIPACION_MINIMA_DIAS (ya existía en business_rules.py desde Fase 0, sin usarse) se expone como referencia informativa en GET /reservations/global-rules, no como validación. El anti doble-booking sí es una regla dura: traslape de fechas contra reservaciones pendiente/aprobada de la misma amenidad → 409 (rechazada/expirada no apartan el horario). GET /amenities/{id}/availability expone los horarios ocupados sin decir de qué vivienda son, para que un residente pueda elegir un hueco libre sin ver información ajena.',
+  'F2-17': 'Flujo de aprobación (HU-C07). Nuevo AmenityApprover (el admin designa aprobadores por amenidad, debe tener rol comite_aprobador — validado, 400 si no). Campo solicitada_en en Reservation que NO está en la tabla documentada del ERD, agregado porque la propia sección "Notas de implementación" de modelo_datos_vivecom.md ya avisaba que faltaban campos de auditoría por brevedad; sin él no hay forma de contar el periodo_limite_horas de cada amenidad. Distinción deliberada entre dos estados terminales: rechazada = alguien decidió (aprobador o vencimiento del plazo de respuesta), expirada = el bloque de tiempo reservado (fecha_inicio) ya pasó sin que NADIE respondiera, ni con el rechazo automático de por medio. Asimetría deliberada frente al patrón de barrido de F1-13/F1-32/F2-04: aquí la notificación a los aprobadores y al residente SÍ se manda de forma síncrona en el propio endpoint (no en un barrido cada 15 min) — porque el reloj de periodo_limite_horas empieza a correr desde que se solicita, y podría ser de solo 1 hora; esperar hasta 15 minutos del próximo barrido para avisar le comería un pedazo real de ese plazo al aprobador. El barrido periódico sí se usa, pero solo para el rechazo/expiración automática, que por naturaleza no tiene un request que lo dispare. VALIDADO: 159/159 pruebas pasando en máquina real (17 nuevas, entre F2-16/17). Con esto se completa TODO Fase 2 de Comunicación y Seguridad que es backend puro (no depende de mobile/frontend).',
+  'F2-20': 'QA de concurrencia en reservaciones (HU-C06: "no se permite doble reservación del mismo horario") — la única de F2-18 a F2-23 que se pudo ejecutar de verdad en esta sesión (ver notas en F2-18/19/21/22/23). Se comprobó de forma EMPÍRICA con asyncio.gather() contra el propio create_reservation() de F2-16, antes de tocar nada: dos solicitudes simultáneas para el mismo horario SÍ lograban crear dos reservaciones traslapadas — la validación de traslape (SELECT) de ambas pasaba antes de que cualquiera de las dos hiciera commit (traspaso clásico time-of-check-to-time-of-use). Era un bug real, no teórico. Corregido con dos capas en reservation_service.create_reservation(): (1) un asyncio.Lock por amenidad, que cierra la carrera DENTRO de un mismo proceso — verificado con una prueba real que además se comprobó que SÍ falla si se quita el candado (no es una prueba de utilería); (2) select(Amenity)...with_for_update() sobre la fila de la amenidad, que en Postgres bloquearía a un segundo PROCESO/worker hasta que el primero comitee. Esa segunda capa NO se pudo verificar de punta a punta aquí: SQLAlchemy compila with_for_update() como no-op silencioso en SQLite (confirmado explícitamente antes de escribir el fix), así que las pruebas de esta sesión no la ejercitan — es el comportamiento documentado de Postgres, pero queda pendiente de confirmar contra un Postgres real con más de un worker antes de confiar en ella en producción. VALIDADO: 160/160 pruebas pasando en máquina real (1 nueva, la de concurrencia). ACTUALIZACIÓN (revisión de código completa de backend/app, sesión posterior): un /code-review sobre todo el backend acumulado encontró que este mismo patrón de carrera (time-of-check-to-time-of-use sin candado) NO se había aplicado a otras tres funciones con el mismo riesgo: reservation_service.resolve_reservation() (aprobar/rechazar una reservación, la función hermana de create_reservation() que sí tenía el fix), payment_reconciliation_service.reconcile_payment() (Property.saldo_a_favor se actualizaba con read-modify-write sin candado) y fee_charge_service.generate_charges_for_period() (el chequeo de "ya tiene cargo este periodo" podía duplicarse con dos disparos concurrentes). Se corrigieron las tres con el mismo patrón ya validado aquí (asyncio.Lock en memoria + with_for_update()), extraído a un helper compartido nuevo (app/core/concurrency.py) que emite un warning una sola vez por contexto cuando corre bajo un dialecto que no bloquea de verdad (SQLite en pruebas) — para no repetir el aviso silencioso de la limitación de Postgres-no-verificado-aquí en cada archivo. La misma revisión encontró y corrigió 6 bugs más fuera de concurrencia, sin relación con F2-20: en poll_service.cast_vote() (F2-14) faltaba capturar el IntegrityError del UNIQUE(poll_id, property_id) ante un voto doble simultáneo (daba 500 en vez de rechazo limpio); en reminder_service/announcement_service/package_notification_service (F1-13/F1-32/F2-04) las tres funciones de notificación marcaban su flag de "enviado" como true sin fijarse si provider.send() de verdad tuvo éxito, perdiendo notificaciones para siempre si Twilio fallaba; TwilioProvider._enviar() (F1-12) dejaba escapar la excepción de httpx ante un error de red en vez de regresar False, rompiendo el contrato de NotificationProvider; api/reservations.py (F2-17) no envolvía el envío de notificación posterior al commit en try/except, así que un fallo ahí regresaba 500 aunque la reservación ya se hubiera guardado bien; reservation_service.process_reservation_timeouts() (F2-17) revisaba primero la condición de rechazo por plazo vencido y luego la de expiración por fecha de inicio pasada, al revés de lo que su propio docstring prometía cuando ambas se cumplían a la vez; y privacy_service.accept_privacy_notice()/erase_personal_data() (F3-02) truena con AttributeError en vez de 404 si el resident_id no existe. Los 10 hallazgos se corrigieron con pruebas de regresión nuevas (9 pruebas: 2 en test_reservations.py, 1 en test_polls.py, 3 en un archivo nuevo test_twilio_provider.py, 1 en test_reminders.py, 1 en test_fee_charges.py, 1 en test_saldo_a_favor.py). VALIDADO: 175/175 pruebas pasando (166 previas + 9 nuevas), ruff limpio.',
+  'F2-18': 'No ejecutable desde esta sesión: es Frontend (rol=Frontend en el plan). No hay ningún código de frontend en este repo — solo backend/, design/ e infra/ — construir un panel admin/vocero real requiere un proyecto de frontend aparte que no existe todavía.',
+  'F2-19': 'No ejecutable desde esta sesión: es Mobile (rol=Mobile). Mismo caso que F2-18 — no hay ningún código de app móvil en este repo.',
+  'F2-21': 'No ejecutable desde esta sesión: un pentest real (rol=DevOps) requiere herramientas y alcance autorizado fuera de lo que una sesión de código puede hacer por su cuenta.',
+  'F2-22': 'No ejecutable desde esta sesión: depende de F1-39 (pruebas de carga con datos reales de producción), que no existen — sin tráfico real no hay queries lentas que optimizar, solo se estaría adivinando.',
+  'F2-23': 'No ejecutable desde esta sesión: reclutar 10-15 condominios piloto reales es una actividad de Producto/ventas (rol=PM/Producto), no de ingeniería.',
+  'F3-01': 'Exportación de movimientos contables (alcance §3.1: "Contabilidad completa de doble entrada [queda fuera] — solo exportación de pólizas para que el contador la use en su propio sistema" — confirma que el alcance real es exactamente lo que se construyó, no una contabilidad de doble entrada). Nueva función build_accounting_entries_excel() en export_service.py (mismo archivo de F1-17) + GET /reports/accounting-entries/export: una fila plana por movimiento (ingresos desde Payment confirmado, egresos desde Expense), columnas genéricas Fecha/Tipo/Cuenta/Concepto/Monto/Referencia. AVISO explícito en el código (mismo espíritu que STPProvider en F1-06): NO está verificado contra el formato de importación real de CONTPAQi ni Aspel — verificarlo requeriría una licencia de alguno de los dos. Se decidió un Excel de columnas genéricas re-mapeables en vez de arriesgar un formato propietario específico sin poder confirmarlo. Tampoco hay catálogo de cuentas contables real en el modelo de datos — "Cuenta" es la categoría de Expense o una cuenta de ingresos fija; cada contador deberá mapear esto a su propio catálogo. VALIDADO: 166/166 pruebas pasando en máquina real.',
+  'F3-02': 'Cumplimiento LFPDPPP (alcance §"Seguridad de datos"): aviso de privacidad, consentimiento, y derechos ARCO de acceso y cancelación. Nuevo GET /privacy-notice (público, sin auth) con un AVISO explícito de que el texto es una PLANTILLA que requiere revisión legal antes de publicarse — no es un documento legal real, mismo criterio que cualquier "cambia-esto-en-produccion". POST /me/privacy-notice/accept, GET /me/data-export (derecho de Acceso: junta Resident + viviendas + votos + avisos leídos + reservaciones + incidencias reportadas + objetos publicados) y POST /me/request-erasure (derecho de Cancelación). Decisión importante: la cancelación ANONIMIZA (nombre/telefono/email) en vez de borrar la fila — la propia LFPDPPP reconoce excepciones cuando hay obligación legal de conservar el dato (la Ley del ISR exige conservar registros contables), y como FeeCharge/Payment cuelgan de Property y no de Resident, anonimizar aquí no rompe ese historial financiero ni las relaciones de ResidentProperty/incidencias/objetos perdidos. Como CurrentUser (el JWT) no trae resident_id, se resuelve vía UserAccount.resident_id — una cuenta sin perfil de residente (admin, guardia sin resident_id) recibe 400 en estos tres endpoints. VALIDADO: 166/166 pruebas pasando en máquina real (5 nuevas de F3-02, 1 de F3-01).',
+  'F3-05': 'Evaluación de integraciones IoT (cámaras y biometría) — es un entregable de investigación/documento (rol Tech Lead, "explorar"), no código, mismo tipo de tarea que F0-01/F0-02. Documento nuevo: evaluacion_iot_f3-05.md en la raíz del repo. Conclusión resumida: cámaras son viables a corto plazo vía integración con la API de un proveedor existente (ej. UniFi Protect) reusando el patrón de webhook ya establecido desde F1-06/F2-01 — riesgo legal bajo. Biometría es técnicamente viable con emparejamiento en el borde (el dispositivo hace el match, Vivecom nunca almacena la plantilla ni la imagen), pero la LFPDPPP clasifica los datos biométricos como sensibles y exige consentimiento expreso por escrito — un nivel más estricto que el aviso genérico de F3-02 — así que se recomienda NO construirlo todavía, esperar demanda real y conseguir revisión legal del consentimiento reforzado primero.',
+  'F3-03': 'No ejecutable de forma significativa desde esta sesión: "mejorar latencia y disponibilidad" (rol DevOps) es optimización sobre tráfico real de producción que no existe todavía — cualquier cambio de infraestructura (CDN, réplicas de lectura, multi-región) sin datos reales de uso sería puro adivinar, a diferencia de F1-36 donde el código (Sentry/métricas) sí corre completo aunque falte el DSN/agente real.',
+  'F3-04': 'No construido: "dashboards ejecutivos para administradoras que manejan varios condominios" implica un usuario que ve VARIOS tenants a la vez, y la arquitectura actual (JWT con un solo tenant_id/schema por sesión, ver core/security.py) no tiene ningún concepto de "una cuenta con acceso a múltiples condominios" — construirlo requeriría antes una decisión de producto/arquitectura real (¿una tabla de administradoras que agrupa tenants? ¿un JWT con una lista de tenants en vez de uno?) que nadie ha tomado todavía. Documentado aquí en vez de improvisar una solución parcial que no resolvería el problema real de fondo.',
+  'F3-06': 'No ejecutable desde esta sesión: es Frontend (rol=Frontend, "onboarding self-service"). No hay ningún código de frontend en este repo.'
+};
+
+async function loadProgress(){
+  let hadProgress = false;
+  try{
+    const res = await window.storage.get(STORAGE_KEY, false);
+    if(res && res.value){
+      progress = JSON.parse(res.value);
+      hadProgress = true;
+    }
+  }catch(e){
+    progress = {};
+  }
+
+  let hadInProgress = false;
+  try{
+    const res2 = await window.storage.get(INPROGRESS_KEY, false);
+    if(res2 && res2.value){ inProgress = JSON.parse(res2.value); hadInProgress = true; }
+  }catch(e){ inProgress = {}; }
+
+  let hadNotes = false;
+  try{
+    const res3 = await window.storage.get(NOTES_KEY, false);
+    if(res3 && res3.value){ notes = JSON.parse(res3.value); hadNotes = true; }
+  }catch(e){ notes = {}; }
+
+  // Primera vez que se abre esta bitácora: sembrar el avance real de la conversación.
+  if(!hadProgress && !hadInProgress && !hadNotes){
+    progress = { ...SEED_DONE };
+    inProgress = { ...SEED_INPROGRESS };
+    notes = { ...SEED_NOTES };
+    await saveProgress();
+    await saveInProgress();
+    await saveNotes();
+  }
+
+  render();
+}
+
+async function saveInProgress(){
+  try{ await window.storage.set(INPROGRESS_KEY, JSON.stringify(inProgress), false); }
+  catch(e){ console.error('No se pudo guardar el estado en progreso', e); }
+}
+
+async function saveNotes(){
+  try{ await window.storage.set(NOTES_KEY, JSON.stringify(notes), false); }
+  catch(e){ console.error('No se pudieron guardar las notas', e); }
+}
+
+function toggleNote(id){
+  openNoteId = (openNoteId === id) ? null : id;
+  render();
+}
+
+function updateNote(id, value){
+  notes[id] = value;
+  saveNotes();
+}
+
+async function saveProgress(){
+  try{
+    await window.storage.set(STORAGE_KEY, JSON.stringify(progress), false);
+  }catch(e){
+    console.error('No se pudo guardar el avance', e);
+  }
+}
+
+function toggleTask(id){
+  progress[id] = !progress[id];
+  saveProgress();
+  render();
+}
+
+function prioClass(p){
+  if(p === 'Alta') return 'prio-alta';
+  if(p === 'Media') return 'prio-media';
+  return 'prio-baja';
+}
+
+function renderTabs(){
+  const tabsEl = document.getElementById('tabs');
+  tabsEl.innerHTML = '';
+  PHASE_ORDER.forEach(fase=>{
+    const items = TASKS.filter(t=>t.fase===fase);
+    const done = items.filter(t=>progress[t.id]).length;
+    const btn = document.createElement('div');
+    btn.className = 'tab' + (fase===activePhase ? ' active' : '');
+    btn.innerHTML = '<span class="dot"></span>' + PHASE_LABEL[fase] + ' <span class="count">(' + done + '/' + items.length + ')</span>';
+    btn.onclick = ()=>{ activePhase = fase; render(); };
+    tabsEl.appendChild(btn);
+  });
+}
+
+function renderStats(){
+  const totalTasks = TASKS.length;
+  const doneTasks = TASKS.filter(t=>progress[t.id]).length;
+  const totalDays = TASKS.reduce((s,t)=>s+t.dias,0);
+  const doneDays = TASKS.filter(t=>progress[t.id]).reduce((s,t)=>s+t.dias,0);
+  const pct = totalTasks ? Math.round((doneTasks/totalTasks)*100) : 0;
+
+  document.getElementById('statDone').textContent = doneTasks + ' / ' + totalTasks;
+  document.getElementById('statPct').textContent = pct + '%';
+  document.getElementById('statBar').style.width = pct + '%';
+  document.getElementById('statDays').textContent = doneDays + ' / ' + totalDays;
+
+  let currentPhase = 'Completo';
+  for(const fase of PHASE_ORDER){
+    const items = TASKS.filter(t=>t.fase===fase);
+    const doneInPhase = items.filter(t=>progress[t.id]).length;
+    if(doneInPhase < items.length){ currentPhase = PHASE_LABEL[fase]; break; }
+  }
+  document.getElementById('statPhase').textContent = currentPhase;
+}
+
+function renderList(){
+  const container = document.getElementById('taskList');
+  container.innerHTML = '';
+  const items = TASKS.filter(t=>t.fase===activePhase);
+  const modules = [...new Set(items.map(t=>t.modulo))];
+
+  modules.forEach(mod=>{
+    const group = document.createElement('div');
+    group.className = 'module-group';
+
+    const title = document.createElement('div');
+    title.className = 'module-title';
+    title.textContent = mod;
+    group.appendChild(title);
+
+    items.filter(t=>t.modulo===mod).forEach(t=>{
+      const isDone = !!progress[t.id];
+      const isInProgress = !isDone && !!inProgress[t.id];
+      const row = document.createElement('div');
+      row.className = 'task-row' + (isDone ? ' done' : '') + (isInProgress ? ' inprogress' : '');
+
+      const cb = document.createElement('div');
+      cb.className = 'checkbox';
+      cb.innerHTML = '<svg viewBox="0 0 24 24" fill="none" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>';
+      cb.onclick = ()=>toggleTask(t.id);
+
+      const body = document.createElement('div');
+      body.className = 'task-body';
+
+      const top = document.createElement('div');
+      top.className = 'task-top';
+      top.innerHTML = '<span class="task-id">' + t.id + '</span><span class="task-name">' + t.tarea + '</span>';
+
+      const desc = document.createElement('div');
+      desc.className = 'task-desc';
+      desc.textContent = t.desc;
+
+      const tags = document.createElement('div');
+      tags.className = 'task-tags';
+      let tagsHtml = '<span class="tag role">' + t.rol + '</span>';
+      tagsHtml += '<span class="tag days">' + t.dias + ' día' + (t.dias===1?'':'s') + '</span>';
+      tagsHtml += '<span class="tag ' + prioClass(t.prioridad) + '">' + t.prioridad + '</span>';
+      if(isInProgress){ tagsHtml += '<span class="tag prio-media">En progreso</span>'; }
+      if(t.dep){ tagsHtml += '<span class="tag dep">depende de ' + t.dep + '</span>'; }
+      const hasNote = !!(notes[t.id] && notes[t.id].trim());
+      tagsHtml += '<span class="tag note-toggle" data-note-toggle="' + t.id + '">' + (hasNote ? '📝 ver nota' : '+ nota') + '</span>';
+      tags.innerHTML = tagsHtml;
+      tags.querySelector('[data-note-toggle]').onclick = ()=>toggleNote(t.id);
+
+      body.appendChild(top);
+      body.appendChild(desc);
+      body.appendChild(tags);
+
+      if(openNoteId === t.id){
+        const noteBox = document.createElement('div');
+        noteBox.className = 'task-note';
+        noteBox.innerHTML = '<span class="note-label">Nota</span>';
+        const ta = document.createElement('textarea');
+        ta.value = notes[t.id] || '';
+        ta.placeholder = 'Escribe una nota sobre el avance o lo que falta…';
+        ta.oninput = ()=>updateNote(t.id, ta.value);
+        noteBox.appendChild(ta);
+        body.appendChild(noteBox);
+      }
+
+      row.appendChild(cb);
+      row.appendChild(body);
+      group.appendChild(row);
+    });
+
+    container.appendChild(group);
+  });
+}
+
+function render(){
+  renderTabs();
+  renderStats();
+  renderList();
+}
+
+document.getElementById('resetBtn').addEventListener('click', async ()=>{
+  progress = {};
+  inProgress = {};
+  notes = {};
+  openNoteId = null;
+  await saveProgress();
+  await saveInProgress();
+  await saveNotes();
+  render();
+});
+
+loadProgress();
+</script>
+</body>
+</html>

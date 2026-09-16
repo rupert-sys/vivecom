@@ -1,0 +1,30 @@
+# Sistema operativo / editor
+.DS_Store
+.vscode/
+.idea/
+.claude/
+
+# Python
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+.pytest_cache/
+htmlcov/
+.coverage
+
+# Secretos y configuración local (nunca al repo)
+.env
+backend/.env
+*.pem
+*.key
+
+# Terraform
+infra/.terraform/
+infra/*.tfstate
+infra/*.tfstate.*
+infra/.terraform.lock.hcl
+infra/*.tfvars
+
+# Node (por si el frontend/mobile se agrega en este mismo repo más adelante)
+node_modules/

@@ -1,0 +1,259 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Prototipo — Vivecom</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,400;8..60,600;8..60,700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --ink:#1C2A39; --ink-soft:#5C6773; --paper:#F6F4EE; --surface:#FFFFFF;
+  --border:#D8D3C4; --teal:#2F6F5E; --teal-soft:#E1EEE9; --amber:#9A6B1F;
+  --amber-soft:#F3E7D2; --brick:#A6432F; --brick-soft:#F4E1DC; --dustblue:#3E5C76; --dustblue-soft:#E1E7EE;
+}
+*{box-sizing:border-box;}
+body{margin:0;background:#DAD5C8;font-family:-apple-system,sans-serif;color:var(--ink);padding:24px 12px;}
+.serif{font-family:"Source Serif 4",serif;}
+.mono{font-family:"IBM Plex Mono",monospace;}
+
+.tester-bar{max-width:1100px;margin:0 auto 20px;display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+.tester-bar button{
+  font-family:"IBM Plex Mono",monospace;font-size:12px;padding:8px 16px;border-radius:999px;
+  border:1px solid var(--border);background:var(--surface);color:var(--ink-soft);cursor:pointer;
+}
+.tester-bar button.active{background:var(--ink);color:var(--paper);border-color:var(--ink);}
+
+.stage{max-width:1100px;margin:0 auto;display:flex;gap:24px;justify-content:center;flex-wrap:wrap;}
+
+.device{
+  width:320px;background:var(--paper);border-radius:28px;border:6px solid var(--ink);
+  overflow:hidden;box-shadow:0 20px 40px rgba(0,0,0,.15);
+}
+.device.wide{width:520px;border-radius:14px;border-width:3px;}
+.screen{display:none;min-height:560px;flex-direction:column;}
+.screen.active{display:flex;}
+
+.topbar{background:var(--surface);padding:14px 16px;border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;}
+.topbar .title{font-family:"Source Serif 4",serif;font-weight:700;font-size:16px;}
+.topbar .back{font-family:"IBM Plex Mono",monospace;font-size:12px;color:var(--dustblue);cursor:pointer;background:none;border:none;}
+
+.content{flex:1;padding:16px;overflow-y:auto;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px;margin-bottom:12px;}
+.card .label{font-size:11px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.04em;margin-bottom:6px;}
+.card .value{font-family:"IBM Plex Mono",monospace;font-size:22px;font-weight:600;}
+.status{display:inline-block;padding:3px 10px;border-radius:999px;font-family:"IBM Plex Mono",monospace;font-size:11px;}
+.status.pagado{background:var(--teal-soft);color:var(--teal);}
+.status.pendiente{background:var(--amber-soft);color:var(--amber);}
+.status.vencido{background:var(--brick-soft);color:var(--brick);}
+
+.btn{display:block;width:100%;text-align:center;padding:12px;border-radius:8px;border:none;
+  font-family:-apple-system,sans-serif;font-size:14px;font-weight:600;cursor:pointer;margin-top:8px;}
+.btn.primary{background:var(--teal);color:white;}
+.btn.ghost{background:var(--surface);color:var(--ink);border:1px solid var(--border);}
+
+.list-row{display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid var(--border);font-size:13px;}
+.list-row:last-child{border-bottom:none;}
+.list-row .meta{color:var(--ink-soft);font-size:11px;}
+
+.tabbar{display:flex;justify-content:space-around;padding:10px 0;border-top:1px solid var(--border);background:var(--surface);}
+.tabbar .tab{font-size:10px;color:var(--ink-soft);text-align:center;cursor:pointer;font-family:"IBM Plex Mono",monospace;}
+.tabbar .tab.active{color:var(--teal);font-weight:600;}
+
+.clabe-box{background:var(--dustblue-soft);border-radius:10px;padding:14px;text-align:center;margin-bottom:12px;}
+.clabe-box .num{font-family:"IBM Plex Mono",monospace;font-size:18px;letter-spacing:.05em;color:var(--dustblue);margin-top:4px;}
+
+.scan-box{border:2px dashed var(--border);border-radius:12px;height:180px;display:flex;align-items:center;justify-content:center;color:var(--ink-soft);font-size:13px;margin-bottom:14px;}
+
+.section-title{font-family:"Source Serif 4",serif;font-weight:700;font-size:13px;margin:14px 0 8px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.03em;}
+</style>
+</head>
+<body>
+
+<div class="tester-bar">
+  <button class="active" data-device="residente">App Residente</button>
+  <button data-device="admin">Panel Admin</button>
+  <button data-device="caseta">App Caseta</button>
+</div>
+
+<div class="stage">
+
+  <!-- ===================== APP RESIDENTE ===================== -->
+  <div class="device" id="device-residente">
+
+    <div class="screen active" id="res-home">
+      <div class="topbar"><span class="title serif">Vivecom</span><span class="mono" style="font-size:11px;color:var(--ink-soft)">Casa 14</span></div>
+      <div class="content">
+        <div class="card">
+          <div class="label">Saldo actual</div>
+          <div class="value">$1,540 <span class="status vencido">Vencido</span></div>
+          <button class="btn primary" onclick="go('res-pagar')">Ver cómo pagar</button>
+        </div>
+        <div class="section-title">Accesos rápidos</div>
+        <div class="card" onclick="go('res-gastos')" style="cursor:pointer">💵 Ver gastos del condominio</div>
+        <div class="card" onclick="go('res-avisos')" style="cursor:pointer">📣 Avisos <span class="status pendiente" style="margin-left:6px">2 nuevos</span></div>
+        <div class="card" onclick="go('res-reservar')" style="cursor:pointer">📅 Reservar amenidad</div>
+      </div>
+      <div class="tabbar">
+        <div class="tab active">Inicio</div>
+        <div class="tab" onclick="go('res-gastos')">Gastos</div>
+        <div class="tab" onclick="go('res-avisos')">Avisos</div>
+        <div class="tab" onclick="go('res-reservar')">Reservas</div>
+      </div>
+    </div>
+
+    <div class="screen" id="res-pagar">
+      <div class="topbar"><button class="back" onclick="go('res-home')">← Atrás</button><span class="title serif">Pagar cuota</span><span></span></div>
+      <div class="content">
+        <p style="font-size:13px;color:var(--ink-soft)">Transfiere desde tu banco a esta cuenta. Tu pago se reflejará automáticamente.</p>
+        <div class="clabe-box">
+          <div class="mono" style="font-size:11px;color:var(--ink-soft)">CLABE del condominio</div>
+          <div class="num">012 180 0154 7896321 4</div>
+        </div>
+        <div class="card">
+          <div class="label">Estado</div>
+          <span class="status pendiente">Esperando detección…</span>
+        </div>
+        <button class="btn ghost" onclick="go('res-anticipado')">Pagar varios meses por adelantado</button>
+      </div>
+      <div class="tabbar"><div class="tab" onclick="go('res-home')">Inicio</div><div class="tab">Gastos</div><div class="tab">Avisos</div><div class="tab">Reservas</div></div>
+    </div>
+
+    <div class="screen" id="res-anticipado">
+      <div class="topbar"><button class="back" onclick="go('res-pagar')">← Atrás</button><span class="title serif">Pago anticipado</span><span></span></div>
+      <div class="content">
+        <div class="card">
+          <div class="label">Meses a cubrir (1-12)</div>
+          <div class="value">3 meses</div>
+        </div>
+        <div class="card"><div class="label">Total a transferir</div><div class="value">$1,050</div></div>
+        <button class="btn primary" onclick="go('res-pagar')">Confirmar</button>
+      </div>
+      <div class="tabbar"><div class="tab" onclick="go('res-home')">Inicio</div><div class="tab">Gastos</div><div class="tab">Avisos</div><div class="tab">Reservas</div></div>
+    </div>
+
+    <div class="screen" id="res-gastos">
+      <div class="topbar"><button class="back" onclick="go('res-home')">← Atrás</button><span class="title serif">Gastos del condominio</span><span></span></div>
+      <div class="content">
+        <p style="font-size:12px;color:var(--ink-soft)">En qué se usa tu cuota. Solo lectura.</p>
+        <div class="list-row"><div>Jardinería<div class="meta">Comprobante adjunto</div></div><div class="mono">$3,200</div></div>
+        <div class="list-row"><div>Mantenimiento bomba<div class="meta">Comprobante adjunto</div></div><div class="mono">$1,800</div></div>
+        <div class="list-row"><div>Seguridad (mes)<div class="meta">Comprobante adjunto</div></div><div class="mono">$12,000</div></div>
+        <div class="list-row"><div>Papelería/impresiones<div class="meta">Comprobante adjunto</div></div><div class="mono">$450</div></div>
+      </div>
+      <div class="tabbar"><div class="tab" onclick="go('res-home')">Inicio</div><div class="tab active">Gastos</div><div class="tab" onclick="go('res-avisos')">Avisos</div><div class="tab" onclick="go('res-reservar')">Reservas</div></div>
+    </div>
+
+    <div class="screen" id="res-avisos">
+      <div class="topbar"><button class="back" onclick="go('res-home')">← Atrás</button><span class="title serif">Avisos</span><span></span></div>
+      <div class="content">
+        <div class="card"><b style="font-size:13px">Corte de agua programado</b><div class="meta" style="margin-top:4px">Hoy, 9:02 am · <span class="status pendiente">No leído</span></div></div>
+        <div class="card"><b style="font-size:13px">Resultado de votación: alberca</b><div class="meta" style="margin-top:4px">Ayer · <span class="status pendiente">No leído</span></div></div>
+        <div class="card" style="opacity:.6"><b style="font-size:13px">Recordatorio de pago</b><div class="meta" style="margin-top:4px">Hace 3 días · <span class="status pagado">Leído</span></div></div>
+      </div>
+      <div class="tabbar"><div class="tab" onclick="go('res-home')">Inicio</div><div class="tab" onclick="go('res-gastos')">Gastos</div><div class="tab active">Avisos</div><div class="tab" onclick="go('res-reservar')">Reservas</div></div>
+    </div>
+
+    <div class="screen" id="res-reservar">
+      <div class="topbar"><button class="back" onclick="go('res-home')">← Atrás</button><span class="title serif">Reservar amenidad</span><span></span></div>
+      <div class="content">
+        <div class="card"><b style="font-size:13px">Salón de eventos</b><div class="meta" style="margin-top:4px">Mín. 2 días de anticipación</div>
+          <button class="btn primary" onclick="go('res-reserva-pendiente')">Solicitar</button>
+        </div>
+        <div class="card"><b style="font-size:13px">Alberca</b><div class="meta" style="margin-top:4px">Disponible hoy</div>
+          <button class="btn ghost">Solicitar</button>
+        </div>
+      </div>
+      <div class="tabbar"><div class="tab" onclick="go('res-home')">Inicio</div><div class="tab" onclick="go('res-gastos')">Gastos</div><div class="tab" onclick="go('res-avisos')">Avisos</div><div class="tab active">Reservas</div></div>
+    </div>
+
+    <div class="screen" id="res-reserva-pendiente">
+      <div class="topbar"><button class="back" onclick="go('res-reservar')">← Atrás</button><span class="title serif">Solicitud enviada</span><span></span></div>
+      <div class="content" style="text-align:center;padding-top:40px;">
+        <div style="font-size:40px;">⏳</div>
+        <p class="serif" style="font-size:16px;margin-top:10px;">Esperando aprobación del comité</p>
+        <span class="status pendiente">Pendiente</span>
+        <p style="font-size:12px;color:var(--ink-soft);margin-top:16px;">Te avisaremos por app, WhatsApp y SMS en cuanto respondan.</p>
+      </div>
+      <div class="tabbar"><div class="tab" onclick="go('res-home')">Inicio</div><div class="tab" onclick="go('res-gastos')">Gastos</div><div class="tab" onclick="go('res-avisos')">Avisos</div><div class="tab active">Reservas</div></div>
+    </div>
+
+  </div>
+
+  <!-- ===================== PANEL ADMIN ===================== -->
+  <div class="device wide" id="device-admin" style="display:none">
+    <div class="screen active" id="admin-dashboard">
+      <div class="topbar"><span class="title serif">Vivecom — Panel administrador</span><span class="mono" style="font-size:11px">Residencial Las Fuentes</span></div>
+      <div class="content" style="display:flex;gap:16px;">
+        <div style="flex:1">
+          <div class="section-title">Financiero</div>
+          <div class="card"><div class="label">Cobrado este mes</div><div class="value">$28,400</div></div>
+          <div class="card"><div class="label">Pendiente</div><div class="value" style="color:var(--brick)">$4,200</div></div>
+          <button class="btn ghost" onclick="go('admin-gastos')">Ir a gastos y comprobantes</button>
+        </div>
+        <div style="flex:1">
+          <div class="section-title">Accesos hoy</div>
+          <div class="list-row"><div>Visitantes</div><div class="mono">12</div></div>
+          <div class="list-row"><div>Paquetes recibidos</div><div class="mono">3</div></div>
+          <div class="list-row"><div>Incidencias abiertas</div><div class="mono" style="color:var(--brick)">1</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="screen" id="admin-gastos">
+      <div class="topbar"><button class="back" onclick="go('admin-dashboard')">← Atrás</button><span class="title serif">Registrar gasto</span><span></span></div>
+      <div class="content">
+        <div class="card">
+          <div class="label">Categoría</div>
+          <div style="font-size:14px;margin-bottom:10px;">Jardinería</div>
+          <div class="label">Monto</div>
+          <div class="value" style="margin-bottom:10px;">$3,200</div>
+          <div class="label">Comprobante</div>
+          <div class="status pendiente">Obligatorio — sin adjuntar</div>
+        </div>
+        <button class="btn primary">Adjuntar comprobante</button>
+        <button class="btn ghost" style="opacity:.5">Guardar (bloqueado sin comprobante)</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===================== APP CASETA ===================== -->
+  <div class="device" id="device-caseta" style="display:none">
+    <div class="screen active" id="caseta-home">
+      <div class="topbar"><span class="title serif">Caseta</span><span class="mono" style="font-size:10px;color:var(--brick)">● Sin conexión</span></div>
+      <div class="content">
+        <div class="scan-box" onclick="go('caseta-ok')" style="cursor:pointer">Tocar para escanear QR de visitante</div>
+        <div class="section-title">Últimos accesos</div>
+        <div class="list-row"><div>Visitante — Casa 14</div><div class="meta mono">10:32</div></div>
+        <div class="list-row"><div>Proveedor — Casa 08</div><div class="meta mono">10:15</div></div>
+      </div>
+    </div>
+    <div class="screen" id="caseta-ok">
+      <div class="topbar"><button class="back" onclick="go('caseta-home')">← Atrás</button><span class="title serif">Resultado</span><span></span></div>
+      <div class="content" style="text-align:center;padding-top:50px;">
+        <div style="font-size:44px;">✅</div>
+        <p class="serif" style="font-size:16px;margin-top:10px;">Acceso autorizado</p>
+        <p class="meta" style="font-size:12px;">QR de Casa 14 · válido, marcado como usado</p>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+function go(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+document.querySelectorAll('.tester-bar button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tester-bar button').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.querySelectorAll('.stage > .device').forEach(d=>d.style.display='none');
+    document.getElementById('device-'+btn.dataset.device).style.display='block';
+  });
+});
+</script>
+</body>
+</html>
