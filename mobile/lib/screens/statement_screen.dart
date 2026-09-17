@@ -3,18 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/account_statement.dart';
 import '../services/api_client.dart';
 import '../services/statement_service.dart';
-
-const Map<String, String> _etiquetasEstadoCargo = {
-  'pendiente': 'Pendiente',
-  'pagado': 'Pagado',
-  'vencido': 'Vencido',
-};
-
-const Map<String, String> _etiquetasEstadoPago = {
-  'pendiente': 'Pendiente',
-  'confirmado': 'Confirmado',
-  'rechazado': 'Rechazado',
-};
+import '../utils/labels.dart';
 
 class StatementScreen extends StatefulWidget {
   final String propertyId;
@@ -121,7 +110,7 @@ class _StatementScreenState extends State<StatementScreen> {
         ...estado.cargos.map(
           (c) => ListTile(
             title: Text('${c.periodo.year}-${c.periodo.month.toString().padLeft(2, '0')}'),
-            subtitle: Text(_etiquetasEstadoCargo[c.estado] ?? c.estado),
+            subtitle: Text(etiquetasEstadoCargo[c.estado] ?? c.estado),
             trailing: Text(_formatoMoneda(c.montoBase + c.recargoAplicado)),
           ),
         ),
@@ -131,7 +120,7 @@ class _StatementScreenState extends State<StatementScreen> {
         ...estado.pagos.map(
           (p) => ListTile(
             title: Text(_formatoMoneda(p.monto)),
-            subtitle: Text('${_etiquetasEstadoPago[p.estado] ?? p.estado} · ${p.claveRastreo}'),
+            subtitle: Text('${etiquetasEstadoPago[p.estado] ?? p.estado} · ${p.claveRastreo}'),
             trailing: Text(_formatoFecha(p.fechaDeteccion)),
           ),
         ),

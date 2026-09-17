@@ -1,6 +1,8 @@
 import 'package:app_residente/screens/residente_home_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/clabe_service.dart';
+import 'package:app_residente/services/fee_service.dart';
+import 'package:app_residente/services/property_service.dart';
 import 'package:app_residente/services/statement_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -8,16 +10,23 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets('navega entre Estado de cuenta y CLABE sin perder cada pantalla', (tester) async {
+  testWidgets('navega entre Estado de cuenta, Pago y CLABE sin perder cada pantalla', (tester) async {
     final mockClient = MockClient((request) async {
-      if (request.url.path.endsWith('/statement')) {
+      final path = request.url.path;
+      if (path.endsWith('/statement')) {
         return http.Response(
           '{"property_id": "p1", "identificador": "Casa 1", "saldo_a_favor": 0.0, "deuda_total": 0.0, "cargos": [], "pagos": []}',
           200,
         );
       }
-      if (request.url.path.endsWith('/clabe')) {
+      if (path.endsWith('/clabe')) {
         return http.Response('{"id": "t1", "nombre": "Residencial Las Torres", "clabe_destino": "646180157012345678"}', 200);
+      }
+      if (path == '/properties/p1') {
+        return http.Response('{"id": "p1", "identificador": "Casa 1", "referencia_pago": "0012345", "saldo_a_favor": 0.0}', 200);
+      }
+      if (path == '/fees') {
+        return http.Response('[{"id": "f1", "monto": 800.0, "periodicidad": "mensual", "activa_desde": "2026-01-01"}]', 200);
       }
       return http.Response('not found', 404);
     });
@@ -29,6 +38,8 @@ void main() {
           token: 'un-token',
           statementService: StatementService(api: ApiClient(client: mockClient)),
           clabeService: ClabeService(api: ApiClient(client: mockClient)),
+          propertyService: PropertyService(api: ApiClient(client: mockClient)),
+          feeService: FeeService(api: ApiClient(client: mockClient)),
           onLogout: () {},
         ),
       ),
@@ -37,6 +48,11 @@ void main() {
 
     expect(find.text('Casa 1'), findsOneWidget);
     expect(find.text('646180157012345678'), findsNothing);
+
+    await tester.tap(find.text('Pago'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Transfiere \$800.00'), findsOneWidget);
 
     await tester.tap(find.text('CLABE'));
     await tester.pumpAndSettle();
