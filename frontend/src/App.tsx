@@ -7,6 +7,7 @@ import { FeesPage } from './pages/FeesPage'
 import { ClabePage } from './pages/ClabePage'
 import { DashboardPage } from './pages/DashboardPage'
 import { ExpensesBudgetPage } from './pages/ExpensesBudgetPage'
+import { ReportsExportPage } from './pages/ReportsExportPage'
 import { RequireAuth } from './auth/RequireAuth'
 
 export default function App() {
@@ -26,6 +27,7 @@ export default function App() {
         <Route path="/clabe" element={<ClabePage />} />
         <Route path="/dashboard" element={<DashboardPage />} />
         <Route path="/expenses" element={<ExpensesBudgetPage />} />
+        <Route path="/reports/export" element={<ReportsExportPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/properties" replace />} />
     </Routes>
