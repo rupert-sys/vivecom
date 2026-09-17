@@ -16,11 +16,17 @@ export function Layout() {
           borderBottom: '1px solid var(--border)',
         }}
       >
-        <h1 style={{ fontSize: '1.25rem' }}>
-          <Link to="/properties" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
-            Vivecom — Panel Admin
-          </Link>
-        </h1>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
+          <h1 style={{ fontSize: '1.25rem' }}>
+            <Link to="/properties" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+              Vivecom — Panel Admin
+            </Link>
+          </h1>
+          <nav style={{ display: 'flex', gap: 'var(--space-3)' }}>
+            <Link to="/properties">Viviendas</Link>
+            <Link to="/fees">Cuotas</Link>
+          </nav>
+        </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
           {user && <span className="mono" style={{ color: 'var(--ink-soft)' }}>{user.rol}</span>}
           <button onClick={logout}>Cerrar sesión</button>

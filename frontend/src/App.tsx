@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import { PropertiesPage } from './pages/PropertiesPage'
 import { PropertyDetailPage } from './pages/PropertyDetailPage'
+import { FeesPage } from './pages/FeesPage'
 import { RequireAuth } from './auth/RequireAuth'
 
 export default function App() {
@@ -18,6 +19,7 @@ export default function App() {
       >
         <Route path="/properties" element={<PropertiesPage />} />
         <Route path="/properties/:propertyId" element={<PropertyDetailPage />} />
+        <Route path="/fees" element={<FeesPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/properties" replace />} />
     </Routes>
