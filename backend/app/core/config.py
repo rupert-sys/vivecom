@@ -21,6 +21,10 @@ class Settings(BaseSettings):
     # Cola/jobs periódicos
     redis_url: str = "redis://localhost:6379/0"
 
+    # F1-18: orígenes permitidos para el panel admin (React) vía CORS. Lista
+    # separada por comas; default cubre el puerto de Vite en local (5173).
+    cors_origins: str = "http://localhost:5173"
+
     # Proveedor de recepción SPEI
     stp_webhook_secret: str = "cambia-esto-en-produccion"
 

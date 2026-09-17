@@ -25,6 +25,17 @@ def test_sentry_is_inert_without_a_dsn():
     assert sentry_sdk.get_client().is_active() is False
 
 
+def test_cors_allows_the_configured_frontend_origin():
+    """F1-18: el panel admin (React, otro origen) necesita CORS habilitado para llamar a esta API."""
+    response = client.get("/health", headers={"Origin": "http://localhost:5173"})
+    assert response.headers["access-control-allow-origin"] == "http://localhost:5173"
+
+
+def test_cors_rejects_an_origin_not_in_the_allowlist():
+    response = client.get("/health", headers={"Origin": "http://evil.example.com"})
+    assert "access-control-allow-origin" not in response.headers
+
+
 def test_openapi_schema_is_complete_and_has_no_duplicate_operation_ids():
     """F1-38: Swagger/OpenAPI de todos los endpoints del MVP."""
     schema = client.get("/openapi.json").json()

@@ -1,5 +1,6 @@
 import sentry_sdk
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import (
@@ -23,6 +24,18 @@ app = FastAPI(
         "alcance_vivecom.md y modelo_datos_vivecom.md en la raíz del repo para el detalle de "
         "producto y datos."
     ),
+)
+
+# F1-18: el panel admin (React, servido desde otro origen en desarrollo y
+# producción) necesita CORS habilitado para llamar a esta API desde el
+# navegador. allow_credentials=False porque la auth va en el header
+# Authorization (Bearer), no en cookies.
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=[origin.strip() for origin in settings.cors_origins.split(",") if origin.strip()],
+    allow_credentials=False,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 app.include_router(auth.router)
