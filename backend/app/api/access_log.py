@@ -48,8 +48,14 @@ async def register_entry(payload: AccessLogCreate, db: AsyncSession = Depends(ge
     for placa in payload.placas:
         db.add(Vehicle(access_log_id=log.id, placa=placa))
 
+    # La lectura va ANTES del commit a propósito: el search_path del tenant
+    # es transaccional (is_local=true, ver core/database.py) y ya no aplica
+    # después de comitear — una consulta posterior en la misma sesión
+    # revienta contra Postgres real con "relation ... does not exist".
+    # Invisible en SQLite (las pruebas no distinguen schemas).
+    resultado = await _to_read(db, log)
     await db.commit()
-    return await _to_read(db, log)
+    return resultado
 
 
 @router.post("/{access_log_id}/exit", response_model=AccessLogRead, dependencies=guardia_only)
@@ -62,8 +68,11 @@ async def register_exit(access_log_id: uuid.UUID, db: AsyncSession = Depends(get
         raise HTTPException(status.HTTP_409_CONFLICT, "Este acceso ya tiene salida registrada")
 
     log.hora_salida = datetime.now(timezone.utc).replace(tzinfo=None)
+    # Ver la nota en register_entry(): la lectura debe ir antes del commit,
+    # no después.
+    resultado = await _to_read(db, log)
     await db.commit()
-    return await _to_read(db, log)
+    return resultado
 
 
 @router.get("", response_model=list[AccessLogRead], dependencies=guardia_only)
