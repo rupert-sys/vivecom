@@ -17,7 +17,11 @@ void main() {
   Future<void> pumpAvisos(WidgetTester tester, http.Client client) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: AnnouncementsScreen(token: 'un-token', announcementService: AnnouncementService(api: ApiClient(client: client))),
+        // AnnouncementsScreen ya no trae su propio Scaffold (vive dentro de
+        // CommunityScreen, F2-19) — se envuelve aquí para probarla sola.
+        home: Scaffold(
+          body: AnnouncementsScreen(token: 'un-token', announcementService: AnnouncementService(api: ApiClient(client: client))),
+        ),
       ),
     );
     await tester.pumpAndSettle();

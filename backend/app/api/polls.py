@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.core.config import settings
-from app.models.poll import Poll, PollOption
+from app.models.poll import Poll, PollOption, Vote
 from app.models.user import Rol
 from app.schemas.poll import PollCreate, PollOptionRead, PollRead, PollResultOption, PollResults, VoteCreate
 from app.services.notification_providers.twilio_provider import TwilioProvider
@@ -27,8 +27,22 @@ _notification_provider = TwilioProvider(
 )
 
 
-async def _to_read(db: AsyncSession, poll: Poll) -> PollRead:
+async def _ya_voto_por_poll(db: AsyncSession, property_id: str | None, poll_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """IDs de votación que la vivienda actual ya votó — una sola consulta por lote (mismo criterio anti-N+1 de F2-22)."""
+    if property_id is None or not poll_ids:
+        return set()
+    votados = (
+        await db.execute(
+            select(Vote.poll_id).where(Vote.property_id == uuid.UUID(property_id), Vote.poll_id.in_(poll_ids))
+        )
+    ).scalars().all()
+    return set(votados)
+
+
+async def _to_read(db: AsyncSession, poll: Poll, current_user: CurrentUser) -> PollRead:
     opciones = (await db.execute(select(PollOption).where(PollOption.poll_id == poll.id))).scalars().all()
+    ya_votados = await _ya_voto_por_poll(db, current_user.property_id, [poll.id])
+    es_residente = current_user.property_id is not None
     return PollRead(
         id=poll.id,
         pregunta=poll.pregunta,
@@ -37,6 +51,7 @@ async def _to_read(db: AsyncSession, poll: Poll) -> PollRead:
         quorum_alcanzado=poll.quorum_alcanzado,
         reactivada=poll.reactivada,
         opciones=[PollOptionRead(id=o.id, texto=o.texto) for o in opciones],
+        ya_voto=(poll.id in ya_votados) if es_residente else None,
     )
 
 
@@ -52,17 +67,21 @@ async def create_poll_endpoint(
     # No se usa _to_read() aquí a propósito: create_poll() ya comiteó, y
     # _to_read() vuelve a consultar poll_option en la misma sesión — revienta
     # contra Postgres real (ver docstring de create_poll). Las opciones ya
-    # están en memoria, así que se arma la respuesta directo desde ahí.
+    # están en memoria, así que se arma la respuesta directo desde ahí. Una
+    # Una votación recién creada no tiene votos todavía, así que ya_voto es
+    # False para cualquier residente (incluido el propio vocero, si también
+    # tiene vivienda) sin necesitar consultar Vote.
     return PollRead(
         id=poll.id, pregunta=poll.pregunta, fecha_cierre=poll.fecha_cierre,
         resultados_en_vivo=poll.resultados_en_vivo, quorum_alcanzado=poll.quorum_alcanzado,
         reactivada=poll.reactivada,
         opciones=[PollOptionRead(id=o.id, texto=o.texto) for o in opciones],
+        ya_voto=False if current_user.property_id is not None else None,
     )
 
 
 @router.get("", response_model=list[PollRead])
-async def list_polls(db: AsyncSession = Depends(get_tenant_db)):
+async def list_polls(current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_tenant_db)):
     polls = (await db.execute(select(Poll).order_by(Poll.fecha_cierre.desc()))).scalars().all()
     if not polls:
         return []
@@ -77,23 +96,29 @@ async def list_polls(db: AsyncSession = Depends(get_tenant_db)):
     for opcion in opciones_todas:
         opciones_por_poll[opcion.poll_id].append(opcion)
 
+    ya_votados = await _ya_voto_por_poll(db, current_user.property_id, poll_ids)
+    es_residente = current_user.property_id is not None
+
     return [
         PollRead(
             id=poll.id, pregunta=poll.pregunta, fecha_cierre=poll.fecha_cierre,
             resultados_en_vivo=poll.resultados_en_vivo, quorum_alcanzado=poll.quorum_alcanzado,
             reactivada=poll.reactivada,
             opciones=[PollOptionRead(id=o.id, texto=o.texto) for o in opciones_por_poll.get(poll.id, [])],
+            ya_voto=(poll.id in ya_votados) if es_residente else None,
         )
         for poll in polls
     ]
 
 
 @router.get("/{poll_id}", response_model=PollRead)
-async def get_poll(poll_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
+async def get_poll(
+    poll_id: uuid.UUID, current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_tenant_db)
+):
     poll = await db.get(Poll, poll_id)
     if poll is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Votación no encontrada")
-    return await _to_read(db, poll)
+    return await _to_read(db, poll, current_user)
 
 
 @router.post("/{poll_id}/vote", status_code=status.HTTP_204_NO_CONTENT)

@@ -2,13 +2,17 @@ import 'package:flutter/material.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/residente_home_screen.dart';
+import 'services/amenity_service.dart';
 import 'services/announcement_service.dart';
 import 'services/auth_service.dart';
 import 'services/clabe_service.dart';
 import 'services/expense_service.dart';
 import 'services/fee_service.dart';
+import 'services/lost_found_service.dart';
+import 'services/poll_service.dart';
 import 'services/property_service.dart';
 import 'services/receipt_service.dart';
+import 'services/reservation_service.dart';
 import 'services/statement_service.dart';
 
 void main() {
@@ -31,6 +35,10 @@ class _VivecomAppState extends State<VivecomApp> {
   final ReceiptService _receiptService = ReceiptService();
   final ExpenseService _expenseService = ExpenseService();
   final AnnouncementService _announcementService = AnnouncementService();
+  final PollService _pollService = PollService();
+  final LostFoundService _lostFoundService = LostFoundService();
+  final AmenityService _amenityService = AmenityService();
+  final ReservationService _reservationService = ReservationService();
 
   String? _token;
   TokenPayload? _usuario;
@@ -112,6 +120,10 @@ class _VivecomAppState extends State<VivecomApp> {
       receiptService: _receiptService,
       expenseService: _expenseService,
       announcementService: _announcementService,
+      pollService: _pollService,
+      lostFoundService: _lostFoundService,
+      amenityService: _amenityService,
+      reservationService: _reservationService,
       onLogout: _onLogout,
     );
   }

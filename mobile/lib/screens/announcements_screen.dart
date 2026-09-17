@@ -67,12 +67,12 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     }
   }
 
+  // Sin Scaffold/AppBar propios: esta pantalla siempre vive dentro de
+  // CommunityScreen (F2-19), que aporta un único AppBar+TabBar compartido
+  // para sus 4 pestañas en vez de que cada una traiga el suyo.
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(title: const Text('Avisos')),
-      body: RefreshIndicator(onRefresh: _cargar, child: _buildBody()),
-    );
+    return RefreshIndicator(onRefresh: _cargar, child: _buildBody());
   }
 
   Widget _buildBody() {

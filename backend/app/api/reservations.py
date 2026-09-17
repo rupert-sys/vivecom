@@ -112,9 +112,20 @@ async def request_reservation(
         telefonos_de_aprobadores(db, payload.amenity_id)
     )
 
+    # Bug real (F2-19): create_reservation() compara fecha_inicio contra un
+    # datetime naive (ver reservation_service.py) — un cliente que mande la
+    # forma ESTÁNDAR de ISO-8601 para UTC (con sufijo 'Z', lo que produce
+    # cualquier serializador de fecha común, incluido el propio Dart) hacía
+    # tronar la comparación con "can't compare offset-naive and
+    # offset-aware datetimes". Mismo patrón ya resuelto en
+    # tenant_config.py/announcements.py: se normaliza a naive UTC ANTES de
+    # usarlo, en vez de exigirle a cada cliente que conozca esta convención.
+    fecha_inicio = payload.fecha_inicio.astimezone(timezone.utc).replace(tzinfo=None) if payload.fecha_inicio.tzinfo else payload.fecha_inicio
+    fecha_fin = payload.fecha_fin.astimezone(timezone.utc).replace(tzinfo=None) if payload.fecha_fin.tzinfo else payload.fecha_fin
+
     try:
         reserva = await create_reservation(
-            db, payload.amenity_id, uuid.UUID(current_user.property_id), payload.fecha_inicio, payload.fecha_fin,
+            db, payload.amenity_id, uuid.UUID(current_user.property_id), fecha_inicio, fecha_fin,
             datetime.now(timezone.utc).replace(tzinfo=None),
         )
     except ReservaInvalida as exc:

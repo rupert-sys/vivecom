@@ -276,3 +276,31 @@ async def test_concurrent_double_vote_from_same_property_is_rejected_cleanly(cli
 
     assert resultados.count("ok") == 1
     assert resultados.count("ya_voto") == 1
+
+
+def test_ya_voto_field_reflects_the_current_residente_own_property(client):
+    """
+    F2-19: la app residente necesita saber, para CADA votación de la lista,
+    si la propia vivienda ya votó, sin tener que intentarlo y toparse con
+    el 409 de "ya_voto" — mismo criterio que AnnouncementRead.leido (F1-34).
+    """
+    prop_a = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    prop_b = client.post("/properties", json={"identificador": "Casa 2"}).json()
+    poll = _crear_votacion(client)
+    opcion = poll["opciones"][0]["id"]
+
+    # admin (sin vivienda): ya_voto debe ser None, el concepto no le aplica.
+    assert client.get("/polls").json()[0]["ya_voto"] is None
+    assert client.get(f"/polls/{poll['id']}").json()["ya_voto"] is None
+
+    _como("residente", prop_a["id"])
+    assert client.get("/polls").json()[0]["ya_voto"] is False
+    assert client.get(f"/polls/{poll['id']}").json()["ya_voto"] is False
+
+    client.post(f"/polls/{poll['id']}/vote", json={"option_id": opcion})
+    assert client.get("/polls").json()[0]["ya_voto"] is True
+    assert client.get(f"/polls/{poll['id']}").json()["ya_voto"] is True
+
+    # otra vivienda que no ha votado no debe verse afectada.
+    _como("residente", prop_b["id"])
+    assert client.get("/polls").json()[0]["ya_voto"] is False

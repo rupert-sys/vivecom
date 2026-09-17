@@ -103,6 +103,36 @@ async def test_create_reservation_success(client):
     assert response.json()["estado"] == "pendiente"
 
 
+@pytest.mark.asyncio
+async def test_create_reservation_accepts_an_aware_utc_datetime(client):
+    """
+    Bug real (F2-19): create_reservation() compara fecha_inicio contra un
+    datetime NAIVE (ver reservation_service.py) — el helper _en() de esta
+    suite siempre manda naive (.replace(tzinfo=None)), así que nunca
+    ejercitaba el caso real: un cliente (ej. la app residente en Flutter)
+    que mande la forma estándar de ISO-8601 para UTC, con sufijo 'Z', hacía
+    tronar con "can't compare offset-naive and offset-aware datetimes".
+    Encontrado al construir F2-19 contra el backend real, no por esta
+    suite. Aquí se manda el sufijo 'Z' a propósito para probar la
+    normalización agregada en el endpoint.
+    """
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    amenidad = _crear_amenidad(client)
+    aprobador_id = await _crear_user_account(client, rol="comite_aprobador")
+    _como("admin")
+    client.post(f"/amenities/{amenidad['id']}/approvers", json={"user_id": aprobador_id})
+
+    _como("residente", property_id=prop["id"])
+    inicio_aware = _en(5).isoformat() + "Z"
+    fin_aware = _en(5.5).isoformat() + "Z"
+    response = client.post(
+        "/reservations", json={"amenity_id": amenidad["id"], "fecha_inicio": inicio_aware, "fecha_fin": fin_aware}
+    )
+
+    assert response.status_code == 201
+    assert response.json()["estado"] == "pendiente"
+
+
 def test_reservation_requires_a_property(client):
     amenidad = _crear_amenidad(client)
     _como("residente")

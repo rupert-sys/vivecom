@@ -24,6 +24,11 @@ class PollRead(BaseModel):
     quorum_alcanzado: bool
     reactivada: bool
     opciones: list[PollOptionRead]
+    # None para quien no es residente ligado a una vivienda — mismo criterio
+    # que AnnouncementRead.leido (F1-34): sin esto, la app residente no
+    # tenía forma de saber si SU vivienda ya votó sin intentarlo y toparse
+    # con el 409 de "ya_voto".
+    ya_voto: bool | None = None
 
 
 class VoteCreate(BaseModel):

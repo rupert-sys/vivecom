@@ -10,3 +10,11 @@ const Map<String, String> etiquetasEstadoPago = {
   'confirmado': 'Confirmado',
   'rechazado': 'Rechazado',
 };
+
+// EstadoReserva en app/models/reservation.py.
+const Map<String, String> etiquetasEstadoReserva = {
+  'pendiente': 'Pendiente',
+  'aprobada': 'Aprobada',
+  'rechazada': 'Rechazada',
+  'expirada': 'Expirada',
+};
