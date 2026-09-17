@@ -27,12 +27,25 @@ async def create_user(
     de amenidades (F2-17) que no fuera el admin sembrado al aprovisionar el
     tenant. No hay flujo de invitación por correo: el admin comparte la
     contraseña temporal por fuera de la app.
+
+    También es el único punto para dar de alta un residente (rol=residente)
+    con su property_id — bug real encontrado en F1-29 al construir la prueba
+    de punta a punta del flujo de cobro: UserAccountCreate no tenía el campo
+    property_id (Pydantic lo descartaba en silencio por no estar declarado),
+    así que ningún tenant nuevo (ej. vía /signup, F3-06) tenía forma de crear
+    una cuenta de residente utilizable — la app residente completa (F1-24 a
+    F1-28) quedaba inalcanzable para un condominio recién dado de alta.
     """
     existente = (await db.execute(select(UserAccount).where(UserAccount.email == payload.email))).scalar_one_or_none()
     if existente is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con ese email")
 
-    user = UserAccount(email=payload.email, password_hash=hash_password(payload.password), rol=payload.rol)
+    user = UserAccount(
+        email=payload.email,
+        password_hash=hash_password(payload.password),
+        rol=payload.rol,
+        property_id=payload.property_id,
+    )
     db.add(user)
     await db.flush()  # necesitamos user.id antes de insertar en user_lookup
 

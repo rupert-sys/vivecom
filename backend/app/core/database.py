@@ -13,7 +13,33 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 
 from app.core.config import settings
 
-engine = create_async_engine(settings.database_url, pool_pre_ping=True, pool_size=10)
+# statement_cache_size=0: asyncpg cachea planes de consulta preparados POR
+# CONEXIÓN, sin que la caché se entere de que el search_path (y por lo
+# tanto A QUÉ TABLA apunta "user_account", etc.) cambia en cada request vía
+# SET LOCAL search_path (ver tenant_session() abajo). Cuando una conexión
+# del pool reutiliza un plan cacheado después de que OTRA sesión hizo DDL
+# sobre una tabla con el mismo nombre en otro schema (ej. /signup creando
+# un tenant nuevo, F1-29), Postgres invalida el plan y asyncpg lo reporta
+# como InvalidCachedStatementError — un 500 real, encontrado al construir
+# la prueba de punta a punta del flujo de cobro. Es el patrón de mitigación
+# oficial de asyncpg para escenarios con schemas dinámicos o pooling
+# externo (PgBouncer): sin esto, además del error visible, existe un
+# riesgo teórico más serio de que un plan cacheado bajo el search_path de
+# UN tenant se reutilice para la consulta de OTRO — deshabilitar el caché
+# de sentencias preparadas por conexión elimina esa clase de bug de raíz,
+# a costa de perder el pequeño ahorro de no re-preparar cada consulta.
+engine = create_async_engine(
+    settings.database_url,
+    pool_pre_ping=True,
+    pool_size=10,
+    # Dos cachés distintas hay que apagar: prepared_statement_cache_size es
+    # la capa que administra el dialecto asyncpg de SQLAlchemy (encima de
+    # asyncpg mismo); statement_cache_size es la del propio driver asyncpg.
+    # Con solo la primera apagada, el problema seguía reproduciéndose — se
+    # verificó a mano matando y recreando un tenant vía /signup seguido de
+    # /auth/login antes de encontrar que hacían falta las dos.
+    connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+)
 SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSession)
 
 

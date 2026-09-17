@@ -41,6 +41,16 @@ async def change_clabe(
     if tenant is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Condominio no encontrado")
 
+    # Mismo chequeo que /signup (F1-29): sin esto, dos tenants con la misma
+    # CLABE rompen el enrutamiento de depósitos SPEI para ambos.
+    clabe_en_uso = (
+        await db.execute(
+            select(Tenant).where(Tenant.clabe_destino == payload.clabe_nueva, Tenant.id != tenant.id).limit(1)
+        )
+    ).scalar_one_or_none()
+    if clabe_en_uso is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Esa CLABE ya está configurada para otro condominio")
+
     clabe_anterior = tenant.clabe_destino
     tenant.clabe_destino = payload.clabe_nueva
 

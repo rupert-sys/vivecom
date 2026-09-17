@@ -5,6 +5,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import control_session
 from app.core.provisioning import provision_tenant
+from app.models.tenant import Tenant
 from app.models.user_lookup import UserLookup
 from app.schemas.signup import TenantSignupRequest, TenantSignupResponse
 
@@ -32,6 +33,17 @@ async def signup(payload: TenantSignupRequest, control_db: AsyncSession = Depend
     ).scalar_one_or_none()
     if existente is not None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con ese email")
+
+    # Bug real (F1-29): la CLABE es el único mecanismo para enrutar un
+    # depósito SPEI al tenant correcto — sin este chequeo, dos condominios
+    # con la misma CLABE de destino (ej. copiar/pegar una de ejemplo) hacen
+    # que CUALQUIER depósito a esa cuenta truene con un 500 en vez de
+    # conciliarse, para ambos tenants.
+    clabe_existente = (
+        await control_db.execute(select(Tenant).where(Tenant.clabe_destino == payload.clabe_destino).limit(1))
+    ).scalar_one_or_none()
+    if clabe_existente is not None:
+        raise HTTPException(status.HTTP_409_CONFLICT, "Esa CLABE ya está configurada para otro condominio")
 
     try:
         tenant = await provision_tenant(

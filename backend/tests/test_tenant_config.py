@@ -1,7 +1,10 @@
+import uuid
+
 import pytest
 from sqlalchemy import select
 
 from app.models.clabe_change_log import ClabeChangeLog
+from app.models.tenant import Tenant
 
 
 def test_get_clabe_returns_seeded_value(client):
@@ -41,6 +44,37 @@ def test_change_clabe_with_confirmation_succeeds_and_logs(client):
     entry = history.json()[0]
     assert entry["clabe_anterior"] == "012180001547896321"
     assert entry["clabe_nueva"] == "999888777666555444"
+
+
+@pytest.mark.asyncio
+async def test_change_clabe_rejects_a_clabe_already_used_by_another_tenant(client):
+    """
+    Bug real (F1-29): la CLABE es el único mecanismo para enrutar un
+    depósito SPEI al tenant correcto (ver deposit_processing_service.py) —
+    sin este chequeo, dos tenants con la misma CLABE rompen ese
+    enrutamiento para AMBOS con un 500, en vez de conciliar el depósito.
+    """
+    # Dispara la creación (perezosa) de las tablas antes de insertar a mano.
+    client.get("/tenant/clabe")
+
+    async with client.db_session_factory() as db:
+        db.add(
+            Tenant(
+                id=uuid.uuid4(),
+                nombre="Otro condominio",
+                clabe_destino="111222333444555666",
+                precio_por_vivienda=25.00,
+                schema_name="tenant_otro",
+            )
+        )
+        await db.commit()
+
+    response = client.patch(
+        "/tenant/clabe", json={"clabe_nueva": "111222333444555666", "confirmo_cambio": True}
+    )
+
+    assert response.status_code == 409
+    assert client.get("/tenant/clabe").json()["clabe_destino"] == "012180001547896321"
 
 
 @pytest.mark.asyncio

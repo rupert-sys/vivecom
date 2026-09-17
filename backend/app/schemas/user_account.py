@@ -9,6 +9,7 @@ class UserAccountCreate(BaseModel):
     email: EmailStr
     password: str = Field(min_length=8)
     rol: Rol
+    property_id: uuid.UUID | None = None
 
 
 class UserAccountRead(BaseModel):
@@ -17,3 +18,4 @@ class UserAccountRead(BaseModel):
     id: uuid.UUID
     email: str
     rol: Rol
+    property_id: uuid.UUID | None

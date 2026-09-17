@@ -21,8 +21,15 @@ class TenantNoEncontrado(Exception):
 
 
 async def process_incoming_deposit(deposito: DepositoRecibido, control_db: AsyncSession) -> Payment:
+    # .limit(1): clabe_destino ahora es unique=True (F1-29) y /signup y
+    # PATCH /tenant/clabe validan duplicados antes de escribir, pero ese
+    # índice no se aplicó retroactivamente a una base ya existente con
+    # duplicados — sin el límite, un webhook público (sin autenticación)
+    # revienta con 500 para CUALQUIER tenant que ya tuviera un duplicado
+    # de antes de este fix, en vez de simplemente conciliar (aunque sea de
+    # forma ambigua) contra uno de ellos.
     tenant = (
-        await control_db.execute(select(Tenant).where(Tenant.clabe_destino == deposito.cuenta_beneficiaria))
+        await control_db.execute(select(Tenant).where(Tenant.clabe_destino == deposito.cuenta_beneficiaria).limit(1))
     ).scalar_one_or_none()
     if tenant is None:
         raise TenantNoEncontrado(

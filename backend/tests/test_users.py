@@ -98,3 +98,28 @@ def test_no_admin_no_puede_crear_ni_listar_usuarios(client):
     _como("guardia")
     assert client.post("/users", json={"email": "x@x.com", "password": "clave-123456", "rol": "guardia"}).status_code == 403
     assert client.get("/users").status_code == 403
+
+
+def test_admin_puede_crear_un_residente_con_property_id(client):
+    """
+    Bug real (F1-29): UserAccountCreate no declaraba property_id, así que
+    Pydantic lo descartaba en silencio y ningún residente creado por este
+    endpoint quedaba asociado a una vivienda — la app residente completa
+    quedaba inalcanzable para cualquier tenant nuevo. Se descubrió al
+    construir la prueba de punta a punta del flujo de cobro.
+    """
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+
+    response = client.post(
+        "/users",
+        json={
+            "email": "residente@condo.mx",
+            "password": "clave-temporal-123",
+            "rol": "residente",
+            "property_id": prop["id"],
+        },
+    )
+
+    assert response.status_code == 201
+    body = response.json()
+    assert body["property_id"] == prop["id"]
