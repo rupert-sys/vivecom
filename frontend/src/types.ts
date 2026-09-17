@@ -126,3 +126,17 @@ export interface AccessLogEntry {
   hora_salida: string | null
   placas: string[]
 }
+
+export interface Announcement {
+  id: string
+  titulo: string
+  contenido: string
+  fecha_publicacion: string
+}
+
+export interface ReadStatusEntry {
+  property_id: string
+  identificador: string
+  leido: boolean
+  leido_at: string | null
+}

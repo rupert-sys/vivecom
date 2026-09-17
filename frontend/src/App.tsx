@@ -11,6 +11,7 @@ import { ExpensesBudgetPage } from './pages/ExpensesBudgetPage'
 import { ReportsExportPage } from './pages/ReportsExportPage'
 import { AmenitiesPollsPage } from './pages/AmenitiesPollsPage'
 import { SecurityDashboardPage } from './pages/SecurityDashboardPage'
+import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { RequireAuth } from './auth/RequireAuth'
 
 export default function App() {
@@ -34,6 +35,7 @@ export default function App() {
         <Route path="/reports/export" element={<ReportsExportPage />} />
         <Route path="/amenities" element={<AmenitiesPollsPage />} />
         <Route path="/security" element={<SecurityDashboardPage />} />
+        <Route path="/announcements" element={<AnnouncementsPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/properties" replace />} />
     </Routes>
