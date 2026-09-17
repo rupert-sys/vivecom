@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'screens/login_screen.dart';
 import 'screens/residente_home_screen.dart';
+import 'services/announcement_service.dart';
 import 'services/auth_service.dart';
 import 'services/clabe_service.dart';
 import 'services/expense_service.dart';
@@ -29,6 +30,7 @@ class _VivecomAppState extends State<VivecomApp> {
   final FeeService _feeService = FeeService();
   final ReceiptService _receiptService = ReceiptService();
   final ExpenseService _expenseService = ExpenseService();
+  final AnnouncementService _announcementService = AnnouncementService();
 
   String? _token;
   TokenPayload? _usuario;
@@ -109,6 +111,7 @@ class _VivecomAppState extends State<VivecomApp> {
       feeService: _feeService,
       receiptService: _receiptService,
       expenseService: _expenseService,
+      announcementService: _announcementService,
       onLogout: _onLogout,
     );
   }

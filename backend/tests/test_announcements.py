@@ -152,3 +152,31 @@ def test_get_unknown_announcement_404(client):
     client.get("/tenant/clabe")
     response = client.get(f"/announcements/{uuid.uuid4()}")
     assert response.status_code == 404
+
+
+def test_leido_field_reflects_the_current_residente_own_property(client):
+    """
+    F1-34: la bandeja de avisos de la app residente necesita saber, para
+    CADA aviso de la lista, si la propia vivienda ya lo leyó — antes solo
+    existía GET /{id}/read-status (admin-only, agrega TODAS las viviendas),
+    que no sirve para que un residente vea su propio estado en el listado.
+    """
+    prop_a = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    prop_b = client.post("/properties", json={"identificador": "Casa 2"}).json()
+    aviso = client.post("/announcements", json={"titulo": "Aviso", "contenido": "Texto"}).json()
+
+    # Para admin (sin vivienda), leido debe ser None: el concepto no le aplica.
+    assert client.get("/announcements").json()[0]["leido"] is None
+    assert client.get(f"/announcements/{aviso['id']}").json()["leido"] is None
+
+    _como_residente(prop_a["id"])
+    assert client.get("/announcements").json()[0]["leido"] is False
+    assert client.get(f"/announcements/{aviso['id']}").json()["leido"] is False
+
+    client.post(f"/announcements/{aviso['id']}/read")
+    assert client.get("/announcements").json()[0]["leido"] is True
+    assert client.get(f"/announcements/{aviso['id']}").json()["leido"] is True
+
+    # Otra vivienda que no lo ha leído no debe verse afectada por lo de arriba.
+    _como_residente(prop_b["id"])
+    assert client.get("/announcements").json()[0]["leido"] is False

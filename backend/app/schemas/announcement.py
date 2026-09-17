@@ -23,6 +23,13 @@ class AnnouncementRead(BaseModel):
     titulo: str
     contenido: str
     fecha_publicacion: datetime
+    # None para quien no es residente ligado a una vivienda (admin, guardia,
+    # etc.) — "leído" no aplica a ellos. Para un residente, refleja si SU
+    # vivienda ya confirmó lectura de este aviso (F1-34: la bandeja de
+    # avisos de la app residente necesita este dato en el propio listado,
+    # no solo en GET /{id}/read-status, que es admin-only y agrega TODAS
+    # las viviendas).
+    leido: bool | None = None
 
 
 class ReadStatusEntry(BaseModel):

@@ -1,4 +1,5 @@
 import 'package:app_residente/screens/residente_home_screen.dart';
+import 'package:app_residente/services/announcement_service.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/clabe_service.dart';
 import 'package:app_residente/services/expense_service.dart';
@@ -12,7 +13,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets('navega entre Estado de cuenta, Pago, Historial, Gastos y CLABE sin perder cada pantalla', (tester) async {
+  testWidgets('navega entre Estado de cuenta, Pago, Historial, Gastos, Avisos y CLABE sin perder cada pantalla', (tester) async {
     final mockClient = MockClient((request) async {
       final path = request.url.path;
       if (path.endsWith('/statement')) {
@@ -36,6 +37,12 @@ void main() {
           200,
         );
       }
+      if (path == '/announcements') {
+        return http.Response(
+          '[{"id": "a1", "titulo": "Corte de agua", "contenido": "Texto", "fecha_publicacion": "2026-09-16T10:00:00", "leido": false}]',
+          200,
+        );
+      }
       return http.Response('not found', 404);
     });
 
@@ -50,6 +57,7 @@ void main() {
           feeService: FeeService(api: ApiClient(client: mockClient)),
           receiptService: ReceiptService(api: ApiClient(client: mockClient)),
           expenseService: ExpenseService(api: ApiClient(client: mockClient)),
+          announcementService: AnnouncementService(api: ApiClient(client: mockClient)),
           onLogout: () {},
         ),
       ),
@@ -73,6 +81,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Jardinería'), findsOneWidget);
+
+    await tester.tap(find.text('Avisos'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Corte de agua'), findsOneWidget);
 
     await tester.tap(find.text('CLABE'));
     await tester.pumpAndSettle();

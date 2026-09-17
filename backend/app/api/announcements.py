@@ -12,7 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.core.config import settings
-from app.models.announcement import Announcement
+from app.models.announcement import Announcement, ReadReceipt
 from app.models.user import Rol
 from app.schemas.announcement import AnnouncementCreate, AnnouncementRead, AnnouncementUpdate, ReadStatusEntry
 from app.services.announcement_service import get_read_status, mark_announcement_read, send_announcement_notifications
@@ -52,6 +52,24 @@ async def create_announcement(payload: AnnouncementCreate, db: AsyncSession = De
     return aviso
 
 
+async def _ids_leidos(db: AsyncSession, property_id: str | None, announcement_ids: list[uuid.UUID]) -> set[uuid.UUID]:
+    """
+    IDs de aviso que la vivienda del usuario actual ya confirmó como
+    leídos — una sola consulta por lote (F2-22: mismo criterio anti-N+1
+    que list_access_logs()/list_polls()), no una por aviso.
+    """
+    if property_id is None or not announcement_ids:
+        return set()
+    receipts = (
+        await db.execute(
+            select(ReadReceipt.announcement_id).where(
+                ReadReceipt.property_id == uuid.UUID(property_id), ReadReceipt.announcement_id.in_(announcement_ids)
+            )
+        )
+    ).scalars().all()
+    return set(receipts)
+
+
 @router.get("", response_model=list[AnnouncementRead])
 async def list_announcements(
     current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_tenant_db)
@@ -64,8 +82,16 @@ async def list_announcements(
     query = select(Announcement).order_by(Announcement.fecha_publicacion.desc())
     if current_user.rol != Rol.admin.value:
         query = query.where(Announcement.fecha_publicacion <= _ahora_naive_utc())
-    result = await db.execute(query)
-    return result.scalars().all()
+    avisos = (await db.execute(query)).scalars().all()
+
+    leidos = await _ids_leidos(db, current_user.property_id, [a.id for a in avisos])
+    es_residente = current_user.property_id is not None
+    return [
+        AnnouncementRead.model_validate(aviso, from_attributes=True).model_copy(
+            update={"leido": (aviso.id in leidos) if es_residente else None}
+        )
+        for aviso in avisos
+    ]
 
 
 @router.get("/{announcement_id}", response_model=AnnouncementRead)
@@ -81,7 +107,12 @@ async def get_announcement(
         # Se responde 404, no 403: para quien no es admin, un aviso todavía
         # no publicado no debe ni confirmar que existe.
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Aviso no encontrado")
-    return aviso
+
+    leidos = await _ids_leidos(db, current_user.property_id, [aviso.id])
+    es_residente = current_user.property_id is not None
+    return AnnouncementRead.model_validate(aviso, from_attributes=True).model_copy(
+        update={"leido": (aviso.id in leidos) if es_residente else None}
+    )
 
 
 @router.patch("/{announcement_id}", response_model=AnnouncementRead, dependencies=admin_only)
