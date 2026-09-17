@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 
 import 'screens/login_screen.dart';
-import 'screens/statement_screen.dart';
+import 'screens/residente_home_screen.dart';
 import 'services/auth_service.dart';
+import 'services/clabe_service.dart';
 import 'services/statement_service.dart';
 
 void main() {
@@ -19,6 +20,7 @@ class VivecomApp extends StatefulWidget {
 class _VivecomAppState extends State<VivecomApp> {
   final AuthService _authService = AuthService();
   final StatementService _statementService = StatementService();
+  final ClabeService _clabeService = ClabeService();
 
   String? _token;
   TokenPayload? _usuario;
@@ -90,10 +92,11 @@ class _VivecomAppState extends State<VivecomApp> {
       );
     }
 
-    return StatementScreen(
+    return ResidenteHomeScreen(
       propertyId: usuario.propertyId!,
       token: token,
       statementService: _statementService,
+      clabeService: _clabeService,
       onLogout: _onLogout,
     );
   }
