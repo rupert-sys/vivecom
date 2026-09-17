@@ -49,7 +49,16 @@ async def register_entry(payload: AccessLogCreate, db: AsyncSession = Depends(ge
         db.add(Vehicle(access_log_id=log.id, placa=placa))
 
     await db.commit()
-    return await _to_read(db, log)
+    # No se usa _to_read() aquí a propósito: re-consultar Vehicle en la MISMA
+    # sesión después de este commit revienta contra Postgres real (el
+    # search_path del tenant, fijado con is_local=true, ya no aplica — ver
+    # core/database.py y el mismo bug ya corregido en polls.py). Las placas
+    # ya se conocen del propio payload, no hace falta volver a pedirlas.
+    return AccessLogRead(
+        id=log.id, property_id=log.property_id, tipo=log.tipo,
+        hora_entrada=log.hora_entrada, hora_salida=log.hora_salida,
+        placas=list(payload.placas),
+    )
 
 
 @router.post("/{access_log_id}/exit", response_model=AccessLogRead, dependencies=guardia_only)
@@ -62,8 +71,13 @@ async def register_exit(access_log_id: uuid.UUID, db: AsyncSession = Depends(get
         raise HTTPException(status.HTTP_409_CONFLICT, "Este acceso ya tiene salida registrada")
 
     log.hora_salida = datetime.now(timezone.utc).replace(tzinfo=None)
+    # _to_read() consulta Vehicle — hay que hacerlo ANTES del commit (mismo
+    # motivo que en register_entry): después de comitear, el search_path del
+    # tenant ya no aplica en esta sesión. hora_salida ya está en memoria en
+    # `log`, así que la respuesta sale completa aunque se arme antes de comitear.
+    respuesta = await _to_read(db, log)
     await db.commit()
-    return await _to_read(db, log)
+    return respuesta
 
 
 @router.get("", response_model=list[AccessLogRead], dependencies=guardia_only)

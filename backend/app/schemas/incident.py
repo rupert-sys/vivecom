@@ -18,6 +18,7 @@ class IncidentRead(BaseModel):
     estado: EstadoIncidencia
     descripcion: str
     created_at: datetime
+    resolved_at: datetime | None
 
 
 class IncidentStatusChange(BaseModel):

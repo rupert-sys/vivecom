@@ -70,3 +70,23 @@ def test_list_access_logs_filters_by_property_and_tipo(client):
 def test_get_unknown_access_log_404(client):
     response = client.get(f"/access-log/{uuid.uuid4()}")
     assert response.status_code == 404
+
+
+def test_register_exit_still_returns_the_plates_registered_at_entry(client):
+    """
+    Revisión: tanto register_entry() como register_exit() armaban su
+    respuesta re-consultando Vehicle DESPUÉS de comitear — revienta contra
+    Postgres real (el search_path del tenant, is_local=true, ya no aplica en
+    esa segunda consulta), mismo bug ya corregido en polls.py. Invisible en
+    SQLite (esta suite). register_entry() se corrigió sin volver a consultar
+    (ya conoce las placas del propio payload); register_exit() se corrigió
+    consultando Vehicle ANTES del commit final, en vez de después. Esta
+    prueba fija que register_exit() siga regresando las placas correctas
+    después del fix.
+    """
+    entrada = client.post("/access-log", json={"tipo": "visitante", "placas": ["ABC-123"]}).json()
+
+    salida = client.post(f"/access-log/{entrada['id']}/exit")
+    assert salida.status_code == 200
+    assert salida.json()["placas"] == ["ABC-123"]
+    assert salida.json()["hora_salida"] is not None

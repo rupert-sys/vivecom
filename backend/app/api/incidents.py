@@ -8,7 +8,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.core.security import decode_access_token
-from app.models.incident import Incident, IncidentUpdate
+from app.models.incident import EstadoIncidencia, Incident, IncidentUpdate
 from app.models.user import Rol
 from app.schemas.incident import (
     IncidentCommentCreate, IncidentCommentRead, IncidentCreate, IncidentRead, IncidentStatusChange,
@@ -72,6 +72,14 @@ async def change_incident_status(
     incidencia = await db.get(Incident, incident_id)
     if incidencia is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Incidencia no encontrada")
+
+    # F2-12: resolved_at refleja la transición A resuelta más reciente — se
+    # limpia si se reabre, ya que la máquina de estados es deliberadamente
+    # permisiva (puede ir hacia atrás, ver nota de F2-05).
+    if payload.estado == EstadoIncidencia.resuelta and incidencia.estado != EstadoIncidencia.resuelta:
+        incidencia.resolved_at = datetime.now(timezone.utc).replace(tzinfo=None)
+    elif payload.estado != EstadoIncidencia.resuelta:
+        incidencia.resolved_at = None
 
     incidencia.estado = payload.estado
     await db.commit()

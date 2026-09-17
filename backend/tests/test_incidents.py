@@ -59,13 +59,32 @@ def test_residente_cannot_see_incidents(client):
 
 def test_change_incident_status_follows_state_machine(client):
     incidencia = client.post("/incidents", json={"descripcion": "Elevador atorado"}).json()
+    assert incidencia["resolved_at"] is None
 
     en_proceso = client.patch(f"/incidents/{incidencia['id']}/status", json={"estado": "en_proceso"})
     assert en_proceso.status_code == 200
     assert en_proceso.json()["estado"] == "en_proceso"
+    assert en_proceso.json()["resolved_at"] is None
 
     resuelta = client.patch(f"/incidents/{incidencia['id']}/status", json={"estado": "resuelta"})
     assert resuelta.json()["estado"] == "resuelta"
+    assert resuelta.json()["resolved_at"] is not None
+
+
+def test_resolved_at_se_limpia_si_se_reabre_una_incidencia(client):
+    """
+    F2-12: la máquina de estados es deliberadamente permisiva (puede ir
+    hacia atrás, ver nota de F2-05) — resolved_at debe reflejar la
+    transición A resuelta más reciente, no quedarse pegado si se reabre.
+    """
+    incidencia = client.post("/incidents", json={"descripcion": "Fuga menor"}).json()
+    client.patch(f"/incidents/{incidencia['id']}/status", json={"estado": "resuelta"})
+
+    reabierta = client.patch(f"/incidents/{incidencia['id']}/status", json={"estado": "abierta"})
+    assert reabierta.json()["resolved_at"] is None
+
+    resuelta_de_nuevo = client.patch(f"/incidents/{incidencia['id']}/status", json={"estado": "resuelta"})
+    assert resuelta_de_nuevo.json()["resolved_at"] is not None
 
 
 def test_add_and_list_comments(client):

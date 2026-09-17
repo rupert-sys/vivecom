@@ -29,6 +29,11 @@ class Incident(TenantBase):
     estado: Mapped[EstadoIncidencia] = mapped_column(Enum(EstadoIncidencia), default=EstadoIncidencia.abierta)
     descripcion: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime)
+    # F2-12: se llena cuando estado pasa a "resuelta" y se limpia si se
+    # reabre (la máquina de estados es permisiva, ver change_incident_status)
+    # — así siempre refleja la transición A resuelta más reciente, para
+    # poder medir tiempos de resolución en el dashboard de seguridad.
+    resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
 
 
 class IncidentUpdate(TenantBase):

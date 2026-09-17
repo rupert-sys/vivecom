@@ -104,3 +104,25 @@ export interface Poll {
   reactivada: boolean
   opciones: { id: string; texto: string }[]
 }
+
+export type EstadoIncidencia = 'abierta' | 'en_proceso' | 'resuelta'
+
+export interface Incident {
+  id: string
+  reportado_por: string
+  estado: EstadoIncidencia
+  descripcion: string
+  created_at: string
+  resolved_at: string | null
+}
+
+export type TipoAcceso = 'residente' | 'visitante' | 'proveedor'
+
+export interface AccessLogEntry {
+  id: string
+  property_id: string | null
+  tipo: TipoAcceso
+  hora_entrada: string
+  hora_salida: string | null
+  placas: string[]
+}

@@ -30,6 +30,7 @@ export function Layout() {
             <Link to="/expenses">Gastos</Link>
             <Link to="/reports/export">Exportar</Link>
             <Link to="/amenities">Amenidades</Link>
+            <Link to="/security">Seguridad</Link>
           </nav>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
