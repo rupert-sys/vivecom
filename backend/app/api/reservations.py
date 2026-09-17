@@ -57,6 +57,29 @@ async def _notificar_sin_romper_la_respuesta(telefonos: list[str], mensaje: str)
             logger.exception("No se pudo notificar a %s sobre una reservación", telefono)
 
 
+async def _obtener_telefonos_sin_romper_la_respuesta(obtener_telefonos) -> list[str]:
+    """
+    Revisión: request_reservation() y _resolve() llamaban a
+    telefonos_de_aprobadores()/telefonos_de_vivienda() DESPUÉS de que
+    create_reservation()/resolve_reservation() ya habían comiteado — el
+    search_path del tenant (is_local=true, ver core/database.py) ya no
+    aplica en esa consulta, revienta contra Postgres real (mismo bug ya
+    corregido en polls.py y access_log.py). Además, esa consulta corría
+    como argumento de _notificar_sin_romper_la_respuesta(), es decir FUERA
+    de su try/except — el blindaje contra fallos de notificación que ese
+    comentario describe nunca cubrió esta consulta en particular. Se
+    corrige en dos partes: los call sites ahora obtienen los teléfonos
+    ANTES de comitear (search_path todavía válido), y esta función blinda
+    esa consulta igual que el envío — un fallo aquí tampoco debe impedir
+    que la reservación se guarde, solo que no se avise esta vez.
+    """
+    try:
+        return await obtener_telefonos
+    except Exception:  # noqa: BLE001
+        logger.exception("No se pudieron obtener los teléfonos a notificar de una reservación")
+        return []
+
+
 @router.get("/global-rules")
 async def get_global_rules():
     """
@@ -81,6 +104,14 @@ async def request_reservation(
     if amenidad is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Amenidad no encontrada")
 
+    # Se obtienen ANTES de create_reservation() a propósito: esa función
+    # comitea internamente, y consultar después revienta el search_path del
+    # tenant contra Postgres real (ver docstring de
+    # _obtener_telefonos_sin_romper_la_respuesta).
+    telefonos_aprobadores = await _obtener_telefonos_sin_romper_la_respuesta(
+        telefonos_de_aprobadores(db, payload.amenity_id)
+    )
+
     try:
         reserva = await create_reservation(
             db, payload.amenity_id, uuid.UUID(current_user.property_id), payload.fecha_inicio, payload.fecha_fin,
@@ -93,7 +124,7 @@ async def request_reservation(
     # se manda por un barrido periódico como en F1-13/F1-32, porque aquí sí
     # importa que llegue de inmediato: arranca el reloj de periodo_limite_horas.
     mensaje = f"Vivecom: nueva solicitud de reservación de {amenidad.nombre} pendiente de tu aprobación."
-    await _notificar_sin_romper_la_respuesta(await telefonos_de_aprobadores(db, payload.amenity_id), mensaje)
+    await _notificar_sin_romper_la_respuesta(telefonos_aprobadores, mensaje)
 
     return reserva
 
@@ -132,15 +163,25 @@ async def _resolve(reservation_id: uuid.UUID, aprobar: bool, current_user: Curre
     if current_user.rol != Rol.admin.value and not es_aprobador_designado:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "No eres aprobador designado de esta amenidad")
 
+    # amenity_id/property_id no cambian entre esta lectura y resolve_reservation()
+    # (son inmutables en una reservación), así que es seguro leerlos de
+    # reserva_previa. Se hace ANTES de resolve_reservation() a propósito: esa
+    # función comitea internamente, y consultar después revienta el
+    # search_path del tenant contra Postgres real (ver docstring de
+    # _obtener_telefonos_sin_romper_la_respuesta).
+    amenidad = await db.get(Amenity, reserva_previa.amenity_id)
+    telefonos_vivienda = await _obtener_telefonos_sin_romper_la_respuesta(
+        telefonos_de_vivienda(db, reserva_previa.property_id)
+    )
+
     reserva = await resolve_reservation(db, reservation_id, uuid.UUID(current_user.user_id), aprobar)
     if reserva is None:
         raise HTTPException(status.HTTP_409_CONFLICT, "Esta reservación ya no está pendiente")
 
     # HU-C07: "el residente ve el estado ... notificado por los mismos 3 canales" — inmediato, mismo criterio que arriba.
-    amenidad = await db.get(Amenity, reserva.amenity_id)
     veredicto = "aprobada" if aprobar else "rechazada"
     mensaje = f"Vivecom: tu reservación de {amenidad.nombre} fue {veredicto}."
-    await _notificar_sin_romper_la_respuesta(await telefonos_de_vivienda(db, reserva.property_id), mensaje)
+    await _notificar_sin_romper_la_respuesta(telefonos_vivienda, mensaje)
 
     return reserva
 

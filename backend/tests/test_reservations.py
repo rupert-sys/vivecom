@@ -260,6 +260,48 @@ async def test_reservation_request_notifies_approvers(client):
 
 
 @pytest.mark.asyncio
+async def test_resolve_notifies_the_property_and_survives_a_second_lookup(client):
+    """
+    Revisión: request_reservation() y _resolve() (aprobar/rechazar) llamaban
+    a telefonos_de_aprobadores()/telefonos_de_vivienda() DESPUÉS de que
+    create_reservation()/resolve_reservation() ya habían comiteado —
+    revienta el search_path del tenant contra Postgres real (invisible en
+    SQLite, esta suite). Peor aún: esa consulta corría como argumento de
+    _notificar_sin_romper_la_respuesta(), fuera de su propio try/except, así
+    que el blindaje contra fallos de notificación no la cubría. Se corrigió
+    obteniendo los teléfonos ANTES del commit en ambos endpoints. Esta
+    prueba cubre el flujo de _resolve() (aprobar), que no tenía prueba de
+    notificación todavía — test_reservation_request_notifies_approvers ya
+    cubre el otro flujo (solicitar).
+    """
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    resident = client.post("/residents", json={"nombre": "Ana Pérez", "telefono": "5511112222"}).json()
+    client.post(f"/properties/{prop['id']}/residents", json={"resident_id": resident["id"], "rol": "propietario"})
+    amenidad = _crear_amenidad(client)
+    aprobador_id = await _crear_user_account(client, rol="comite_aprobador")
+    _como("admin")
+    client.post(f"/amenities/{amenidad['id']}/approvers", json={"user_id": aprobador_id})
+
+    _como("residente", property_id=prop["id"])
+    reserva = client.post(
+        "/reservations", json={"amenity_id": amenidad["id"], "fecha_inicio": _en(5).isoformat(), "fecha_fin": _en(6).isoformat()}
+    ).json()
+
+    from unittest.mock import AsyncMock, patch
+
+    import app.api.reservations as reservations_module
+
+    _como("comite_aprobador", user_id=aprobador_id)
+    with patch.object(reservations_module._notification_provider, "send", AsyncMock(return_value=True)) as mock_send:
+        response = client.post(f"/reservations/{reserva['id']}/approve")
+
+    assert response.status_code == 200
+    mock_send.assert_awaited_once()
+    assert mock_send.call_args.args[0] == "5511112222"
+    assert "aprobada" in mock_send.call_args.args[1]
+
+
+@pytest.mark.asyncio
 async def test_process_timeouts_auto_rejects_after_sla(client):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
     amenidad = _crear_amenidad(client, periodo_limite_horas=2)
