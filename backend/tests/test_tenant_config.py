@@ -1,3 +1,9 @@
+import pytest
+from sqlalchemy import select
+
+from app.models.clabe_change_log import ClabeChangeLog
+
+
 def test_get_clabe_returns_seeded_value(client):
     response = client.get("/tenant/clabe")
     assert response.status_code == 200
@@ -35,3 +41,25 @@ def test_change_clabe_with_confirmation_succeeds_and_logs(client):
     entry = history.json()[0]
     assert entry["clabe_anterior"] == "012180001547896321"
     assert entry["clabe_nueva"] == "999888777666555444"
+
+
+@pytest.mark.asyncio
+async def test_change_clabe_stores_a_naive_utc_timestamp(client):
+    """
+    Revisión (encontrada al construir el panel admin de F1-20 contra un
+    Postgres real, no solo contra esta suite): change_clabe() guardaba
+    datetime.now(timezone.utc) SIN .replace(tzinfo=None) — ClabeChangeLog.fecha
+    es un DateTime naive (igual que el resto del proyecto). Contra SQLite
+    (esta prueba) el valor aware se guarda sin quejarse, pero contra Postgres
+    real revienta al insertar: "can't subtract offset-naive and
+    offset-aware datetimes". No podemos reproducir el crash de Postgres
+    aquí (limitación conocida de la suite, igual que con with_for_update()),
+    pero sí podemos exigir que el propio código nunca vuelva a construir el
+    registro con un datetime aware.
+    """
+    response = client.patch("/tenant/clabe", json={"clabe_nueva": "999888777666555444", "confirmo_cambio": True})
+    assert response.status_code == 200
+
+    async with client.db_session_factory() as db:
+        log = (await db.execute(select(ClabeChangeLog))).scalar_one()
+    assert log.fecha.tzinfo is None

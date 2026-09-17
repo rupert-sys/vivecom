@@ -28,6 +28,19 @@ interface ApiFetchOptions {
   auth?: boolean
 }
 
+// FastAPI regresa errores como {"detail": "mensaje"} (HTTPException) o
+// {"detail": [{"msg": "...", "loc": [...]}, ...]} (422 de validación de
+// Pydantic) — antes de esto solo se manejaba el primer caso, y cualquier
+// error de validación (ej. la CLABE de F1-20) se veía como un mensaje
+// genérico en vez del mensaje real del campo.
+function extraerMensajeDeError(detail: unknown): string {
+  if (typeof detail === 'string') return detail
+  if (Array.isArray(detail) && detail.length > 0 && typeof detail[0]?.msg === 'string') {
+    return detail[0].msg.replace(/^Value error, /, '')
+  }
+  return 'Ocurrió un error inesperado.'
+}
+
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true } = options
 
@@ -52,10 +65,7 @@ export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): 
   const data = isJson ? await response.json() : undefined
 
   if (!response.ok) {
-    // FastAPI regresa errores como {"detail": "mensaje"} o una lista de errores de validación.
-    const detail = data?.detail
-    const message = typeof detail === 'string' ? detail : 'Ocurrió un error inesperado.'
-    throw new ApiError(response.status, message)
+    throw new ApiError(response.status, extraerMensajeDeError(data?.detail))
   }
 
   return data as T

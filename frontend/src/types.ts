@@ -27,3 +27,17 @@ export interface GlobalRules {
   recargo_porcentaje: number
   recargo_dia_del_mes: number
 }
+
+export interface TenantClabe {
+  id: string
+  nombre: string
+  clabe_destino: string
+}
+
+export interface ClabeChangeLogEntry {
+  id: string
+  clabe_anterior: string
+  clabe_nueva: string
+  cambiado_por: string
+  fecha: string
+}

@@ -46,6 +46,27 @@ describe('apiFetch', () => {
     await expect(apiFetch('/auth/login')).rejects.toThrow('Credenciales inválidas')
   })
 
+  it('extrae el mensaje del primer error cuando detail es una lista de validación de Pydantic (422)', async () => {
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          detail: [
+            {
+              type: 'value_error',
+              loc: ['body', 'clabe_nueva'],
+              msg: 'Value error, La CLABE debe tener exactamente 18 dígitos numéricos',
+            },
+          ],
+        }),
+        { status: 422, headers: { 'content-type': 'application/json' } },
+      ),
+    )
+
+    await expect(apiFetch('/tenant/clabe', { method: 'PATCH' })).rejects.toThrow(
+      'La CLABE debe tener exactamente 18 dígitos numéricos',
+    )
+  })
+
   it('regresa undefined en respuestas 204 sin intentar parsear JSON', async () => {
     vi.mocked(fetch).mockResolvedValue(new Response(null, { status: 204 }))
 

@@ -25,6 +25,7 @@ export function Layout() {
           <nav style={{ display: 'flex', gap: 'var(--space-3)' }}>
             <Link to="/properties">Viviendas</Link>
             <Link to="/fees">Cuotas</Link>
+            <Link to="/clabe">CLABE</Link>
           </nav>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>

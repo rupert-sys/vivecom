@@ -49,7 +49,12 @@ async def change_clabe(
         clabe_anterior=clabe_anterior,
         clabe_nueva=payload.clabe_nueva,
         cambiado_por=uuid.UUID(current_user.user_id),
-        fecha=datetime.now(timezone.utc),
+        # Revisión: ClabeChangeLog.fecha es un DateTime naive (igual que el
+        # resto del proyecto, ver announcement_service.py). Guardar un
+        # datetime aware aquí funcionaba "por accidente" contra SQLite
+        # (las pruebas), pero truena contra Postgres real: "can't subtract
+        # offset-naive and offset-aware datetimes".
+        fecha=datetime.now(timezone.utc).replace(tzinfo=None),
     )
     db.add(log)
     await db.commit()
