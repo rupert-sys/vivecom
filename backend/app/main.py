@@ -5,7 +5,8 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import (
     access_log, amenities, announcements, auth, budgets, expenses, fees, incidents, lost_found, packages, payments,
-    payments_webhook, polls, privacy, properties, reports, reservations, residents, tenant_config, users, visitor_qr,
+    payments_webhook, polls, privacy, properties, reports, reservations, residents, signup, tenant_config, users,
+    visitor_qr,
 )
 from app.core.config import settings
 
@@ -38,6 +39,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(signup.router)
 app.include_router(auth.router)
 app.include_router(properties.router)
 app.include_router(residents.router)

@@ -40,6 +40,11 @@ def test_admin_puede_crear_un_usuario_con_rol_comite_aprobador(client):
     assert "password_hash" not in body
 
 
+def test_password_corta_es_rechazada(client):
+    response = client.post("/users", json={"email": "x@condo.mx", "password": "corta", "rol": "guardia"})
+    assert response.status_code == 422
+
+
 def test_no_se_puede_repetir_el_email(client):
     client.post("/users", json={"email": "vocero@condo.mx", "password": "clave-123456", "rol": "vocero"})
     response = client.post("/users", json={"email": "vocero@condo.mx", "password": "otra-clave", "rol": "guardia"})

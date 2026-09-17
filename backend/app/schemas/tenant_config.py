@@ -3,6 +3,8 @@ from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict, field_validator
 
+from app.core.validators import validar_clabe
+
 
 class TenantClabeRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
@@ -16,12 +18,7 @@ class ClabeChangeRequest(BaseModel):
     clabe_nueva: str
     confirmo_cambio: bool
 
-    @field_validator("clabe_nueva")
-    @classmethod
-    def clabe_debe_tener_18_digitos(cls, v: str) -> str:
-        if not v.isdigit() or len(v) != 18:
-            raise ValueError("La CLABE debe tener exactamente 18 dígitos numéricos")
-        return v
+    _validar_clabe = field_validator("clabe_nueva")(validar_clabe)
 
     @field_validator("confirmo_cambio")
     @classmethod

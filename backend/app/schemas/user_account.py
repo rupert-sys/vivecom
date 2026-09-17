@@ -1,13 +1,13 @@
 import uuid
 
-from pydantic import BaseModel, ConfigDict, EmailStr
+from pydantic import BaseModel, ConfigDict, EmailStr, Field
 
 from app.models.user import Rol
 
 
 class UserAccountCreate(BaseModel):
     email: EmailStr
-    password: str
+    password: str = Field(min_length=8)
     rol: Rol
 
 
