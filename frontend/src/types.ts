@@ -55,3 +55,28 @@ export interface CollectionsSummary {
   pendiente_total: number
   por_vivienda: PropertyCollectionsSummary[]
 }
+
+export interface Expense {
+  id: string
+  categoria: string
+  monto: number
+  comprobante_url: string
+  fecha: string
+}
+
+export type PeriodicidadPresupuesto = 'mensual' | 'anual'
+
+export interface Budget {
+  id: string
+  categoria: string
+  periodicidad: PeriodicidadPresupuesto
+  periodo: string
+  monto_planeado: number
+}
+
+export interface BudgetComparison {
+  categoria: string
+  periodicidad: PeriodicidadPresupuesto
+  monto_planeado: number
+  monto_real: number
+}

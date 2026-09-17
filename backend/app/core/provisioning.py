@@ -22,8 +22,20 @@ from app.models.clabe_change_log import ClabeChangeLog  # noqa: F401 — registr
 from app.models.tenant import Tenant
 from app.models.user import Rol, UserAccount
 from app.models.user_lookup import UserLookup
-# Importar todos los modelos de tenant para que TenantBase.metadata los conozca:
-from app.models import fee, fee_charge, payment, property, resident, user  # noqa: F401
+# Importar TODOS los modelos de tenant para que TenantBase.metadata los conozca
+# antes de create_all() — si un modelo nuevo no se agrega aquí, TenantBase.metadata
+# nunca se entera de que existe y create_all() no crea su tabla, sin ningún error
+# visible hasta que un endpoint la use ("relation ... does not exist"). Revisión:
+# esta lista se quedó fija en 6 módulos desde que se escribió (época de F1-07) y
+# nunca se actualizó según crecía el proyecto — todo tenant aprovisionado con
+# este script le faltaban budget, expense, announcement, incident, poll, amenity,
+# access_log, package, visitor_qr, vehicle, lost_found_item y reservation (Fases 1
+# y 2 casi completas). migrate_add_tables.py sí se había mantenido al día con la
+# lista completa; se copia de ahí en vez de mantener dos listas por separado.
+from app.models import (  # noqa: F401
+    access_log, amenity, announcement, budget, expense, fee, fee_charge, incident, lost_found_item, package,
+    payment, poll, property, reservation, resident, user, vehicle, visitor_qr,
+)
 
 
 async def provision_tenant(nombre: str, clabe_destino: str, admin_email: str, admin_password: str) -> Tenant:
