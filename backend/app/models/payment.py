@@ -25,7 +25,8 @@ class Payment(TenantBase):
     __tablename__ = "payment"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    property_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("property.id"), nullable=True)
+    # F2-22: filtrado por property_id en cada estado de cuenta (statement_service).
+    property_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("property.id"), nullable=True, index=True)
     monto: Mapped[float] = mapped_column(Numeric(10, 2))
     estado: Mapped[EstadoPago] = mapped_column(Enum(EstadoPago), default=EstadoPago.pendiente)
     referencia_recibida: Mapped[str] = mapped_column(String(7))

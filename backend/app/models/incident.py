@@ -42,7 +42,8 @@ class IncidentUpdate(TenantBase):
     __tablename__ = "incident_update"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    incident_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("incident.id"))
+    # F2-22: filtrado por incident_id en GET /incidents/{id}/comments.
+    incident_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("incident.id"), index=True)
     user_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("user_account.id"))
     comentario: Mapped[str] = mapped_column(Text)
     created_at: Mapped[datetime] = mapped_column(DateTime)

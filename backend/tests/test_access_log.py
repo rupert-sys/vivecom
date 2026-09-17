@@ -67,6 +67,26 @@ def test_list_access_logs_filters_by_property_and_tipo(client):
     assert len(client.get("/access-log").json()) == 3
 
 
+def test_list_access_logs_keeps_each_ones_own_plates_separate(client):
+    """
+    F2-22: list_access_logs() antes hacía una consulta a Vehicle POR CADA
+    log (N+1) llamando _to_read() en un loop; se corrigió con una sola
+    consulta con IN (...) que agrupa las placas por access_log_id en
+    memoria. La forma más real de romper ese agrupamiento es mezclar las
+    placas de un log con las de otro — esta prueba usa 3 logs con placas
+    distintas (una sin ninguna) para exigir que cada uno traiga solo las
+    suyas.
+    """
+    client.post("/access-log", json={"tipo": "visitante", "placas": ["AAA-111"]})
+    client.post("/access-log", json={"tipo": "visitante", "placas": ["BBB-222", "CCC-333"]})
+    client.post("/access-log", json={"tipo": "proveedor", "placas": []})
+
+    listado = client.get("/access-log").json()
+    assert len(listado) == 3
+    placas_por_log = {tuple(sorted(entrada["placas"])) for entrada in listado}
+    assert placas_por_log == {("AAA-111",), ("BBB-222", "CCC-333"), ()}
+
+
 def test_get_unknown_access_log_404(client):
     response = client.get(f"/access-log/{uuid.uuid4()}")
     assert response.status_code == 404

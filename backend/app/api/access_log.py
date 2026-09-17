@@ -1,4 +1,5 @@
 import uuid
+from collections import defaultdict
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -92,7 +93,30 @@ async def list_access_logs(
     if tipo is not None:
         query = query.where(AccessLog.tipo == tipo)
     logs = (await db.execute(query)).scalars().all()
-    return [await _to_read(db, log) for log in logs]
+    if not logs:
+        return []
+
+    # F2-22: antes hacía una consulta a Vehicle POR CADA log (N+1) llamando
+    # _to_read() en el loop — con volumen real de accesos (guardia registra
+    # decenas al día) esto escala linealmente en número de queries en vez de
+    # quedarse en 2 fijas. Una sola consulta con IN (...) agrupa las placas
+    # por access_log_id en memoria.
+    log_ids = [log.id for log in logs]
+    filas_vehiculo = (
+        await db.execute(select(Vehicle.access_log_id, Vehicle.placa).where(Vehicle.access_log_id.in_(log_ids)))
+    ).all()
+    placas_por_log: dict[uuid.UUID, list[str]] = defaultdict(list)
+    for access_log_id, placa in filas_vehiculo:
+        placas_por_log[access_log_id].append(placa)
+
+    return [
+        AccessLogRead(
+            id=log.id, property_id=log.property_id, tipo=log.tipo,
+            hora_entrada=log.hora_entrada, hora_salida=log.hora_salida,
+            placas=placas_por_log.get(log.id, []),
+        )
+        for log in logs
+    ]
 
 
 @router.get("/{access_log_id}", response_model=AccessLogRead, dependencies=guardia_only)

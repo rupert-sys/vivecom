@@ -31,12 +31,20 @@ class PollOption(TenantBase):
     __tablename__ = "poll_option"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    poll_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poll.id"))
+    # F2-22: filtrado por poll_id en list_polls (F2-22, batch tras el fix de
+    # N+1), get_poll_results y cast_vote — sin cubrir por ningún otro índice.
+    poll_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("poll.id"), index=True)
     texto: Mapped[str] = mapped_column(String)
 
 
 class Vote(TenantBase):
-    """Un voto por vivienda por votación (HU-C03), forzado con UNIQUE(poll_id, property_id)."""
+    """
+    Un voto por vivienda por votación (HU-C03), forzado con UNIQUE(poll_id,
+    property_id) — esa restricción ya deja un índice sobre (poll_id,
+    property_id) con poll_id como columna izquierda, así que las consultas
+    que solo filtran por poll_id (conteo de votos, quorum) ya están
+    cubiertas; no hace falta un índice aparte aquí (F2-22).
+    """
 
     __tablename__ = "vote"
     __table_args__ = (UniqueConstraint("poll_id", "property_id"),)

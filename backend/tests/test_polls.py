@@ -59,6 +59,39 @@ def test_vocero_creates_poll(client):
     assert poll["quorum_alcanzado"] is False
 
 
+def test_list_polls_keeps_each_ones_own_options_separate(client):
+    """
+    F2-22: list_polls() antes hacía una consulta a PollOption POR CADA
+    votación (N+1) llamando _to_read() en un loop; se corrigió con una sola
+    consulta con IN (...) que agrupa las opciones por poll_id en memoria.
+    La forma más real de romper ese agrupamiento es mezclar las opciones de
+    una votación con las de otra — esta prueba usa 2 votaciones con
+    opciones completamente distintas para exigir que cada una traiga solo
+    las suyas.
+    """
+    _como("vocero")
+    client.post(
+        "/polls",
+        json={"pregunta": "¿Cambiamos el reglamento?", "opciones": ["Sí", "No"], "fecha_cierre": "2026-12-31"},
+    )
+    client.post(
+        "/polls",
+        json={
+            "pregunta": "¿Quién debe ser el nuevo vocero?",
+            "opciones": ["Ana", "Luis", "Carla"],
+            "fecha_cierre": "2026-12-31",
+        },
+    )
+
+    listado = client.get("/polls").json()
+    assert len(listado) == 2
+    por_pregunta = {p["pregunta"]: {o["texto"] for o in p["opciones"]} for p in listado}
+    assert por_pregunta == {
+        "¿Cambiamos el reglamento?": {"Sí", "No"},
+        "¿Quién debe ser el nuevo vocero?": {"Ana", "Luis", "Carla"},
+    }
+
+
 @pytest.mark.asyncio
 async def test_create_poll_returns_options_with_ids_already_populated(client):
     """

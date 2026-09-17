@@ -24,7 +24,11 @@ class FeeCharge(TenantBase):
     __tablename__ = "fee_charge"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    property_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property.id"))
+    # F2-22: filtrado por property_id en cada estado de cuenta, cada
+    # conciliación de pago y en el dashboard financiero (F1-21) — sin índice,
+    # Postgres no indexa automáticamente el lado FK de una relación (solo el
+    # lado referenciado), así que esto era un full table scan.
+    property_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property.id"), index=True)
     fee_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("fee.id"))
     periodo: Mapped[date] = mapped_column(Date)  # primer día del mes/ciclo que corresponde
     monto_base: Mapped[float] = mapped_column(Numeric(10, 2))

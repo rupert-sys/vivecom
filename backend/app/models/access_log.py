@@ -25,7 +25,8 @@ class AccessLog(TenantBase):
     __tablename__ = "access_log"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    property_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("property.id"), nullable=True)
+    # F2-22: filtrado por property_id en GET /access-log (?property_id=).
+    property_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("property.id"), nullable=True, index=True)
     tipo: Mapped[TipoAcceso] = mapped_column(Enum(TipoAcceso))
     hora_entrada: Mapped[datetime] = mapped_column(DateTime)
     hora_salida: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)

@@ -43,5 +43,11 @@ class ResidentProperty(TenantBase):
     __tablename__ = "resident_property"
 
     resident_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("resident.id"), primary_key=True)
-    property_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property.id"), primary_key=True)
+    # F2-22: la PK compuesta (resident_id, property_id) sirve consultas que
+    # filtran por resident_id (o por ambas), pero NO a las que filtran solo
+    # por property_id — que es exactamente el patrón más común aquí
+    # (telefonos_de_vivienda, list_property_residents, recordatorios,
+    # notificaciones de paquetería): todas preguntan "¿quién vive en esta
+    # vivienda?", nunca al revés. index=True agrega ese índice que la PK no cubre.
+    property_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property.id"), primary_key=True, index=True)
     rol: Mapped[RolOcupacion] = mapped_column(Enum(RolOcupacion))

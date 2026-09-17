@@ -34,8 +34,12 @@ class Reservation(TenantBase):
     __tablename__ = "reservation"
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
-    amenity_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("amenity.id"))
-    property_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property.id"))
+    # F2-22: amenity_id se filtra en cada solicitud nueva (chequeo de
+    # traslape, create_reservation) y en /amenities/{id}/availability —
+    # ambos en el camino caliente de "solicitar una reservación".
+    amenity_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("amenity.id"), index=True)
+    # property_id se filtra al listar las reservaciones propias de un residente.
+    property_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property.id"), index=True)
     fecha_inicio: Mapped[datetime] = mapped_column(DateTime)
     fecha_fin: Mapped[datetime] = mapped_column(DateTime)
     estado: Mapped[EstadoReserva] = mapped_column(Enum(EstadoReserva), default=EstadoReserva.pendiente)

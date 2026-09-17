@@ -1,4 +1,5 @@
 import uuid
+from collections import defaultdict
 from datetime import date, datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
@@ -63,7 +64,28 @@ async def create_poll_endpoint(
 @router.get("", response_model=list[PollRead])
 async def list_polls(db: AsyncSession = Depends(get_tenant_db)):
     polls = (await db.execute(select(Poll).order_by(Poll.fecha_cierre.desc()))).scalars().all()
-    return [await _to_read(db, poll) for poll in polls]
+    if not polls:
+        return []
+
+    # F2-22: antes hacía una consulta a PollOption POR CADA votación (N+1)
+    # llamando _to_read() en el loop — mismo problema ya corregido en
+    # list_access_logs(). Una sola consulta con IN (...) agrupa las
+    # opciones por poll_id en memoria.
+    poll_ids = [poll.id for poll in polls]
+    opciones_todas = (await db.execute(select(PollOption).where(PollOption.poll_id.in_(poll_ids)))).scalars().all()
+    opciones_por_poll: dict[uuid.UUID, list[PollOption]] = defaultdict(list)
+    for opcion in opciones_todas:
+        opciones_por_poll[opcion.poll_id].append(opcion)
+
+    return [
+        PollRead(
+            id=poll.id, pregunta=poll.pregunta, fecha_cierre=poll.fecha_cierre,
+            resultados_en_vivo=poll.resultados_en_vivo, quorum_alcanzado=poll.quorum_alcanzado,
+            reactivada=poll.reactivada,
+            opciones=[PollOptionRead(id=o.id, texto=o.texto) for o in opciones_por_poll.get(poll.id, [])],
+        )
+        for poll in polls
+    ]
 
 
 @router.get("/{poll_id}", response_model=PollRead)
