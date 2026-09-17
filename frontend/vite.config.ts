@@ -1,6 +1,5 @@
-/// <reference types="vitest/config" />
 import react from '@vitejs/plugin-react'
-import { defineConfig } from 'vite'
+import { defineConfig } from 'vitest/config'
 
 // https://vite.dev/config/
 export default defineConfig({
@@ -12,5 +11,9 @@ export default defineConfig({
     environment: 'jsdom',
     globals: true,
     setupFiles: ['./src/setupTests.ts'],
+    // 5s (default) no alcanza en el contenedor Docker de desarrollo de este
+    // proyecto (sin Node.js nativo en el host, I/O de virtiofs es lento) para
+    // pruebas que escriben en varios campos + esperan una llamada async.
+    testTimeout: 15000,
   },
 })
