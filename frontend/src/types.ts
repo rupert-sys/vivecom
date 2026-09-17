@@ -41,3 +41,17 @@ export interface ClabeChangeLogEntry {
   cambiado_por: string
   fecha: string
 }
+
+export interface PropertyCollectionsSummary {
+  property_id: string
+  identificador: string
+  cobrado: number
+  pendiente: number
+}
+
+export interface CollectionsSummary {
+  periodo: string | null
+  cobrado_total: number
+  pendiente_total: number
+  por_vivienda: PropertyCollectionsSummary[]
+}

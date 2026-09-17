@@ -6,6 +6,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import get_tenant_db, require_roles
 from app.models.user import Rol
+from app.schemas.reports import CollectionsSummary
+from app.services.collections_summary_service import get_collections_summary
 from app.services.export_service import (
     build_account_statements_excel, build_accounting_entries_excel, build_budget_report_excel, build_expenses_excel,
 )
@@ -23,6 +25,14 @@ def _xlsx_response(contenido: bytes, filename: str) -> Response:
         media_type=_XLSX_MEDIA_TYPE,
         headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
+
+
+@router.get("/collections-summary", response_model=CollectionsSummary, dependencies=tesorero_only)
+async def collections_summary(
+    periodo: date | None = None, property_id: uuid.UUID | None = None, db: AsyncSession = Depends(get_tenant_db)
+):
+    """F1-21: cobrado vs. pendiente para el dashboard financiero del panel admin, filtrable por vivienda y periodo."""
+    return await get_collections_summary(db, periodo, property_id)
 
 
 @router.get("/account-statements/export", dependencies=tesorero_only)
