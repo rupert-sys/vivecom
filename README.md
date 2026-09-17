@@ -5,6 +5,7 @@ Plataforma de administración, comunicación, seguridad y pagos para condominios
 ## Estructura del repo
 ```
 backend/    API en FastAPI (Python), multi-tenant por schema de PostgreSQL
+frontend/   Panel admin (React + TypeScript + Vite)
 infra/      Infraestructura como código (Terraform, AWS)
 design/     Sistema de diseño (paleta, tipografía, componentes)
 .github/    Pipeline de CI/CD (GitHub Actions)
@@ -24,6 +25,31 @@ uvicorn app.main:app --reload
 cd backend
 pytest -v
 ```
+
+## Levantar el panel admin (frontend) en local
+Requiere Node.js 20+. Si no lo tienes instalado, todos los comandos de abajo
+corren igual dentro de un contenedor de Docker — ver la variante de cada uno:
+
+```bash
+cd frontend
+npm install
+echo "VITE_API_URL=http://localhost:8000" > .env.local   # opcional, ese es el default
+npm run dev      # http://localhost:5173 — necesita el backend corriendo (ver arriba)
+npm test         # Vitest + React Testing Library
+npm run build    # type-check (tsc -b) + build de producción
+```
+
+**Sin Node.js instalado (vía Docker):**
+```bash
+cd /ruta/al/repo
+docker run --rm -v "$(pwd)/frontend:/app" -v vivecom_frontend_node_modules:/app/node_modules -w /app node:20-alpine npm install
+docker run --rm -v "$(pwd)/frontend:/app" -v vivecom_frontend_node_modules:/app/node_modules -w /app node:20-alpine npm test
+docker run --rm -v "$(pwd)/frontend:/app" -v vivecom_frontend_node_modules:/app/node_modules -p 5173:5173 -w /app node:20-alpine npm run dev -- --host 0.0.0.0
+```
+El volumen nombrado `vivecom_frontend_node_modules` evita instalar
+`node_modules` directo en el host (evita problemas de arquitectura entre el
+contenedor Linux y macOS). `.claude/launch.json` ya tiene esta variante del
+dev server configurada para levantarse con un clic desde Claude Code.
 
 ## Desplegar infraestructura (requiere cuenta de AWS propia)
 ```bash
