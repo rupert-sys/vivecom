@@ -26,16 +26,28 @@ class VotoInvalido(Exception):
 async def create_poll(
     db: AsyncSession, creado_por: uuid.UUID, pregunta: str, opciones: list[str], fecha_cierre: date,
     resultados_en_vivo: bool,
-) -> Poll:
+) -> tuple[Poll, list[PollOption]]:
+    """
+    Regresa también las PollOption creadas (no solo el Poll): el endpoint
+    las necesita para armar la respuesta, y volver a consultarlas DESPUÉS
+    de este commit revienta contra Postgres real — el search_path del
+    tenant se fija con is_local=true (ver core/database.py), así que una
+    consulta en la MISMA sesión después de comitear ya no lo tiene y
+    "relation poll_option does not exist". Invisible en SQLite (las
+    pruebas), que no distingue schemas. Se evita por completo re-consultando:
+    las PollOption ya están en memoria con su id (Python-side default,
+    poblado en el flush) antes de comitear.
+    """
     poll = Poll(creado_por=creado_por, pregunta=pregunta, fecha_cierre=fecha_cierre, resultados_en_vivo=resultados_en_vivo)
     db.add(poll)
     await db.flush()  # para tener poll.id antes de crear las PollOption
 
-    for texto in opciones:
-        db.add(PollOption(poll_id=poll.id, texto=texto))
+    poll_options = [PollOption(poll_id=poll.id, texto=texto) for texto in opciones]
+    db.add_all(poll_options)
+    await db.flush()  # para tener cada PollOption.id en memoria antes del commit
 
     await db.commit()
-    return poll
+    return poll, poll_options
 
 
 async def cast_vote(db: AsyncSession, poll_id: uuid.UUID, property_id: uuid.UUID, option_id: uuid.UUID) -> Vote:

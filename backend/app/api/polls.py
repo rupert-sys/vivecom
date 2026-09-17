@@ -44,11 +44,20 @@ async def create_poll_endpoint(
     payload: PollCreate, current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_tenant_db)
 ):
     """HU-C02: solo el vocero crea votaciones."""
-    poll = await create_poll(
+    poll, opciones = await create_poll(
         db, uuid.UUID(current_user.user_id), payload.pregunta, payload.opciones, payload.fecha_cierre,
         payload.resultados_en_vivo,
     )
-    return await _to_read(db, poll)
+    # No se usa _to_read() aquí a propósito: create_poll() ya comiteó, y
+    # _to_read() vuelve a consultar poll_option en la misma sesión — revienta
+    # contra Postgres real (ver docstring de create_poll). Las opciones ya
+    # están en memoria, así que se arma la respuesta directo desde ahí.
+    return PollRead(
+        id=poll.id, pregunta=poll.pregunta, fecha_cierre=poll.fecha_cierre,
+        resultados_en_vivo=poll.resultados_en_vivo, quorum_alcanzado=poll.quorum_alcanzado,
+        reactivada=poll.reactivada,
+        opciones=[PollOptionRead(id=o.id, texto=o.texto) for o in opciones],
+    )
 
 
 @router.get("", response_model=list[PollRead])

@@ -80,3 +80,27 @@ export interface BudgetComparison {
   monto_planeado: number
   monto_real: number
 }
+
+export type Rol = 'admin' | 'tesorero' | 'comite_lectura' | 'comite_aprobador' | 'vocero' | 'residente' | 'guardia'
+
+export interface UserAccount {
+  id: string
+  email: string
+  rol: Rol
+}
+
+export interface Amenity {
+  id: string
+  nombre: string
+  periodo_limite_horas: number
+}
+
+export interface Poll {
+  id: string
+  pregunta: string
+  fecha_cierre: string
+  resultados_en_vivo: boolean
+  quorum_alcanzado: boolean
+  reactivada: boolean
+  opciones: { id: string; texto: string }[]
+}

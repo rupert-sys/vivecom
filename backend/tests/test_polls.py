@@ -13,7 +13,7 @@ from app.api.deps import get_current_user
 from app.main import app
 from app.schemas.auth import CurrentUser
 from app.services.notification_providers.base import NotificationProvider
-from app.services.poll_service import VotoInvalido, cast_vote, process_poll_closures
+from app.services.poll_service import VotoInvalido, cast_vote, create_poll, process_poll_closures
 
 
 class FakeNotificationProvider(NotificationProvider):
@@ -57,6 +57,33 @@ def test_vocero_creates_poll(client):
     poll = _crear_votacion(client)
     assert len(poll["opciones"]) == 2
     assert poll["quorum_alcanzado"] is False
+
+
+@pytest.mark.asyncio
+async def test_create_poll_returns_options_with_ids_already_populated(client):
+    """
+    Revisión: create_poll_endpoint() armaba su respuesta re-consultando
+    poll_option DESPUÉS de que create_poll() ya había comiteado — revienta
+    contra Postgres real (el search_path del tenant, fijado con
+    is_local=true, ya no aplica tras el commit) con "relation poll_option
+    does not exist". Invisible en SQLite (esta suite no distingue schemas).
+    Se corrigió para que create_poll() regrese las PollOption ya creadas en
+    vez de que el endpoint las vuelva a pedir. Esta prueba fija esa garantía
+    a nivel de servicio: las opciones ya deben traer su id poblado (el
+    default de uuid.uuid4 se evalúa en Python al hacer flush(), no hace
+    falta ninguna consulta después del commit).
+    """
+    client.get("/polls")  # dispara la creación de tablas en la BD de pruebas (ver conftest.py)
+
+    async with client.db_session_factory() as db:
+        poll, opciones = await create_poll(
+            db, uuid.uuid4(), "¿Aprobamos el reglamento?", ["Sí", "No"], date(2026, 12, 31), False
+        )
+
+    assert poll.id is not None
+    assert len(opciones) == 2
+    assert all(o.id is not None for o in opciones)
+    assert {o.texto for o in opciones} == {"Sí", "No"}
 
 
 def test_non_vocero_cannot_create_poll(client):
