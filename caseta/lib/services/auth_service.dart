@@ -1,0 +1,54 @@
+import 'dart:convert';
+
+import 'package:shared_preferences/shared_preferences.dart';
+
+import 'api_client.dart';
+
+class TokenPayload {
+  final String sub;
+  final String tenantId;
+  final String schema;
+  final String rol;
+
+  const TokenPayload({required this.sub, required this.tenantId, required this.schema, required this.rol});
+
+  // Decodificado SOLO para mostrar/ocultar UI según rol — nunca una barrera
+  // de seguridad real. El backend sigue siendo quien valida cada rol vía
+  // require_roles (mismo criterio que app_residente y el panel admin web).
+  factory TokenPayload.decode(String token) {
+    final segmentos = token.split('.');
+    final payload = base64Url.normalize(segmentos[1]);
+    final mapa = jsonDecode(utf8.decode(base64Url.decode(payload))) as Map<String, dynamic>;
+    return TokenPayload(
+      sub: mapa['sub'] as String,
+      tenantId: mapa['tenant_id'] as String,
+      schema: mapa['schema'] as String,
+      rol: mapa['rol'] as String,
+    );
+  }
+}
+
+class AuthService {
+  static const _tokenKey = 'access_token';
+
+  final ApiClient _api;
+
+  AuthService({ApiClient? api}) : _api = api ?? ApiClient();
+
+  Future<String?> obtenerToken() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_tokenKey);
+  }
+
+  Future<void> login(String email, String password) async {
+    final data = await _api.post('/auth/login', {'email': email, 'password': password});
+    final token = data['access_token'] as String;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_tokenKey, token);
+  }
+
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_tokenKey);
+  }
+}

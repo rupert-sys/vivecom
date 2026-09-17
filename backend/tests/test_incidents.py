@@ -147,3 +147,36 @@ def test_websocket_rejects_role_without_access(client):
             raise AssertionError("un residente no debería poder conectarse")
     except Exception:
         pass
+
+
+def test_create_incident_with_client_id_is_idempotent_on_retry(client):
+    """F2-07/F2-11: mismo criterio que access_log — un reintento de sync offline con el mismo client_id no duplica."""
+    client_id = str(uuid.uuid4())
+    payload = {"descripcion": "Fuga de agua en estacionamiento", "client_id": client_id}
+
+    primero = client.post("/incidents", json=payload)
+    assert primero.status_code == 201
+
+    segundo = client.post("/incidents", json=payload)
+    assert segundo.status_code == 201
+    assert segundo.json()["id"] == primero.json()["id"]
+
+    listado = client.get("/incidents").json()
+    assert len([i for i in listado if i["id"] == primero.json()["id"]]) == 1
+
+
+def test_create_incident_with_reused_client_id_and_different_payload_alerts_admin(client):
+    client_id = str(uuid.uuid4())
+    client.post("/incidents", json={"descripcion": "Fuga de agua", "client_id": client_id})
+
+    token = create_access_token(
+        subject=str(uuid.uuid4()), tenant_id=_tenant_id(), schema_name="test", rol="admin", property_id=None
+    )
+    with client.websocket_connect(f"/incidents/ws?token={token}") as websocket:
+        conflicto = client.post("/incidents", json={"descripcion": "Otra cosa totalmente distinta", "client_id": client_id})
+        assert conflicto.status_code == 409
+
+        mensaje = websocket.receive_json()
+        assert mensaje["evento"] == "sync_conflicto"
+        assert mensaje["recurso"] == "incident"
+        assert mensaje["client_id"] == client_id

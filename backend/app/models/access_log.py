@@ -30,3 +30,7 @@ class AccessLog(TenantBase):
     tipo: Mapped[TipoAcceso] = mapped_column(Enum(TipoAcceso))
     hora_entrada: Mapped[datetime] = mapped_column(DateTime)
     hora_salida: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # F2-07/F2-11: UUID generado por la app caseta al encolar el registro
+    # offline. Permite que un reintento de sincronización (mismo client_id)
+    # no cree un duplicado — ver POST /access-log.
+    client_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, unique=True, index=True)

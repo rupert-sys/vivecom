@@ -6,12 +6,13 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_tenant_db, require_roles
+from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.models.access_log import AccessLog, TipoAcceso
 from app.models.property import Property
 from app.models.user import Rol
 from app.models.vehicle import Vehicle
 from app.schemas.access_log import AccessLogCreate, AccessLogRead
+from app.services.incident_broadcast import manager
 
 router = APIRouter(prefix="/access-log", tags=["access-log"])
 
@@ -30,9 +31,52 @@ async def _to_read(db: AsyncSession, log: AccessLog) -> AccessLogRead:
     )
 
 
-@router.post("", response_model=AccessLogRead, status_code=status.HTTP_201_CREATED, dependencies=guardia_only)
-async def register_entry(payload: AccessLogCreate, db: AsyncSession = Depends(get_tenant_db)):
-    """HU-S01: registro de entrada. Sin límite de visitantes ni horario (alcance §10.2)."""
+@router.post(
+    "",
+    response_model=AccessLogRead,
+    status_code=status.HTTP_201_CREATED,
+    dependencies=guardia_only,
+)
+async def register_entry(
+    payload: AccessLogCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
+    """
+    HU-S01: registro de entrada. Sin límite de visitantes ni horario (alcance §10.2).
+
+    F2-07/F2-11: la app caseta manda `client_id` (generado en el dispositivo
+    al encolar el registro offline) para que un reintento de sincronización
+    sea idempotente. Si ya existe un registro con ese client_id: mismo
+    payload → se regresa el registro existente (replay legítimo de un
+    reintento); payload distinto → es un conflicto real (dos registros
+    distintos compitiendo por el mismo client_id), se alerta al admin por el
+    mismo canal de WebSocket de incidencias (F2-06) y se responde 409.
+    """
+    if payload.client_id is not None:
+        existente = (await db.execute(select(AccessLog).where(AccessLog.client_id == payload.client_id))).scalar_one_or_none()
+        if existente is not None:
+            placas_existentes = sorted(
+                (await db.execute(select(Vehicle.placa).where(Vehicle.access_log_id == existente.id))).scalars().all()
+            )
+            if (
+                existente.property_id == payload.property_id
+                and existente.tipo == payload.tipo
+                and placas_existentes == sorted(payload.placas)
+            ):
+                return await _to_read(db, existente)
+
+            await manager.broadcast(
+                current_user.schema_name,
+                {
+                    "evento": "sync_conflicto",
+                    "recurso": "access_log",
+                    "client_id": str(payload.client_id),
+                    "motivo": "Ya existe un registro de acceso con este client_id pero con datos distintos.",
+                },
+            )
+            raise HTTPException(status.HTTP_409_CONFLICT, "Conflicto de sincronización: este client_id ya existe con otros datos.")
+
     if payload.property_id is not None:
         propiedad = await db.get(Property, payload.property_id)
         if propiedad is None:
@@ -42,6 +86,7 @@ async def register_entry(payload: AccessLogCreate, db: AsyncSession = Depends(ge
         property_id=payload.property_id,
         tipo=payload.tipo,
         hora_entrada=datetime.now(timezone.utc).replace(tzinfo=None),
+        client_id=payload.client_id,
     )
     db.add(log)
     await db.flush()  # para tener log.id antes de crear los Vehicle (F2-03)

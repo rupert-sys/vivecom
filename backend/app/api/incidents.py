@@ -29,10 +29,34 @@ async def create_incident(
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_tenant_db),
 ):
+    """
+    F2-07/F2-11: mismo esquema de idempotencia de sync que POST /access-log —
+    ver la nota en access_log.register_entry(). `client_id` viene de la app
+    caseta al encolar la incidencia offline.
+    """
+    if payload.client_id is not None:
+        existente = (await db.execute(select(Incident).where(Incident.client_id == payload.client_id))).scalar_one_or_none()
+        if existente is not None:
+            if existente.descripcion == payload.descripcion and existente.foto_url == payload.foto_url:
+                return existente
+
+            await manager.broadcast(
+                current_user.schema_name,
+                {
+                    "evento": "sync_conflicto",
+                    "recurso": "incident",
+                    "client_id": str(payload.client_id),
+                    "motivo": "Ya existe una incidencia con este client_id pero con datos distintos.",
+                },
+            )
+            raise HTTPException(status.HTTP_409_CONFLICT, "Conflicto de sincronización: este client_id ya existe con otros datos.")
+
     incidencia = Incident(
         reportado_por=uuid.UUID(current_user.user_id),
         descripcion=payload.descripcion,
+        foto_url=payload.foto_url,
         created_at=datetime.now(timezone.utc).replace(tzinfo=None),
+        client_id=payload.client_id,
     )
     db.add(incidencia)
     await db.commit()

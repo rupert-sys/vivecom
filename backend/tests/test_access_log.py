@@ -110,3 +110,33 @@ def test_register_exit_still_returns_the_plates_registered_at_entry(client):
     assert salida.status_code == 200
     assert salida.json()["placas"] == ["ABC-123"]
     assert salida.json()["hora_salida"] is not None
+
+
+def test_register_entry_with_client_id_is_idempotent_on_retry(client):
+    """
+    F2-07/F2-11: la app caseta reintenta la sincronización de un registro
+    encolado offline si el primer intento no confirmó respuesta (aunque sí
+    haya llegado al servidor) — un reintento con el MISMO client_id y el
+    mismo payload no debe crear un segundo registro.
+    """
+    client_id = str(uuid.uuid4())
+    payload = {"tipo": "visitante", "placas": ["ABC-123"], "client_id": client_id}
+
+    primero = client.post("/access-log", json=payload)
+    assert primero.status_code == 201
+
+    segundo = client.post("/access-log", json=payload)
+    assert segundo.status_code == 201
+    assert segundo.json()["id"] == primero.json()["id"]
+
+    listado = client.get("/access-log").json()
+    assert len([log for log in listado if log["id"] == primero.json()["id"]]) == 1
+
+
+def test_register_entry_with_reused_client_id_and_different_payload_is_a_conflict(client):
+    """Dos registros distintos compitiendo por el mismo client_id es un bug del cliente, no un reintento legítimo."""
+    client_id = str(uuid.uuid4())
+    client.post("/access-log", json={"tipo": "visitante", "client_id": client_id})
+
+    conflicto = client.post("/access-log", json={"tipo": "residente", "client_id": client_id})
+    assert conflicto.status_code == 409

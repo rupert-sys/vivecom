@@ -8,6 +8,9 @@ from app.models.incident import EstadoIncidencia
 
 class IncidentCreate(BaseModel):
     descripcion: str
+    foto_url: str | None = None
+    # F2-07: UUID generado por la app caseta — ver client_id en el modelo.
+    client_id: uuid.UUID | None = None
 
 
 class IncidentRead(BaseModel):
@@ -17,6 +20,7 @@ class IncidentRead(BaseModel):
     reportado_por: uuid.UUID
     estado: EstadoIncidencia
     descripcion: str
+    foto_url: str | None
     created_at: datetime
     resolved_at: datetime | None
 

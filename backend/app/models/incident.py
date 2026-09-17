@@ -34,6 +34,13 @@ class Incident(TenantBase):
     # — así siempre refleja la transición A resuelta más reciente, para
     # poder medir tiempos de resolución en el dashboard de seguridad.
     resolved_at: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # F2-09: igual que LostFoundItem.foto_url — no hay infraestructura de
+    # storage de archivos en el proyecto todavía, así que es una URL de
+    # texto (subida a donde sea que el cliente resuelva) y no un upload.
+    foto_url: Mapped[str | None] = mapped_column(nullable=True)
+    # F2-07/F2-11: mismo propósito que AccessLog.client_id — idempotencia de
+    # sync offline desde la app caseta.
+    client_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, unique=True, index=True)
 
 
 class IncidentUpdate(TenantBase):
