@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../models/account_statement.dart';
 import '../services/api_client.dart';
 import '../services/statement_service.dart';
+import '../utils/dates.dart';
 import '../utils/labels.dart';
 
 class StatementScreen extends StatefulWidget {
@@ -121,17 +122,11 @@ class _StatementScreenState extends State<StatementScreen> {
           (p) => ListTile(
             title: Text(_formatoMoneda(p.monto)),
             subtitle: Text('${etiquetasEstadoPago[p.estado] ?? p.estado} · ${p.claveRastreo}'),
-            trailing: Text(_formatoFecha(p.fechaDeteccion)),
+            trailing: Text(formatoFechaCorta(p.fechaDeteccion)),
           ),
         ),
       ],
     );
   }
 
-  String _pad(int n) => n.toString().padLeft(2, '0');
-
-  String _formatoFecha(DateTime fecha) {
-    final local = fecha.toLocal();
-    return '${local.year}-${_pad(local.month)}-${_pad(local.day)}';
-  }
 }

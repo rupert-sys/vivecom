@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:typed_data';
 
 import 'package:http/http.dart' as http;
 
@@ -32,6 +33,18 @@ class ApiClient {
       body: jsonEncode(body),
     );
     return _handle(response);
+  }
+
+  // Para respuestas binarias (ej. el PDF del recibo de F1-11/F1-27) —
+  // apiFetch() del panel admin asume JSON en todo el proyecto y por eso tuvo
+  // que agregar downloadFile.ts aparte (F1-23); aquí se resuelve como un
+  // método más de ApiClient, reusando el mismo manejo de error JSON.
+  Future<Uint8List> getBytes(String path, {String? token}) async {
+    final response = await _client.get(Uri.parse('$baseUrl$path'), headers: _headers(token));
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return response.bodyBytes;
+    }
+    throw ApiException(_extraerMensaje(response));
   }
 
   Map<String, String> _headers(String? token) => {if (token != null) 'Authorization': 'Bearer $token'};

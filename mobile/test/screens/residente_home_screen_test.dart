@@ -3,6 +3,7 @@ import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/clabe_service.dart';
 import 'package:app_residente/services/fee_service.dart';
 import 'package:app_residente/services/property_service.dart';
+import 'package:app_residente/services/receipt_service.dart';
 import 'package:app_residente/services/statement_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -10,7 +11,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets('navega entre Estado de cuenta, Pago y CLABE sin perder cada pantalla', (tester) async {
+  testWidgets('navega entre Estado de cuenta, Pago, Historial y CLABE sin perder cada pantalla', (tester) async {
     final mockClient = MockClient((request) async {
       final path = request.url.path;
       if (path.endsWith('/statement')) {
@@ -40,6 +41,7 @@ void main() {
           clabeService: ClabeService(api: ApiClient(client: mockClient)),
           propertyService: PropertyService(api: ApiClient(client: mockClient)),
           feeService: FeeService(api: ApiClient(client: mockClient)),
+          receiptService: ReceiptService(api: ApiClient(client: mockClient)),
           onLogout: () {},
         ),
       ),
@@ -53,6 +55,11 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Transfiere \$800.00'), findsOneWidget);
+
+    await tester.tap(find.text('Historial'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Todavía no hay pagos registrados.'), findsOneWidget);
 
     await tester.tap(find.text('CLABE'));
     await tester.pumpAndSettle();

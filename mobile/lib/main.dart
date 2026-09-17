@@ -6,6 +6,7 @@ import 'services/auth_service.dart';
 import 'services/clabe_service.dart';
 import 'services/fee_service.dart';
 import 'services/property_service.dart';
+import 'services/receipt_service.dart';
 import 'services/statement_service.dart';
 
 void main() {
@@ -25,6 +26,7 @@ class _VivecomAppState extends State<VivecomApp> {
   final ClabeService _clabeService = ClabeService();
   final PropertyService _propertyService = PropertyService();
   final FeeService _feeService = FeeService();
+  final ReceiptService _receiptService = ReceiptService();
 
   String? _token;
   TokenPayload? _usuario;
@@ -103,6 +105,7 @@ class _VivecomAppState extends State<VivecomApp> {
       clabeService: _clabeService,
       propertyService: _propertyService,
       feeService: _feeService,
+      receiptService: _receiptService,
       onLogout: _onLogout,
     );
   }

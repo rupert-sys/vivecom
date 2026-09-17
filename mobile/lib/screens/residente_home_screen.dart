@@ -3,8 +3,10 @@ import 'package:flutter/material.dart';
 import '../services/clabe_service.dart';
 import '../services/fee_service.dart';
 import '../services/property_service.dart';
+import '../services/receipt_service.dart';
 import '../services/statement_service.dart';
 import 'clabe_screen.dart';
+import 'payment_history_screen.dart';
 import 'payment_screen.dart';
 import 'statement_screen.dart';
 
@@ -17,6 +19,7 @@ class ResidenteHomeScreen extends StatefulWidget {
   final ClabeService clabeService;
   final PropertyService propertyService;
   final FeeService feeService;
+  final ReceiptService receiptService;
   final VoidCallback onLogout;
 
   const ResidenteHomeScreen({
@@ -27,6 +30,7 @@ class ResidenteHomeScreen extends StatefulWidget {
     required this.clabeService,
     required this.propertyService,
     required this.feeService,
+    required this.receiptService,
     required this.onLogout,
   });
 
@@ -54,6 +58,12 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         feeService: widget.feeService,
         clabeService: widget.clabeService,
       ),
+      PaymentHistoryScreen(
+        propertyId: widget.propertyId,
+        token: widget.token,
+        statementService: widget.statementService,
+        receiptService: widget.receiptService,
+      ),
       ClabeScreen(token: widget.token, clabeService: widget.clabeService),
     ];
 
@@ -65,6 +75,7 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         destinations: const [
           NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: 'Estado de cuenta'),
           NavigationDestination(icon: Icon(Icons.payments), label: 'Pago'),
+          NavigationDestination(icon: Icon(Icons.history), label: 'Historial'),
           NavigationDestination(icon: Icon(Icons.account_balance), label: 'CLABE'),
         ],
       ),
