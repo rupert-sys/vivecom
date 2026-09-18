@@ -56,3 +56,34 @@ def test_webhook_processes_valid_signed_deposit(client):
     assert response.status_code == 200
     assert response.json()["status"] == "processed"
     assert response.json()["payment_estado"] == "confirmado"
+
+
+def test_webhook_refuses_the_placeholder_secret_in_production(client):
+    """
+    F2-21: stp_webhook_secret trae un default público y conocido
+    ("cambia-esto-en-produccion") para no tronar el arranque en dev — pero un
+    secreto de firma sin configurar en PRODUCCIÓN es "fail open": cualquiera
+    que haya leído el repo puede firmar un depósito falso. En producción debe
+    rechazarse de plano en vez de aceptar webhooks firmados con ese secreto
+    público.
+    """
+    body = {
+        "monto": "1500.00", "referenciaNumerica": "0000014", "claveRastreo": "STP-X",
+        "fechaOperacion": "2026-09-15T10:00:00", "cuentaBeneficiario": "012180001547896321",
+    }
+    assert settings.stp_webhook_secret == "cambia-esto-en-produccion"
+    original_environment = settings.environment
+    settings.environment = "production"
+    try:
+        response = _signed_request(client, body)
+    finally:
+        settings.environment = original_environment
+
+    assert response.status_code == 503
+
+
+def test_webhook_does_not_leak_internal_field_names_on_invalid_payload(client):
+    """F2-21: un payload inválido regresaba el detalle crudo de la excepción (nombres de campos internos) al llamador."""
+    response = _signed_request(client, {"monto": "1500.00"})  # faltan referenciaNumerica, claveRastreo, etc.
+    assert response.status_code == 422
+    assert response.json()["detail"] == "Payload de STP inválido"

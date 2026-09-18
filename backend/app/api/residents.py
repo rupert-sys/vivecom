@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_tenant_db, require_roles
+from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.models.property import Property
 from app.models.resident import Resident, ResidentProperty
 from app.models.user import Rol
@@ -13,6 +13,11 @@ from app.schemas.resident import LinkResidentToProperty, ResidentCreate, Residen
 router = APIRouter(tags=["residents"])
 
 admin_only = [Depends(require_roles(Rol.admin))]
+# F2-21: nombre/teléfono/email de TODA la base de residentes del tenant, sin
+# acotar por vivienda — un residente no tiene motivo legítimo para ver el
+# directorio completo del condominio, a diferencia de tesorero/guardia
+# (cobranza y control de acceso, respectivamente).
+staff_only = [Depends(require_roles(Rol.admin, Rol.tesorero, Rol.guardia))]
 
 
 @router.post("/residents", response_model=ResidentRead, status_code=status.HTTP_201_CREATED, dependencies=admin_only)
@@ -25,13 +30,13 @@ async def create_resident(payload: ResidentCreate, db: AsyncSession = Depends(ge
     return resident
 
 
-@router.get("/residents", response_model=list[ResidentRead])
+@router.get("/residents", response_model=list[ResidentRead], dependencies=staff_only)
 async def list_residents(db: AsyncSession = Depends(get_tenant_db)):
     result = await db.execute(select(Resident).order_by(Resident.nombre))
     return result.scalars().all()
 
 
-@router.get("/residents/{resident_id}", response_model=ResidentRead)
+@router.get("/residents/{resident_id}", response_model=ResidentRead, dependencies=staff_only)
 async def get_resident(resident_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
     resident = await db.get(Resident, resident_id)
     if resident is None:
@@ -87,7 +92,17 @@ async def link_resident_to_property(
 
 
 @router.get("/properties/{property_id}/residents", response_model=list[ResidentRead])
-async def list_property_residents(property_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
+async def list_property_residents(
+    property_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
+    # Mismo control de acceso que get_property_statement (properties.py):
+    # staff ve cualquier vivienda, un residente solo la propia.
+    es_staff = current_user.rol in {Rol.admin.value, Rol.tesorero.value, Rol.guardia.value}
+    if not es_staff and current_user.property_id != str(property_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "No tienes acceso a los residentes de esta vivienda")
+
     result = await db.execute(
         select(Resident).join(ResidentProperty).where(ResidentProperty.property_id == property_id)
     )

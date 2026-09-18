@@ -3,13 +3,22 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.database import control_session, tenant_session
-from app.core.security import create_access_token, verify_password
+from app.core.security import create_access_token, hash_password, verify_password
 from app.models.tenant import Tenant
 from app.models.user import UserAccount
 from app.models.user_lookup import UserLookup
 from app.schemas.auth import LoginRequest, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+# F2-21: hash bcrypt de un valor fijo, sin usuario real detrás. Cuando el
+# email no existe (o no tiene UserAccount en su tenant), igual se corre un
+# verify_password() contra ESTE hash antes de responder 401 — así el tiempo
+# de respuesta no delata si el email está registrado. Sin esto, un email
+# inexistente respondía de inmediato (sin bcrypt) mientras uno real siempre
+# corría el hash (~decenas de ms), un canal lateral de timing para enumerar
+# cuentas pese a que el mensaje de error ya es idéntico en ambos casos.
+_DUMMY_PASSWORD_HASH = hash_password("no-existe-ningun-usuario-con-este-password")
 
 
 @router.post("/login", response_model=TokenResponse)
@@ -19,6 +28,7 @@ async def login(payload: LoginRequest, control_db: AsyncSession = Depends(contro
         await control_db.execute(select(UserLookup).where(UserLookup.email == payload.email))
     ).scalar_one_or_none()
     if lookup is None:
+        verify_password(payload.password, _DUMMY_PASSWORD_HASH)
         # Mismo mensaje que credenciales inválidas: no revelar si el email existe o no.
         raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas")
 
@@ -32,7 +42,11 @@ async def login(payload: LoginRequest, control_db: AsyncSession = Depends(contro
             await tenant_db.execute(select(UserAccount).where(UserAccount.email == payload.email))
         ).scalar_one_or_none()
 
-        if user is None or not verify_password(payload.password, user.password_hash):
+        if user is None:
+            verify_password(payload.password, _DUMMY_PASSWORD_HASH)
+            raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas")
+
+        if not verify_password(payload.password, user.password_hash):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas")
 
         token = create_access_token(

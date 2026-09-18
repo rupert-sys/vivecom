@@ -96,5 +96,10 @@ async def test_erasure_anonymizes_resident_but_keeps_the_row(client):
     assert body["telefono"] == ""
     assert body["email"] is None
 
-    # el residente sigue existiendo (se conserva por integridad de ResidentProperty/incidencias)
+    # el residente sigue existiendo (se conserva por integridad de ResidentProperty/incidencias).
+    # GET /residents/{id} es staff-only desde F2-21 (antes cualquier residente
+    # podía leer el registro de CUALQUIER OTRO residente por este mismo
+    # endpoint, un IDOR real) — se verifica como admin, no como el propio
+    # residente, ya que esa ya no es una ruta de acceso legítima para él.
+    _como("admin", user_id)
     assert client.get(f"/residents/{resident['id']}").status_code == 200

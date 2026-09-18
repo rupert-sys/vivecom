@@ -38,7 +38,20 @@ async def list_properties(db: AsyncSession = Depends(get_tenant_db)):
 
 
 @router.get("/{property_id}", response_model=PropertyRead)
-async def get_property(property_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
+async def get_property(
+    property_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
+    # F2-21: mismo control de acceso que get_property_statement — a
+    # diferencia de list_properties (abierto a todo el tenant a propósito,
+    # transparencia financiera del condominio en su conjunto), este endpoint
+    # expone referencia_pago/saldo_a_favor de UNA vivienda puntual, y un
+    # residente no debe poder leer los de otra vivienda solo adivinando el id.
+    es_staff = current_user.rol in {Rol.admin.value, Rol.tesorero.value}
+    if not es_staff and current_user.property_id != str(property_id):
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "No tienes acceso a esta vivienda")
+
     prop = await db.get(Property, property_id)
     if prop is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
