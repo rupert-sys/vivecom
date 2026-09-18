@@ -31,7 +31,20 @@ from app.core.config import settings
 engine = create_async_engine(
     settings.database_url,
     pool_pre_ping=True,
-    pool_size=10,
+    # F1-37 (QA de carga): con el default de SQLAlchemy (pool_size=5,
+    # max_overflow=10 quedaba en 10+10 con el pool_size explícito de abajo)
+    # una ráfaga real de ~100 depósitos concurrentes (fin de mes, muchos
+    # residentes pagando casi a la vez) agotaba el pool y Postgres real
+    # respondía con 500 (QueuePool limit... connection timed out) en vez de
+    # simplemente encolar. El servidor de Postgres permite hasta 100
+    # conexiones — 20 usadas normalmente por esta app deja poco margen, así
+    # que se sube a 20+20 (40 total), muy por debajo del límite del server y
+    # con margen para otras conexiones (herramientas, otra instancia, etc.).
+    # Esto empuja el techo más arriba, no lo elimina — una ráfaga aún más
+    # grande necesitaría planeación de capacidad real (PgBouncer, más de un
+    # proceso de la app, etc.), fuera del alcance de esta prueba de carga.
+    pool_size=20,
+    max_overflow=20,
     # Dos cachés distintas hay que apagar: prepared_statement_cache_size es
     # la capa que administra el dialecto asyncpg de SQLAlchemy (encima de
     # asyncpg mismo); statement_cache_size es la del propio driver asyncpg.

@@ -121,45 +121,70 @@ async def reconcile_payment(db: AsyncSession, payment: Payment) -> list[FeeCharg
         return []
 
     async with _locks_por_propiedad[payment.property_id]:
-        advertir_si_with_for_update_es_no_op(db, "payment_reconciliation_service.reconcile_payment")
-        # Bloquea la fila de Property antes de leer/decidir nada: sin esto,
-        # dos conciliaciones concurrentes para la misma vivienda pueden leer
-        # el mismo saldo_a_favor de partida y pisarse una a la otra al
-        # escribir (ver revisión de F2-20/F3 arriba).
-        await db.execute(select(Property).where(Property.id == payment.property_id).with_for_update())
+        return await reconcile_payment_ya_con_candado(db, payment)
 
-        result = await db.execute(
-            select(FeeCharge)
-            .where(
-                FeeCharge.property_id == payment.property_id,
-                FeeCharge.estado.in_([EstadoCargo.pendiente, EstadoCargo.vencido]),
-                FeeCharge.payment_id.is_(None),
-            )
-            .order_by(FeeCharge.periodo.asc())
+
+async def reconcile_payment_ya_con_candado(db: AsyncSession, payment: Payment) -> list[FeeCharge]:
+    """
+    Cuerpo real de la conciliación, SIN adquirir _locks_por_propiedad — para
+    deposit_processing_service.process_incoming_deposit(), que necesita
+    tener el candado tomado desde ANTES de insertar el propio Payment, no
+    solo durante la conciliación.
+
+    F1-37 (QA de carga): con dos depósitos concurrentes para la MISMA
+    vivienda, la versión anterior (INSERT del Payment fuera del candado,
+    reconcile_payment() adquiriéndolo después) producía un interbloqueo
+    real contra Postgres, reproducible con qa_carga_financiera.py: el
+    INSERT en `payment` toma un lock implícito (FOR KEY SHARE) sobre la
+    fila de `property` referenciada por la llave foránea, ANTES de que esa
+    petición intente tomar el candado en memoria. Si la OTRA petición
+    concurrente ya tiene el candado y está esperando su propio
+    with_for_update() sobre esa misma fila, quedan esperándose una a la
+    otra para siempre: Python nunca ve el ciclo (la mitad de la espera es
+    un asyncio.Lock, invisible para el detector de interbloqueos de
+    Postgres) así que nadie lo rompe solo. La corrección real es que el
+    INSERT del Payment y la conciliación pasen a ser una sola sección
+    crítica bajo el mismo candado — ver process_incoming_deposit().
+    """
+    advertir_si_with_for_update_es_no_op(db, "payment_reconciliation_service.reconcile_payment")
+    # Bloquea la fila de Property antes de leer/decidir nada: sin esto,
+    # dos conciliaciones concurrentes para la misma vivienda pueden leer
+    # el mismo saldo_a_favor de partida y pisarse una a la otra al
+    # escribir (ver revisión de F2-20/F3 arriba).
+    await db.execute(select(Property).where(Property.id == payment.property_id).with_for_update())
+
+    result = await db.execute(
+        select(FeeCharge)
+        .where(
+            FeeCharge.property_id == payment.property_id,
+            FeeCharge.estado.in_([EstadoCargo.pendiente, EstadoCargo.vencido]),
+            FeeCharge.payment_id.is_(None),
         )
-        candidatos = result.scalars().all()
+        .order_by(FeeCharge.periodo.asc())
+    )
+    candidatos = result.scalars().all()
 
-        restante = float(payment.monto)
-        conciliados = []
-        for charge in candidatos:
-            total_cargo = float(charge.monto_base) + float(charge.recargo_aplicado)
-            if restante + TOLERANCIA_CENTAVOS < total_cargo:
-                break
-            charge.estado = EstadoCargo.pagado
-            charge.payment_id = payment.id
-            conciliados.append(charge)
-            restante -= total_cargo
+    restante = float(payment.monto)
+    conciliados = []
+    for charge in candidatos:
+        total_cargo = float(charge.monto_base) + float(charge.recargo_aplicado)
+        if restante + TOLERANCIA_CENTAVOS < total_cargo:
+            break
+        charge.estado = EstadoCargo.pagado
+        charge.payment_id = payment.id
+        conciliados.append(charge)
+        restante -= total_cargo
 
-        # F1-08: solo tiene sentido "adelantar" meses futuros si ya no queda
-        # nada pendiente/vencido sin cubrir de esta vivienda.
-        if restante > TOLERANCIA_CENTAVOS and len(conciliados) == len(candidatos):
-            cargos_anticipados, restante = await _aplicar_pago_anticipado(db, payment, restante)
-            conciliados.extend(cargos_anticipados)
+    # F1-08: solo tiene sentido "adelantar" meses futuros si ya no queda
+    # nada pendiente/vencido sin cubrir de esta vivienda.
+    if restante > TOLERANCIA_CENTAVOS and len(conciliados) == len(candidatos):
+        cargos_anticipados, restante = await _aplicar_pago_anticipado(db, payment, restante)
+        conciliados.extend(cargos_anticipados)
 
-        if restante > TOLERANCIA_CENTAVOS:
-            propiedad = await db.get(Property, payment.property_id)
-            propiedad.saldo_a_favor = float(propiedad.saldo_a_favor) + restante
+    if restante > TOLERANCIA_CENTAVOS:
+        propiedad = await db.get(Property, payment.property_id)
+        propiedad.saldo_a_favor = float(propiedad.saldo_a_favor) + restante
 
-        if conciliados or restante > TOLERANCIA_CENTAVOS:
-            await db.flush()
-        return conciliados
+    if conciliados or restante > TOLERANCIA_CENTAVOS:
+        await db.flush()
+    return conciliados
