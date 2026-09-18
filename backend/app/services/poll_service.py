@@ -3,6 +3,7 @@ F2-14: votaciones con quorum (HU-C02 crear, HU-C03 votar, HU-C04 quorum y
 reactivación automática).
 """
 
+import logging
 import uuid
 from datetime import date, timedelta
 
@@ -15,6 +16,8 @@ from app.models.poll import Poll, PollOption, Vote
 from app.models.property import Property
 from app.models.resident import Resident
 from app.services.notification_providers.base import NotificationProvider
+
+logger = logging.getLogger(__name__)
 
 
 class VotoInvalido(Exception):
@@ -116,12 +119,21 @@ async def process_poll_closures(db: AsyncSession, provider: NotificationProvider
             poll.quorum_alcanzado = True
             quorum_alcanzado += 1
         elif not poll.reactivada:
+            # La extensión de fecha_cierre es el efecto real (HU-C04) y debe
+            # quedar aplicada aunque el aviso falle — a diferencia de
+            # recordatorios/confirmaciones/paquetes/avisos, reactivada=True
+            # es de una sola vez para siempre (ver comentario más abajo), así
+            # que no hay una corrida futura que reintente el envío solo. F1-35
+            # (QA de entrega): un envío fallido aquí no vuelve a intentarse
+            # nunca, así que al menos se deja un rastro para revisión manual
+            # en vez de desaparecer en silencio.
             poll.fecha_cierre = poll.fecha_cierre + timedelta(days=VOTACION_REACTIVACION_DIAS)
             poll.reactivada = True
             reactivadas += 1
             mensaje = f'Vivecom: la votación "{poll.pregunta}" no alcanzó quorum y se reabrió una semana más. ¡Participa!'
             for telefono in await _telefonos_de_todos_los_residentes(db):
-                await provider.send(telefono, mensaje)
+                if not await provider.send(telefono, mensaje):
+                    logger.warning("No se pudo notificar la reactivación de la votación %s a %s", poll.id, telefono)
         # si ya se había reactivado y sigue sin quorum, se queda así: una sola reactivación (alcance HU-C04).
 
     if candidatas:

@@ -20,6 +20,13 @@ class FakeNotificationProvider(NotificationProvider):
         return True
 
 
+class FailingNotificationProvider(NotificationProvider):
+    """Simula un proveedor cuyo envío siempre falla (ej. Twilio caído). Ver F1-35."""
+
+    async def send(self, telefono: str, mensaje: str) -> bool:
+        return False
+
+
 def _crear_residente_y_ligar(client, property_id: str, telefono="5511112222"):
     resident = client.post("/residents", json={"nombre": "Ana Pérez", "telefono": telefono}).json()
     client.post(f"/properties/{property_id}/residents", json={"resident_id": resident["id"], "rol": "propietario"})
@@ -94,3 +101,42 @@ async def test_send_notifications_covers_arrival_and_pickup(client):
         tercera = await send_package_notifications(db, provider)
     assert tercera == 1
     assert provider.enviados[-1] == ("5511112222", "Vivecom: tu paquete fue recogido. Registro cerrado.")
+
+
+@pytest.mark.asyncio
+async def test_arrival_notification_not_marked_sent_when_delivery_fails(client):
+    """F1-35 (QA de entrega): un envío fallido no debe marcar notificacion_llegada_enviada — debe reintentarse."""
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _crear_residente_y_ligar(client, prop["id"])
+    client.post("/packages", json={"property_id": prop["id"]})
+
+    async with client.db_session_factory() as db:
+        enviados = await send_package_notifications(db, FailingNotificationProvider())
+    assert enviados == 0
+
+    provider_ok = FakeNotificationProvider()
+    async with client.db_session_factory() as db:
+        reintento = await send_package_notifications(db, provider_ok)
+    assert reintento == 1
+    assert provider_ok.enviados == [("5511112222", "Vivecom: te llegó un paquete. Pásalo a recoger en la caseta.")]
+
+
+@pytest.mark.asyncio
+async def test_pickup_notification_not_marked_sent_when_delivery_fails(client):
+    """Mismo criterio que la notificación de llegada, para la de recolección."""
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _crear_residente_y_ligar(client, prop["id"])
+    paquete = client.post("/packages", json={"property_id": prop["id"]}).json()
+    async with client.db_session_factory() as db:
+        await send_package_notifications(db, FakeNotificationProvider())  # limpia el flag de llegada
+    client.post(f"/packages/{paquete['id']}/pickup")
+
+    async with client.db_session_factory() as db:
+        enviados = await send_package_notifications(db, FailingNotificationProvider())
+    assert enviados == 0
+
+    provider_ok = FakeNotificationProvider()
+    async with client.db_session_factory() as db:
+        reintento = await send_package_notifications(db, provider_ok)
+    assert reintento == 1
+    assert provider_ok.enviados == [("5511112222", "Vivecom: tu paquete fue recogido. Registro cerrado.")]

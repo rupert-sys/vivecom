@@ -27,6 +27,22 @@ async def test_send_returns_false_on_network_error_instead_of_raising(provider):
 
 
 @pytest.mark.asyncio
+async def test_send_returns_false_on_timeout_instead_of_raising(provider):
+    """
+    F1-35 (QA de entrega, "distintas condiciones de red"): un timeout
+    (Twilio lento, no caído del todo) es una excepción DISTINTA a
+    ConnectError en httpx (TimeoutException, no ConnectError) — ambas son
+    subclases de HTTPError así que el except ya las cubre, pero se agrega
+    esta prueba porque un timeout es el escenario de red más realista para
+    "Twilio responde lento" y no estaba cubierto explícitamente.
+    """
+    with patch("httpx.AsyncClient.post", AsyncMock(side_effect=httpx.ReadTimeout("tardó demasiado"))):
+        resultado = await provider.send("5511112222", "hola")
+
+    assert resultado is False
+
+
+@pytest.mark.asyncio
 async def test_send_falls_back_to_sms_when_whatsapp_fails(provider):
     respuesta_ok = httpx.Response(status_code=201, request=httpx.Request("POST", "https://x"))
     respuesta_error = httpx.Response(status_code=400, request=httpx.Request("POST", "https://x"))

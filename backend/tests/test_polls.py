@@ -25,6 +25,13 @@ class FakeNotificationProvider(NotificationProvider):
         return True
 
 
+class FailingNotificationProvider(NotificationProvider):
+    """Simula un proveedor cuyo envío siempre falla (ej. Twilio caído). Ver F1-35."""
+
+    async def send(self, telefono: str, mensaje: str) -> bool:
+        return False
+
+
 def _tenant_id() -> str:
     return app.dependency_overrides[get_current_user]().tenant_id
 
@@ -243,7 +250,35 @@ async def test_process_closures_does_not_reactivate_a_second_time(client):
     _como("admin")
     final = client.get(f"/polls/{poll['id']}").json()
     assert final["quorum_alcanzado"] is False
-    assert final["reactivada"] is True
+
+
+@pytest.mark.asyncio
+async def test_reactivation_still_applies_even_if_the_notice_fails_to_send(client, caplog):
+    """
+    F1-35 (QA de entrega de notificaciones): a diferencia de recordatorios,
+    confirmaciones y avisos/paquetes (que se reintentan solos en la
+    siguiente corrida), reactivada=True es de una sola vez para siempre —
+    un envío fallido aquí nunca se reintenta. La extensión de fecha_cierre
+    (el efecto real de HU-C04) debe aplicarse de todos modos, y el fallo
+    debe quedar registrado en el log en vez de desaparecer en silencio.
+    """
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    resident = client.post("/residents", json={"nombre": "Ana Pérez", "telefono": "5511112222"}).json()
+    client.post(f"/properties/{prop['id']}/residents", json={"resident_id": resident["id"], "rol": "propietario"})
+    poll = _crear_votacion(client, fecha_cierre="2026-09-01")
+
+    provider = FailingNotificationProvider()
+    with caplog.at_level("WARNING"):
+        async with client.db_session_factory() as db:
+            resultado = await process_poll_closures(db, provider, date(2026, 9, 5))
+
+    assert resultado == {"quorum_alcanzado": 0, "reactivadas": 1}
+    assert "No se pudo notificar la reactivación" in caplog.text
+
+    _como("admin")
+    actualizada = client.get(f"/polls/{poll['id']}").json()
+    assert actualizada["reactivada"] is True
+    assert actualizada["fecha_cierre"] == "2026-09-08"
 
 
 def test_get_unknown_poll_404(client):

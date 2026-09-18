@@ -24,6 +24,13 @@ class FakeNotificationProvider(NotificationProvider):
         return True
 
 
+class FailingNotificationProvider(NotificationProvider):
+    """Simula un proveedor cuyo envío siempre falla (ej. Twilio caído). Ver F1-35."""
+
+    async def send(self, telefono: str, mensaje: str) -> bool:
+        return False
+
+
 def _como_residente(property_id: str):
     tenant_id = app.dependency_overrides[get_current_user]().tenant_id
 
@@ -146,6 +153,31 @@ async def test_scheduled_announcement_not_notified_before_its_time(client):
         enviados = await send_announcement_notifications(db, provider, datetime.now(timezone.utc).replace(tzinfo=None))
     assert enviados == 0
     assert provider.enviados == []
+
+
+@pytest.mark.asyncio
+async def test_notification_not_marked_sent_when_delivery_fails(client):
+    """
+    F1-35 (QA de entrega): un envío fallido (Twilio caído, número inválido)
+    no debe marcar notificacion_enviada=True — si lo hiciera, ese aviso
+    nunca se reintentaría y el residente jamás se enteraría por WhatsApp/SMS.
+    """
+    client.get("/tenant/clabe")
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    resident = client.post("/residents", json={"nombre": "Ana Pérez", "telefono": "5511112222"}).json()
+    client.post(f"/properties/{prop['id']}/residents", json={"resident_id": resident["id"], "rol": "propietario"})
+    client.post("/announcements", json={"titulo": "Aviso", "contenido": "Texto"})
+
+    provider = FailingNotificationProvider()
+    async with client.db_session_factory() as db:
+        enviados = await send_announcement_notifications(db, provider, datetime.now(timezone.utc).replace(tzinfo=None))
+    assert enviados == 0
+
+    # Con el proveedor caído reparado, la siguiente corrida SÍ debe reintentar y notificar.
+    provider_ok = FakeNotificationProvider()
+    async with client.db_session_factory() as db:
+        reintento = await send_announcement_notifications(db, provider_ok, datetime.now(timezone.utc).replace(tzinfo=None))
+    assert reintento == 1
 
 
 def test_get_unknown_announcement_404(client):
