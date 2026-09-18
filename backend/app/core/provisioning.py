@@ -22,6 +22,7 @@ from app.models.clabe_change_log import ClabeChangeLog  # noqa: F401 — registr
 from app.models.tenant import Tenant
 from app.models.user import Rol, UserAccount
 from app.models.user_lookup import UserLookup
+from app.models.vivecom_staff import VivecomStaff  # noqa: F401 — registra en ControlBase (F3-04)
 # Importar TODOS los modelos de tenant para que TenantBase.metadata los conozca
 # antes de create_all() — si un modelo nuevo no se agrega aquí, TenantBase.metadata
 # nunca se entera de que existe y create_all() no crea su tabla, sin ningún error

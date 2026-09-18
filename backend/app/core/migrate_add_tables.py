@@ -22,6 +22,7 @@ from app.models import (  # noqa: F401
 )
 from app.models.clabe_change_log import ClabeChangeLog  # noqa: F401
 from app.models.tenant import Tenant  # noqa: F401
+from app.models.vivecom_staff import VivecomStaff  # noqa: F401
 
 
 async def add_missing_tables(schema_name: str) -> None:

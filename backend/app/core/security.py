@@ -38,3 +38,21 @@ def create_access_token(*, subject: str, tenant_id: str, schema_name: str, rol: 
 
 def decode_access_token(token: str) -> dict[str, Any]:
     return jwt.decode(token, settings.jwt_secret, algorithms=[settings.jwt_algorithm])
+
+
+def create_staff_access_token(*, subject: str) -> str:
+    """
+    F3-04: token de un empleado de Vivecom (VivecomStaff), deliberadamente
+    SIN tenant_id/schema/rol/property_id — a diferencia de create_access_token(),
+    este NO da acceso a ningún tenant individual, solo al dashboard agregado
+    (ver deps.get_current_staff). El claim `staff: true` es lo que distingue
+    este tipo de token de uno normal de UserAccount al decodificarlo.
+    """
+    now = datetime.now(timezone.utc)
+    payload: dict[str, Any] = {
+        "sub": subject,  # vivecom_staff.id
+        "staff": True,
+        "iat": now,
+        "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
+    }
+    return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)

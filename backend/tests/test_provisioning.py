@@ -33,7 +33,7 @@ PROVISIONING_FILE = Path(__file__).parent.parent / "app" / "core" / "provisionin
 
 # Modelos de app/models/ que viven en ControlBase (schema público, no por
 # tenant) — provisioning.py ya los importa aparte, no deben exigirse aquí.
-MODULOS_DE_CONTROL = {"clabe_change_log", "tenant", "user_lookup", "__init__"}
+MODULOS_DE_CONTROL = {"clabe_change_log", "tenant", "user_lookup", "vivecom_staff", "__init__"}
 
 
 def _modulos_de_tenant_en_disco() -> set[str]:
