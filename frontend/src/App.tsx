@@ -16,6 +16,7 @@ import { CollectionStatusPage } from './pages/CollectionStatusPage'
 import { ReservationsPage } from './pages/ReservationsPage'
 import { ReglamentoPage } from './pages/ReglamentoPage'
 import { PaymentProofsPage } from './pages/PaymentProofsPage'
+import { AnnouncementQuestionsPage } from './pages/AnnouncementQuestionsPage'
 import { RequireAuth } from './auth/RequireAuth'
 
 export default function App() {
@@ -40,6 +41,7 @@ export default function App() {
         <Route path="/amenities" element={<AmenitiesPollsPage />} />
         <Route path="/security" element={<SecurityDashboardPage />} />
         <Route path="/announcements" element={<AnnouncementsPage />} />
+        <Route path="/announcement-questions" element={<AnnouncementQuestionsPage />} />
         <Route path="/collection" element={<CollectionStatusPage />} />
         <Route path="/payment-proofs" element={<PaymentProofsPage />} />
         <Route path="/reservations" element={<ReservationsPage />} />

@@ -1,5 +1,6 @@
 import { Fragment, useEffect, useState, type FormEvent } from 'react'
 import { createAnnouncement, getReadStatus, listAnnouncements, updateAnnouncement } from '../api/announcements'
+import { getReglamento } from '../api/reglamento'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { Announcement, ReadStatusEntry } from '../types'
@@ -16,6 +17,10 @@ export function AnnouncementsPage() {
   const [titulo, setTitulo] = useState('')
   const [contenido, setContenido] = useState('')
   const [fechaPublicacion, setFechaPublicacion] = useState('')
+  const [permiteDudas, setPermiteDudas] = useState(false)
+  const [dudasHasta, setDudasHasta] = useState('')
+  // Lo que diga el reglamento del condominio para los avisos nuevos (se aplica al limpiar el formulario).
+  const [dudasPorDefecto, setDudasPorDefecto] = useState(false)
   const [editingId, setEditingId] = useState<string | null>(null)
   const [guardando, setGuardando] = useState(false)
 
@@ -36,12 +41,20 @@ export function AnnouncementsPage() {
 
   useEffect(() => {
     reload()
+    getReglamento()
+      .then((r) => {
+        setDudasPorDefecto(r.dudas_en_avisos_por_defecto)
+        setPermiteDudas(r.dudas_en_avisos_por_defecto)
+      })
+      .catch(() => setDudasPorDefecto(false)) // sin reglamento: las dudas quedan apagadas
   }, [])
 
   function limpiarFormulario() {
     setTitulo('')
     setContenido('')
     setFechaPublicacion('')
+    setPermiteDudas(dudasPorDefecto)
+    setDudasHasta('')
     setEditingId(null)
   }
 
@@ -50,6 +63,8 @@ export function AnnouncementsPage() {
     setTitulo(aviso.titulo)
     setContenido(aviso.contenido)
     setFechaPublicacion(dateToDatetimeLocalValue(utcNaiveToDate(aviso.fecha_publicacion)))
+    setPermiteDudas(aviso.permite_dudas)
+    setDudasHasta(aviso.dudas_hasta ?? '')
   }
 
   async function handleSubmit(event: FormEvent) {
@@ -60,11 +75,13 @@ export function AnnouncementsPage() {
         titulo,
         contenido,
         fecha_publicacion: fechaPublicacion ? datetimeLocalValueToUtcIso(fechaPublicacion) : undefined,
+        permite_dudas: permiteDudas,
       }
       if (editingId) {
-        await updateAnnouncement(editingId, payload)
+        // Al editar, un plazo vacío se manda como null para quitarlo.
+        await updateAnnouncement(editingId, { ...payload, dudas_hasta: permiteDudas && dudasHasta ? dudasHasta : null })
       } else {
-        await createAnnouncement(payload)
+        await createAnnouncement({ ...payload, dudas_hasta: permiteDudas && dudasHasta ? dudasHasta : undefined })
       }
       limpiarFormulario()
       await reload()
@@ -117,6 +134,22 @@ export function AnnouncementsPage() {
                 style={{ display: 'block', width: '100%', marginTop: 4 }}
               />
             </label>
+            <label style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+              <input type="checkbox" checked={permiteDudas} onChange={(e) => setPermiteDudas(e.target.checked)} />
+              Permitir que los residentes manden dudas sobre este aviso
+            </label>
+            {permiteDudas && (
+              <label>
+                Recibir dudas hasta (opcional — vacío = sin fecha límite)
+                <input
+                  type="date"
+                  aria-label="Recibir dudas hasta"
+                  value={dudasHasta}
+                  onChange={(e) => setDudasHasta(e.target.value)}
+                  style={{ display: 'block', width: '100%', marginTop: 4 }}
+                />
+              </label>
+            )}
             <div style={{ display: 'flex', gap: 'var(--space-2)' }}>
               <button type="submit" disabled={guardando}>
                 {guardando ? 'Guardando…' : editingId ? 'Guardar cambios' : 'Publicar aviso'}
@@ -158,6 +191,7 @@ export function AnnouncementsPage() {
               <th>Título</th>
               <th>Publicación</th>
               <th>Estado</th>
+              <th>Dudas</th>
               {isAdmin && <th />}
             </tr>
           </thead>
@@ -173,6 +207,15 @@ export function AnnouncementsPage() {
                     <td style={{ color: programado ? 'var(--amber)' : 'var(--teal)' }}>
                       {programado ? 'Programado' : 'Publicado'}
                     </td>
+                    <td>
+                      {aviso.dudas_abiertas
+                        ? aviso.dudas_hasta
+                          ? `Abiertas hasta ${aviso.dudas_hasta}`
+                          : 'Abiertas'
+                        : aviso.permite_dudas
+                          ? 'Cerradas'
+                          : '—'}
+                    </td>
                     {isAdmin && (
                       <td style={{ display: 'flex', gap: 'var(--space-2)' }}>
                         <button onClick={() => editar(aviso)}>Editar</button>
@@ -182,7 +225,7 @@ export function AnnouncementsPage() {
                   </tr>
                   {avisoParaLectura === aviso.id && (
                     <tr>
-                      <td colSpan={4}>
+                      <td colSpan={5}>
                         <ul>
                           {lectura.map((entrada) => (
                             <li key={entrada.property_id}>

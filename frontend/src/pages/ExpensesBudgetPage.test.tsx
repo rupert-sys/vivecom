@@ -62,6 +62,7 @@ const reglamento: Reglamento = {
   cotizaciones_minimas: 3,
   cajones_visitas: 7,
   horas_max_estacionamiento_visitas: 24,
+  dudas_en_avisos_por_defecto: false,
 }
 
 function mockUser(rol: string) {

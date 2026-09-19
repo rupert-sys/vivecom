@@ -26,6 +26,7 @@ export function ReglamentoPage() {
   const [cotizaciones, setCotizaciones] = useState('')
   const [cajones, setCajones] = useState('')
   const [horasVisitas, setHorasVisitas] = useState('')
+  const [dudasPorDefecto, setDudasPorDefecto] = useState(false)
 
   useEffect(() => {
     getReglamento()
@@ -41,6 +42,7 @@ export function ReglamentoPage() {
         setCotizaciones(String(r.cotizaciones_minimas))
         setCajones(String(r.cajones_visitas))
         setHorasVisitas(String(r.horas_max_estacionamiento_visitas))
+        setDudasPorDefecto(r.dudas_en_avisos_por_defecto)
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'No se pudo cargar el reglamento.'))
       .finally(() => setLoading(false))
@@ -62,6 +64,7 @@ export function ReglamentoPage() {
         cotizaciones_minimas: Number(cotizaciones),
         cajones_visitas: Number(cajones),
         horas_max_estacionamiento_visitas: Number(horasVisitas),
+        dudas_en_avisos_por_defecto: dudasPorDefecto,
       })
       setError(null)
       setGuardado(true)
@@ -145,6 +148,12 @@ export function ReglamentoPage() {
           <label style={campo}>
             Cotizaciones mínimas de proveedores distintos
             <input type="number" min={0} max={10} value={cotizaciones} onChange={(e) => setCotizaciones(e.target.value)} required />
+          </label>
+
+          <h3>Avisos</h3>
+          <label style={casilla}>
+            <input type="checkbox" checked={dudasPorDefecto} onChange={(e) => setDudasPorDefecto(e.target.checked)} />
+            Los avisos nuevos reciben dudas de los residentes (el administrador puede cambiarlo al publicar cada aviso)
           </label>
 
           <h3>Estacionamiento de visitas</h3>

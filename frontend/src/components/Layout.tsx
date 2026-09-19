@@ -35,6 +35,7 @@ export function Layout() {
             <Link to="/reservations">Reservaciones</Link>
             <Link to="/security">Seguridad</Link>
             <Link to="/announcements">Avisos</Link>
+            <Link to="/announcement-questions">Dudas</Link>
             <Link to="/reglamento">Reglamento</Link>
           </nav>
         </div>

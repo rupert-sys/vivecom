@@ -5,6 +5,9 @@ export interface AnnouncementInput {
   titulo: string
   contenido: string
   fecha_publicacion?: string
+  permite_dudas?: boolean
+  // null quita el plazo; ausente no lo toca.
+  dudas_hasta?: string | null
 }
 
 export function listAnnouncements(): Promise<Announcement[]> {

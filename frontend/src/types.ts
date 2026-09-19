@@ -39,6 +39,7 @@ export interface Reglamento {
   cotizaciones_minimas: number
   cajones_visitas: number
   horas_max_estacionamiento_visitas: number
+  dudas_en_avisos_por_defecto: boolean
 }
 
 export type EstatusCobranza = 'al_corriente' | 'pendiente' | 'moroso'
@@ -267,6 +268,25 @@ export interface Announcement {
   titulo: string
   contenido: string
   fecha_publicacion: string
+  // Dudas de los residentes: las activa el administrador al publicar (o el condominio por defecto).
+  permite_dudas: boolean
+  dudas_hasta: string | null // última fecha para mandar dudas; null = sin límite
+  dudas_abiertas: boolean // ¿se pueden mandar HOY? (activadas y dentro del plazo)
+}
+
+// Duda de un residente sobre un aviso. Va solo a la administración y al comité; si se publica como
+// aclaración la ven todos, sin vivienda.
+export interface AnnouncementQuestion {
+  id: string
+  announcement_id: string
+  aviso_titulo: string | null
+  texto: string
+  estado: 'abierta' | 'respondida'
+  respuesta: string | null
+  respondido_en: string | null
+  publica: boolean
+  created_at: string
+  vivienda: string | null
 }
 
 export interface ReadStatusEntry {

@@ -3,8 +3,9 @@ import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { AnnouncementsPage } from './AnnouncementsPage'
 import * as announcementsApi from '../api/announcements'
+import * as reglamentoApi from '../api/reglamento'
 import { useAuth } from '../auth/AuthContext'
-import type { Announcement, ReadStatusEntry } from '../types'
+import type { Announcement, ReadStatusEntry, Reglamento } from '../types'
 
 vi.mock('../auth/AuthContext', () => ({ useAuth: vi.fn() }))
 
@@ -13,6 +14,9 @@ const publicado: Announcement = {
   titulo: 'Corte de agua programado',
   contenido: 'El día 20 se cortará el agua de 9am a 1pm por mantenimiento.',
   fecha_publicacion: '2020-01-01T10:00:00',
+  permite_dudas: false,
+  dudas_hasta: null,
+  dudas_abiertas: false,
 }
 
 const programado: Announcement = {
@@ -20,6 +24,24 @@ const programado: Announcement = {
   titulo: 'Junta de vecinos',
   contenido: 'Convocatoria para la junta anual.',
   fecha_publicacion: '2099-01-01T10:00:00',
+  permite_dudas: false,
+  dudas_hasta: null,
+  dudas_abiertas: false,
+}
+
+const reglamentoSinDudas: Reglamento = {
+  dia_limite_pago: 5,
+  dia_recargo: 6,
+  recargo_porcentaje: 0.1,
+  recargo_modalidad: 'unico',
+  acepta_pago_efectivo: false,
+  morosos_sin_voto: false,
+  morosos_sin_areas_comunes: false,
+  gasto_umbral_asamblea: null,
+  cotizaciones_minimas: 3,
+  cajones_visitas: 0,
+  horas_max_estacionamiento_visitas: 24,
+  dudas_en_avisos_por_defecto: false,
 }
 
 function mockUser(rol: string) {
@@ -33,6 +55,7 @@ function mockUser(rol: string) {
 describe('AnnouncementsPage', () => {
   beforeEach(() => {
     vi.restoreAllMocks()
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(reglamentoSinDudas)
   })
 
   it('lista avisos y distingue publicados de programados', async () => {
@@ -91,6 +114,8 @@ describe('AnnouncementsPage', () => {
         titulo: 'Corte de agua programado',
         contenido: 'El día 20 se cortará el agua.',
         fecha_publicacion: undefined,
+        permite_dudas: false,
+        dudas_hasta: undefined,
       }),
     )
   })
@@ -160,7 +185,7 @@ describe('AnnouncementsPage', () => {
       mockUser('admin')
       const ahoraUtcNaive = new Date().toISOString().replace('Z', '')
       vi.spyOn(announcementsApi, 'listAnnouncements').mockResolvedValue([
-        { id: 'a3', titulo: 'Recién publicado', contenido: '...', fecha_publicacion: ahoraUtcNaive },
+        { id: 'a3', titulo: 'Recién publicado', contenido: '...', fecha_publicacion: ahoraUtcNaive, permite_dudas: false, dudas_hasta: null, dudas_abiertas: false },
       ])
 
       render(<AnnouncementsPage />)
@@ -180,5 +205,76 @@ describe('AnnouncementsPage', () => {
     render(<AnnouncementsPage />)
 
     expect(await screen.findByText(/no se pudieron cargar los avisos/i)).toBeInTheDocument()
+  })
+
+  it('un aviso nuevo permite dudas si el reglamento del condominio lo pide por defecto', async () => {
+    mockUser('admin')
+    vi.spyOn(announcementsApi, 'listAnnouncements').mockResolvedValue([])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue({ ...reglamentoSinDudas, dudas_en_avisos_por_defecto: true })
+    const createSpy = vi.spyOn(announcementsApi, 'createAnnouncement').mockResolvedValue(publicado)
+    const user = userEvent.setup({ delay: null })
+
+    render(<AnnouncementsPage />)
+    await screen.findByText(/todavía no hay avisos/i)
+    await waitFor(() => expect(screen.getByLabelText(/permitir que los residentes manden dudas/i)).toBeChecked())
+    await user.type(screen.getByPlaceholderText('Título'), 'Aviso')
+    await user.type(screen.getByPlaceholderText('Contenido'), 'Texto')
+    await user.click(screen.getByRole('button', { name: /publicar aviso/i }))
+
+    await waitFor(() => expect(createSpy).toHaveBeenCalled())
+    expect(createSpy.mock.calls[0][0]).toMatchObject({ permite_dudas: true })
+  })
+
+  it('el administrador activa las dudas al publicar y les pone fecha límite', async () => {
+    mockUser('admin')
+    vi.spyOn(announcementsApi, 'listAnnouncements').mockResolvedValue([])
+    const createSpy = vi.spyOn(announcementsApi, 'createAnnouncement').mockResolvedValue(publicado)
+    const user = userEvent.setup({ delay: null })
+
+    render(<AnnouncementsPage />)
+    await screen.findByText(/todavía no hay avisos/i)
+    expect(screen.queryByLabelText('Recibir dudas hasta')).not.toBeInTheDocument() // el plazo solo aparece con dudas activadas
+    await user.type(screen.getByPlaceholderText('Título'), 'Corte de agua')
+    await user.type(screen.getByPlaceholderText('Contenido'), 'El jueves.')
+    await user.click(screen.getByLabelText(/permitir que los residentes manden dudas/i))
+    await user.type(screen.getByLabelText('Recibir dudas hasta'), '2026-09-30')
+    await user.click(screen.getByRole('button', { name: /publicar aviso/i }))
+
+    await waitFor(() => expect(createSpy).toHaveBeenCalled())
+    expect(createSpy.mock.calls[0][0]).toMatchObject({ permite_dudas: true, dudas_hasta: '2026-09-30' })
+  })
+
+  it('al editar un aviso el formulario trae su configuración de dudas y un plazo vacío se manda como null', async () => {
+    mockUser('admin')
+    const conDudas: Announcement = { ...publicado, permite_dudas: true, dudas_hasta: '2026-09-30', dudas_abiertas: true }
+    vi.spyOn(announcementsApi, 'listAnnouncements').mockResolvedValue([conDudas])
+    const updateSpy = vi.spyOn(announcementsApi, 'updateAnnouncement').mockResolvedValue(conDudas)
+    const user = userEvent.setup({ delay: null })
+
+    render(<AnnouncementsPage />)
+    await user.click(await screen.findByRole('button', { name: /editar/i }))
+    expect(screen.getByLabelText(/permitir que los residentes manden dudas/i)).toBeChecked()
+    expect(screen.getByLabelText('Recibir dudas hasta')).toHaveValue('2026-09-30')
+
+    await user.clear(screen.getByLabelText('Recibir dudas hasta'))
+    await user.click(screen.getByRole('button', { name: /guardar cambios/i }))
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    expect(updateSpy.mock.calls[0][1]).toMatchObject({ permite_dudas: true, dudas_hasta: null })
+  })
+
+  it('la lista dice si cada aviso recibe dudas: abiertas hasta una fecha, cerradas o sin dudas', async () => {
+    mockUser('admin')
+    vi.spyOn(announcementsApi, 'listAnnouncements').mockResolvedValue([
+      { ...publicado, id: 'a1', titulo: 'Con plazo', permite_dudas: true, dudas_hasta: '2099-12-31', dudas_abiertas: true },
+      { ...publicado, id: 'a2', titulo: 'Vencido', permite_dudas: true, dudas_hasta: '2020-01-01', dudas_abiertas: false },
+      { ...publicado, id: 'a3', titulo: 'Sin dudas' },
+    ])
+
+    render(<AnnouncementsPage />)
+
+    expect((await screen.findByText('Con plazo')).closest('tr')).toHaveTextContent('Abiertas hasta 2099-12-31')
+    expect(screen.getByText('Vencido').closest('tr')).toHaveTextContent('Cerradas')
+    expect(screen.getByText('Sin dudas').closest('tr')).not.toHaveTextContent(/abiertas|cerradas/i)
   })
 })

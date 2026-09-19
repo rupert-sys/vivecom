@@ -21,6 +21,7 @@ const arequipa: Reglamento = {
   cotizaciones_minimas: 3,
   cajones_visitas: 7,
   horas_max_estacionamiento_visitas: 24,
+  dudas_en_avisos_por_defecto: false,
 }
 
 function mockUser(rol: string) {
@@ -85,6 +86,7 @@ describe('ReglamentoPage', () => {
       cotizaciones_minimas: 3,
       cajones_visitas: 7,
       horas_max_estacionamiento_visitas: 24,
+      dudas_en_avisos_por_defecto: false,
     })
     expect(await screen.findByText(/reglamento guardado/i)).toBeInTheDocument()
   })
@@ -140,5 +142,22 @@ describe('ReglamentoPage', () => {
     render(<ReglamentoPage />)
 
     expect(await screen.findByText('Error de servidor')).toBeInTheDocument()
+  })
+
+  it('el reglamento decide si los avisos nuevos reciben dudas por defecto', async () => {
+    mockUser('admin')
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue({ ...arequipa, dudas_en_avisos_por_defecto: true })
+    const updateSpy = vi.spyOn(reglamentoApi, 'updateReglamento').mockResolvedValue(arequipa)
+    const user = userEvent.setup()
+
+    render(<ReglamentoPage />)
+    const casilla = await screen.findByLabelText(/los avisos nuevos reciben dudas/i)
+    expect(casilla).toBeChecked()
+
+    await user.click(casilla)
+    await user.click(screen.getByRole('button', { name: /guardar reglamento/i }))
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    expect(updateSpy.mock.calls[0][0]).toMatchObject({ dudas_en_avisos_por_defecto: false })
   })
 })
