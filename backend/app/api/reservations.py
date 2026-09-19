@@ -36,6 +36,18 @@ _MOTIVO_A_MENSAJE = {
     "rango_invalido": "El rango de fechas no es válido (fecha_fin debe ser posterior a fecha_inicio)",
     "fecha_pasada": "No se puede reservar en el pasado",
     "horario_ocupado": "Ese horario ya está ocupado por otra reservación",
+    "amenidad_inexistente": "Amenidad no encontrada",
+}
+
+# Motivos que no son un conflicto de horario: la regla del reglamento (o la
+# mora de la vivienda) es la que impide reservar, no otra reservación.
+_MOTIVO_A_STATUS = {
+    "amenidad_inexistente": status.HTTP_404_NOT_FOUND,
+    "moroso": status.HTTP_403_FORBIDDEN,
+    "anticipacion_insuficiente": status.HTTP_422_UNPROCESSABLE_ENTITY,
+    "dia_no_permitido": status.HTTP_422_UNPROCESSABLE_ENTITY,
+    "fuera_de_horario": status.HTTP_422_UNPROCESSABLE_ENTITY,
+    "duracion_excedida": status.HTTP_422_UNPROCESSABLE_ENTITY,
 }
 
 
@@ -129,7 +141,10 @@ async def request_reservation(
             datetime.now(timezone.utc).replace(tzinfo=None),
         )
     except ReservaInvalida as exc:
-        raise HTTPException(status.HTTP_409_CONFLICT, _MOTIVO_A_MENSAJE[exc.motivo]) from exc
+        raise HTTPException(
+            _MOTIVO_A_STATUS.get(exc.motivo, status.HTTP_409_CONFLICT),
+            exc.detalle or _MOTIVO_A_MENSAJE[exc.motivo],
+        ) from exc
 
     # HU-C07: notificación a los aprobadores al momento de solicitarse — no
     # se manda por un barrido periódico como en F1-13/F1-32, porque aquí sí
@@ -150,6 +165,25 @@ async def list_reservations(current_user: CurrentUser = Depends(get_current_user
         query = query.where(Reservation.property_id == uuid.UUID(current_user.property_id))
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.post(
+    "/{reservation_id}/cuota-pagada",
+    response_model=ReservationRead,
+    dependencies=[Depends(require_roles(Rol.tesorero, Rol.admin))],
+)
+async def marcar_cuota_pagada(reservation_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
+    """
+    Reglamento (Arequipa Art. 2 VI): la cuota por el uso del área se entrega a
+    tesorería al solicitarla — el tesorero deja constancia aquí de que ya la
+    recibió, para que el aprobador y el residente lo vean.
+    """
+    reserva = await db.get(Reservation, reservation_id)
+    if reserva is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Reservación no encontrada")
+    reserva.cuota_pagada = True
+    await db.commit()
+    return reserva
 
 
 @router.get("/{reservation_id}", response_model=ReservationRead)

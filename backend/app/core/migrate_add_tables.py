@@ -18,7 +18,7 @@ from app.core.config import settings
 from app.core.database_base import ControlBase, TenantBase
 from app.models import (  # noqa: F401
     access_log, amenity, announcement, budget, expense, fee, fee_charge, incident, lost_found_item, package,
-    payment, poll, property, reservation, resident, user, vehicle, visitor_qr,
+    payment, poll, property, reglamento, reservation, resident, user, vehicle, visitor_qr,
 )
 from app.models.clabe_change_log import ClabeChangeLog  # noqa: F401
 from app.models.tenant import Tenant  # noqa: F401

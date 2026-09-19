@@ -1,10 +1,12 @@
 """
-Reglas de negocio que son iguales para TODOS los condominios en Vivecom —
-a diferencia de `Fee` (monto/periodicidad), que sí varía por tenant.
+Valores por defecto de la plataforma, iguales para TODOS los condominios que
+no configuraron su reglamento. Cada condominio puede sobrescribir el recargo,
+el plazo de pago y demás reglas con su `ReglamentoConfig` (models/reglamento.py,
+PATCH /tenant/reglamento) — el reglamento interior manda sobre este default.
 Ver alcance, sección 3.1 y sección 9 (pendiente "Recargo en cuotas bimestrales" resuelto).
 """
 
-# Porcentaje de recargo por mora, aplicado a partir del minuto 1 del día 6 de cada mes.
+# Recargo por mora por defecto, aplicado a partir del minuto 1 del día 6 de cada mes.
 RECARGO_PORCENTAJE = 0.10
 RECARGO_DIA_DEL_MES = 6
 

@@ -6,7 +6,7 @@ F2-17 (HU-C07, flujo de aprobación con rechazo automático por tiempo).
 import asyncio
 import uuid
 from collections import defaultdict
-from datetime import datetime, timedelta
+from datetime import datetime, time, timedelta, timezone
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -16,12 +16,103 @@ from app.models.amenity import Amenity, AmenityApprover
 from app.models.reservation import EstadoReserva, Reservation
 from app.models.resident import Resident
 from app.models.user import UserAccount
+from app.services.reglamento_service import TZ_CONDOMINIO, get_reglamento, vivienda_en_mora
 
 
 class ReservaInvalida(Exception):
-    def __init__(self, motivo: str):
+    def __init__(self, motivo: str, detalle: str | None = None):
         self.motivo = motivo
+        # Mensaje ya redactado para el residente cuando el motivo lleva datos
+        # (ej. cuántos días de anticipación pide esta amenidad).
+        self.detalle = detalle
         super().__init__(motivo)
+
+
+def max_simultaneas(reservaciones, inicio: datetime, fin: datetime) -> int:
+    """
+    Cuántas reservaciones coinciden AL MISMO TIEMPO como máximo dentro de
+    [inicio, fin). Dos reservaciones consecutivas (una termina cuando la otra
+    empieza) no cuentan como simultáneas.
+    """
+    eventos = []
+    for reserva in reservaciones:
+        eventos.append((max(reserva.fecha_inicio, inicio), 1))
+        eventos.append((min(reserva.fecha_fin, fin), -1))
+    eventos.sort(key=lambda e: (e[0], e[1]))  # -1 antes que +1 en el mismo instante
+    actual = maximo = 0
+    for _, delta in eventos:
+        actual += delta
+        maximo = max(maximo, actual)
+    return maximo
+
+
+def _a_local(naive_utc: datetime) -> datetime:
+    """Los datetimes del proyecto son UTC 'naive' — las reglas del reglamento se evalúan en hora local."""
+    return naive_utc.replace(tzinfo=timezone.utc).astimezone(TZ_CONDOMINIO)
+
+
+def _formato_hora(hora: time) -> str:
+    return f"{hora:%H:%M}"
+
+
+def validar_reglas_de_la_amenidad(amenidad: Amenity, fecha_inicio: datetime, fecha_fin: datetime, ahora: datetime) -> None:
+    """
+    Reglas del reglamento para reservar esta amenidad (Condominio Arequipa,
+    Art. 2 III-V): anticipación mínima, días y horario permitidos, horario
+    máximo de uso y duración. Todas evalúan en hora LOCAL del condominio: a las
+    11pm en México ya es "mañana" en UTC. Las reglas por defecto (0 días, sin
+    ventana, sin tope) no restringen nada — una amenidad sin configurar se
+    comporta como antes.
+    """
+    inicio, fin, hoy = _a_local(fecha_inicio), _a_local(fecha_fin), _a_local(ahora).date()
+
+    if amenidad.dias_anticipacion_minimos:
+        dias = (inicio.date() - hoy).days
+        if dias < amenidad.dias_anticipacion_minimos:
+            raise ReservaInvalida(
+                "anticipacion_insuficiente",
+                f"{amenidad.nombre} se debe solicitar con al menos {amenidad.dias_anticipacion_minimos} días de "
+                f"anticipación (faltan {dias} para esa fecha)",
+            )
+
+    if amenidad.dias_semana_permitidos:
+        permitidos = {int(d) for d in amenidad.dias_semana_permitidos.split(",") if d.strip() != ""}
+        dia, ultimo = inicio.date(), (fin - timedelta(microseconds=1)).date()
+        while dia <= ultimo:
+            if dia.weekday() not in permitidos:
+                nombres = ["lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo"]
+                validos = ", ".join(nombres[d] for d in sorted(permitidos))
+                raise ReservaInvalida(
+                    "dia_no_permitido", f"{amenidad.nombre} solo se puede usar: {validos}"
+                )
+            dia += timedelta(days=1)
+
+    if amenidad.hora_inicio_permitida and inicio.timetz().replace(tzinfo=None) < amenidad.hora_inicio_permitida:
+        raise ReservaInvalida(
+            "fuera_de_horario",
+            f"{amenidad.nombre} se puede usar a partir de las {_formato_hora(amenidad.hora_inicio_permitida)}",
+        )
+
+    if amenidad.hora_fin_maxima:
+        # El primer momento, a partir del inicio, en que se llega a la hora
+        # máxima: "hasta la 01:00 am" para un evento que empieza a las 15:00
+        # significa la 01:00 del día siguiente.
+        limite = inicio.replace(
+            hour=amenidad.hora_fin_maxima.hour, minute=amenidad.hora_fin_maxima.minute, second=0, microsecond=0
+        )
+        if limite <= inicio:
+            limite += timedelta(days=1)
+        if fin > limite:
+            raise ReservaInvalida(
+                "fuera_de_horario",
+                f"El horario máximo de uso de {amenidad.nombre} es hasta las {_formato_hora(amenidad.hora_fin_maxima)}",
+            )
+
+    if amenidad.max_duracion_horas and (fecha_fin - fecha_inicio) > timedelta(hours=amenidad.max_duracion_horas):
+        raise ReservaInvalida(
+            "duracion_excedida",
+            f"{amenidad.nombre} se puede reservar por un máximo de {amenidad.max_duracion_horas} horas",
+        )
 
 
 # F2-20 (QA de concurrencia): sin esto, dos solicitudes simultáneas para el
@@ -70,6 +161,23 @@ async def create_reservation(
     if fecha_inicio < ahora:
         raise ReservaInvalida("fecha_pasada")
 
+    amenidad = await db.get(Amenity, amenity_id)
+    if amenidad is None:
+        raise ReservaInvalida("amenidad_inexistente")
+    validar_reglas_de_la_amenidad(amenidad, fecha_inicio, fecha_fin, ahora)
+
+    # Reglamento (Arequipa Art. 2 VIII y Art. 21 II): las viviendas con adeudo
+    # no pueden usar las áreas comunes, ni siquiera con carta compromiso.
+    reglamento = await get_reglamento(db)
+    if reglamento.morosos_sin_areas_comunes and await vivienda_en_mora(
+        db, property_id, _a_local(ahora).date(), reglamento
+    ):
+        raise ReservaInvalida(
+            "moroso",
+            "Tu vivienda tiene cuotas vencidas: según el reglamento no puede usar las áreas comunes "
+            "hasta que regularices tu pago",
+        )
+
     async with _locks_por_amenidad[amenity_id]:
         # with_for_update(): no cambia nada en SQLite (no-op), pero en
         # Postgres bloquea esta fila hasta el commit — el candado real
@@ -87,12 +195,15 @@ async def create_reservation(
                 )
             )
         ).scalars().all()
-        if traslapes:
+        # capacidad > 1 (ej. 7 cajones de estacionamiento): el horario solo está
+        # ocupado cuando ya no queda lugar en ALGÚN momento del rango pedido.
+        # Con capacidad 1 (lo normal) es el doble-booking de siempre.
+        if max_simultaneas(traslapes, fecha_inicio, fecha_fin) >= amenidad.capacidad:
             raise ReservaInvalida("horario_ocupado")
 
         reserva = Reservation(
             amenity_id=amenity_id, property_id=property_id, fecha_inicio=fecha_inicio, fecha_fin=fecha_fin,
-            solicitada_en=ahora,
+            solicitada_en=ahora, cuota=amenidad.cuota or 0, cuota_pagada=False,
         )
         db.add(reserva)
         await db.commit()

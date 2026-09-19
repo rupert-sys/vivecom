@@ -1,8 +1,8 @@
 # Documento de alcance — Vivecom (México)
 
 **Tarea relacionada:** F0-01 — Definir alcance detallado del MVP
-**Estado:** ✅ Cerrado (v3.2) — 26 historias de usuario, incorpora hallazgos de entrevistas y resuelve los 2 riesgos abiertos (transferencias y votaciones digitales, sin cambios)
-**Versión:** 3.2
+**Estado:** ✅ Cerrado (v3.3) — 26 historias de usuario, incorpora hallazgos de entrevistas y, desde v3.3, el reglamento interior de cada condominio como configuración (sección 3.4), que **supera** cuatro decisiones anteriores (marcadas «superada por 3.4» abajo)
+**Versión:** 3.3
 
 ---
 
@@ -43,11 +43,11 @@ Vivecom es una plataforma que centraliza la administración, comunicación, segu
 
 **Incluye:**
 - Alta de condominio, viviendas y residentes (con relación propietario/inquilino).
-- Configuración de cuotas: monto y periodicidad (mensual/bimestral) definidos por cada condominio; el recargo por atraso es una **regla global de la plataforma**: 10% aplicado a partir del minuto 1 del día 6 de cada mes (los primeros 5 días del mes son de gracia).
+- Configuración de cuotas: monto y periodicidad (mensual/bimestral) definidos por cada condominio; el recargo por atraso es, **por defecto**, 10% único a partir del minuto 1 del día 6 de cada mes (los primeros 5 días son de gracia) — *superada por 3.4:* cada condominio puede configurar día límite, porcentaje y modalidad (único o mensual sobre saldo) según su reglamento.
 - Recordatorios automáticos de pago: se envían desde el día 1 del mes hasta que la vivienda registre su pago, por notificación dentro de la app del condominio (canal principal) y WhatsApp; SMS como respaldo si los anteriores fallan. En cuanto el pago se registra, se envía una confirmación de pago en vez de seguir mandando recordatorios de cobro.
 - Pago anticipado: el residente puede pagar por adelantado de 1 a 12 meses en una sola transacción, precisamente para evitar que se generen recargos por mora en esos meses futuros.
 - Generación automática de cargos por vivienda cada ciclo.
-- Todos los pagos son por **transferencia bancaria (SPEI)** a la cuenta CLABE del condominio, que se muestra dentro de la app y es configurable por el administrador (modificable en cualquier momento, con **confirmación explícita del administrador** y registro en bitácora de auditoría). No hay pago en efectivo ni en línea con tarjeta.
+- Todos los pagos son por **transferencia bancaria (SPEI)** a la cuenta CLABE del condominio, que se muestra dentro de la app y es configurable por el administrador (modificable en cualquier momento, con **confirmación explícita del administrador** y registro en bitácora de auditoría). No hay pago en línea con tarjeta. *Pago en efectivo: superada por 3.4* — se acepta solo en los condominios cuyo reglamento lo prevé, y lo captura el tesorero (que entrega recibo).
 - El residente hace la transferencia **desde su propio banco** (fuera de la app, como una transferencia normal) — no se requiere Open Banking ni que capture datos bancarios dentro de Vivecom. El pago se refleja automáticamente en su estado de cuenta en cuanto el sistema detecta el depósito (integración de recepción SPEI).
 - El **tesorero** (rol del comité) es quien valida los pagos detectados y resuelve casos especiales. Si un residente transfiere de más, el excedente queda como **saldo a favor** para el siguiente periodo. Si la transferencia no se refleja de inmediato, queda en estado **"pendiente"** hasta que el sistema la detecte; si el banco la rechaza, el residente debe repetir la transferencia.
 - Recibo de pago simple (no fiscal) generado automáticamente por cada pago registrado, descargable en PDF.
@@ -85,11 +85,35 @@ Vivecom es una plataforma que centraliza la administración, comunicación, segu
 - Notificación dentro de la app del condominio (canal principal) y WhatsApp cuando se publica un aviso; SMS como respaldo si los anteriores fallan.
 - Votaciones digitales, creadas por los **voceros** (representantes de sección/edificio), con fecha de cierre definida al crearlas. Requieren un **mínimo de 51% de participación** de las viviendas para ser válidas; si no se alcanza, la votación **se reactiva automáticamente una semana después** con un nuevo periodo de expiración, enviando recordatorios a todos los residentes para que participen. Si los resultados se muestran en tiempo real o solo al cierre depende de la configuración elegida en cada votación (no es un comportamiento fijo).
 - Tablón de objetos perdidos y encontrados: las publicaciones requieren **autorización del administrador** antes de mostrarse públicamente.
-- Calendario y reservación de amenidades (salón de eventos, alberca, cancha), con bloqueo para evitar doble reservación del mismo horario. Regla de anticipación: mínimo 2 días antes, salvo que el horario siga disponible más cerca de la fecha (entonces se permite reservar con menor anticipación). La reservación tiene una duración configurable (uno o varios días) y expira automáticamente al terminar ese periodo. **Toda reservación queda en estado "pendiente" hasta que se apruebe**: el administrador designa a uno o más miembros del comité como aprobadores (por amenidad o de forma general), y al solicitarse la reservación se les envía una notificación por los 3 canales definidos (app + WhatsApp + SMS de respaldo). Cada amenidad tiene su propio **periodo límite de respuesta configurable**; si nadie aprueba dentro de ese plazo, la reservación se **rechaza automáticamente**. El residente ve el estado de su reservación (pendiente/aprobada/rechazada) en todo momento, notificado por los mismos 3 canales.
+- Calendario y reservación de amenidades (salón de eventos, alberca, cancha), con bloqueo para evitar doble reservación del mismo horario. Regla de anticipación por defecto: mínimo 2 días antes, salvo que el horario siga disponible más cerca de la fecha; *superada por 3.4:* cada amenidad puede exigir una anticipación mínima estricta (ej. 8 días), un horario máximo, días permitidos, capacidad y cuota. La reservación tiene una duración configurable (uno o varios días) y expira automáticamente al terminar ese periodo. **Toda reservación queda en estado "pendiente" hasta que se apruebe**: el administrador designa a uno o más miembros del comité como aprobadores (por amenidad o de forma general), y al solicitarse la reservación se les envía una notificación por los 3 canales definidos (app + WhatsApp + SMS de respaldo). Cada amenidad tiene su propio **periodo límite de respuesta configurable**; si nadie aprueba dentro de ese plazo, la reservación se **rechaza automáticamente**. El residente ve el estado de su reservación (pendiente/aprobada/rechazada) en todo momento, notificado por los mismos 3 canales.
 
 **No incluye (por ahora):**
 - Chat en tiempo real entre residentes (tipo mensajería instantánea). El WhatsApp mencionado arriba es solo para notificaciones automáticas de un solo sentido (avisos, recordatorios), no una conversación bidireccional dentro de la plataforma.
 - Encuestas complejas con lógica condicional — solo votaciones de opción única.
+
+---
+
+### 3.4 Reglamento interior por condominio (v3.3)
+
+Los administradores entregaron el reglamento interior real de un condominio (Arequipa, modificado el 18-ene-2026) y con él quedó claro que las reglas **cambian de condominio a condominio**. Por eso dejan de ser constantes de la plataforma y pasan a ser configuración por condominio (`PATCH /tenant/reglamento`, por amenidad en `PATCH /amenities/{id}`). Sin configurar, todo se comporta como antes (los valores por defecto reproducen las reglas globales de las versiones 3.2 y anteriores).
+
+| Regla del reglamento | Cómo se refleja en Vivecom |
+|---|---|
+| Art. 9: cuota mensual con plazo hasta el día 5; recargo de 5% mensual sobre saldo | `dia_limite_pago`, `recargo_porcentaje`, `recargo_modalidad` (`unico` \| `mensual_sobre_saldo`). El recargo se recalcula en absoluto cada día (idempotente): monto base × % × meses vencidos. Hora local `America/Mexico_City`. |
+| Art. 9 IV y Art. 7 VI: pago en efectivo con recibo | `acepta_pago_efectivo`; `POST /payments/manual` (tesorero) registra quién capturó el pago; el recibo PDF indica "Efectivo". |
+| Art. 5 III: la vivienda en mora conserva voz pero no voto | `morosos_sin_voto`; votar responde 403 y `PollRead.voto_restringido_por_mora` deja que la app lo explique en vez de fallar. |
+| Art. 2 III-VIII: área adoquinada — 8 días de anticipación, hasta la 01:00 am, cuota de $1,000, sin adeudos | Reglas por amenidad: `dias_anticipacion_minimos`, `hora_inicio_permitida`/`hora_fin_maxima` (cruza medianoche), `dias_semana_permitidos`, `capacidad`, `max_duracion_horas`, `cuota` (+ `cuota_pagada` que marca tesorería), `notas_reglamento`. `AmenityRead.reglas` las expone en lenguaje llano y `GET /amenities/{id}/disponibilidad` dice cuántos lugares quedan (ej. cajones). `morosos_sin_areas_comunes` bloquea a la vivienda con adeudo. |
+| Art. 2 IX-XI y Art. 17 V.7: 7 cajones de visitas, máximo 24 h | `cajones_visitas`, `horas_max_estacionamiento_visitas`; `GET /access-log/estacionamiento-visitas` (libres y accesos que ya rebasaron el plazo). |
+| Art. 17 V.1-V.3: bitácora con nombre, acompañantes, identificación y autorización previa | `AccessLog.nombre_visitante`, `acompanantes`, `identificacion`, `autorizado_por` (`residente_previo` \| `telefono` \| `otro`). |
+| Art. 17 V.2: bitácora de incidencias con casa y persona; la caseta reporta fallas | `Incident.tipo` (`seguridad` \| `mantenimiento` \| `otro`), `property_id`, `persona_involucrada`; filtros por tipo y vivienda. Reportar una falla no es administrar el mantenimiento (sigue fuera de alcance). |
+| Art. 8: gastos programados/extraordinarios > $10,000 requieren asamblea y 3 cotizaciones; remisión o factura | `gasto_umbral_asamblea`, `cotizaciones_minimas`; `Expense.tipo`, `aprobado_en_asamblea`, `acta_referencia`, `cotizaciones`, `tipo_comprobante`. |
+| Art. 7 VI: estado de cuenta cuatrimestral a cada condómino | `GET /expenses/summary?desde&hasta` (ingresos, gastos, saldo a favor o en contra, por cobrar, gastos por tipo y categoría), abierto a todo rol autenticado. |
+| Cobranza: quién pagó, quién falta, quién es moroso | `GET /reports/collection-status` (tesorero/admin): por vivienda `al_corriente` \| `pendiente` \| `moroso`, adeudo y conteos. Moroso se calcula por fecha, no depende de que el job diario ya haya corrido. |
+| Art. 16: constancia de no adeudo para la venta | `GET /reports/no-debt-certificate/{property_id}` — PDF NO fiscal; 409 si hay cualquier cargo sin pagar. |
+
+**Interpretaciones a confirmar con el cliente:** (1) "5% mensual sobre saldo" se modeló como interés simple sobre el monto base por cada mes vencido, no compuesto; (2) el reglamento fija 8 días de anticipación **mínimos** (antes era solo informativo); (3) la prórroga de cuotas (Art. 1 VIII y 9 VII) **no está implementada**: falta definir quién la solicita, quién la aprueba y cómo afecta el recargo y el estatus de moroso; (4) la restricción a morosos es solo de **voto y áreas comunes** — Vivecom sigue sin negar el acceso físico a la vivienda ni a sus visitas (ver la nota «No construir» de la sección 13); (5) la caseta offline no puede conocer la mora, por lo que no bloquea accesos.
+
+**Pendiente de producto (retroalimentación de administradores, sin implementar):** adjuntar comprobante bancario (foto/PDF) al pago y a los gastos — hoy `comprobante_url` es solo texto y no existe almacenamiento de archivos (depende de F0-15); retroalimentación/preguntas en avisos (el alcance excluye chat: falta decidir un formato acotado); apps móvil/caseta y panel admin que consuman los endpoints nuevos (paquetes, generación de QR de visitantes y códigos de proveedor, resúmenes, configuración del reglamento).
 
 ---
 
@@ -133,7 +157,7 @@ Vivecom es una plataforma que centraliza la administración, comunicación, segu
 
 1. ~~¿Un residente puede tener más de una vivienda?~~ **Resuelto:** sí, y se tratan de forma independiente (ver sección 2).
 2. ~~¿El comité/mesa directiva necesita aprobar gastos dentro del sistema, o solo consultarlos?~~ **Resuelto:** solo consultarlos. El comité tiene acceso de solo lectura a reportes financieros; no hay flujo de aprobación dentro del sistema.
-3. ~~¿Los recargos por mora son iguales para todos los condominios o cada uno define su propia regla?~~ **Resuelto:** son iguales para todos los condominios (regla global de la plataforma, no configurable por condominio).
+3. ~~¿Los recargos por mora son iguales para todos los condominios o cada uno define su propia regla?~~ **Resuelto:** iguales para todos (regla global). *Superada por 3.4:* el reglamento del condominio Arequipa fija 5% mensual sobre saldo insoluto, así que la regla es configurable por condominio; el 10% único queda como valor por defecto.
 4. ~~¿Existe algún reglamento de condominio (ej. límite de visitantes, horario de amenidades) que deba reflejarse como regla del sistema desde el MVP?~~ **Resuelto:** no hay límite de visitantes ni horario restringido de acceso. Las amenidades se reservan con mínimo 2 días de antelación, salvo que el horario siga disponible más cerca de la fecha (en cuyo caso sí se permite reservar con menos anticipación). La reservación expira automáticamente al terminar el bloque de tiempo programado, que puede ser de uno o varios días.
 5. ~~¿Confirmas que no se requiere ningún tipo de comprobante fiscal, ni siquiera un recibo simple no fiscal generado por Vivecom?~~ **Resuelto:** sí se requiere un recibo simple (no fiscal) por cada pago; no se requiere timbrado ni CFDI.
 
@@ -153,7 +177,7 @@ Vamos marcando esta lista conforme resolvamos cada punto — es el "qué falta" 
 - [x] **Modelo de negocio y pricing:** cobro por vivienda, con periodicidad mensual. Ver sección 1.
 - [x] **Canal de notificación prioritario:** notificación dentro de la app del condominio (canal principal) y WhatsApp; SMS como respaldo si los anteriores fallan.
 - [x] **Periodo de prueba / onboarding comercial:** no hay periodo gratuito.
-- [x] **Pago en efectivo:** no existe. Todos los pagos son por transferencia bancaria (SPEI). Ver sección 3.1.
+- [x] **Pago en efectivo:** no existe por defecto (transferencia SPEI). *Superada por 3.4:* se habilita por condominio cuando su reglamento lo acepta. Ver sección 3.1.
 - [x] **Seguridad al cambiar la cuenta de destino:** requiere confirmación explícita del administrador, además de quedar en la bitácora de auditoría.
 - [x] **Proveedor de pagos:** no se requiere Open Banking ni iniciación de transferencias desde la app. El residente transfiere desde su propio banco (fuera de Vivecom) a la CLABE mostrada; solo se necesita un proveedor de **recepción/detección SPEI** (mucho más simple que iniciar transferencias) — el proveedor específico (STP, Arcus, etc.) se evalúa como parte de F0-05.
 - [x] **Flujo de aprobación de reservaciones — destinatario:** el administrador designa a uno o más miembros del comité como aprobadores (no todo el comité por defecto).
@@ -359,7 +383,7 @@ Como aprobador (miembro del comité designado), quiero recibir una notificación
 - Hoy no existe registro digital de accesos/incidencias en ningún caso — valida la oportunidad, aunque implica cambio de hábito.
 
 **Riesgos abiertos — resueltos:**
-1. ~~¿Se reabre "todo pago es por transferencia"?~~ **Decisión: se mantiene.** Solo transferencia, sin efectivo, tal como está en la sección 3.1.
+1. ~~¿Se reabre "todo pago es por transferencia"?~~ **Decisión: se mantiene** como valor por defecto (solo transferencia). *Superada por 3.4:* un condominio cuyo reglamento acepta efectivo lo activa en su configuración.
 2. ~~¿Votaciones digitales vs. junta física con acta firmada?~~ **Decisión: se mantiene digital.** El módulo de votaciones (HU-C02 a HU-C04) queda como está; no se adapta al proceso de acta en papel.
 
 **No construir**: un administrador reveló que hoy se niega el acceso físico a quien no paga — práctica con riesgo legal que Vivecom **no debe replicar** aunque algún cliente lo pida.

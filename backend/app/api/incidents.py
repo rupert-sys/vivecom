@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.core.security import decode_access_token
 from app.models.incident import EstadoIncidencia, Incident, IncidentUpdate
+from app.models.property import Property
 from app.models.user import Rol
 from app.schemas.incident import (
     IncidentCommentCreate, IncidentCommentRead, IncidentCreate, IncidentRead, IncidentStatusChange,
@@ -37,7 +38,13 @@ async def create_incident(
     if payload.client_id is not None:
         existente = (await db.execute(select(Incident).where(Incident.client_id == payload.client_id))).scalar_one_or_none()
         if existente is not None:
-            if existente.descripcion == payload.descripcion and existente.foto_url == payload.foto_url:
+            if (
+                existente.descripcion == payload.descripcion
+                and existente.foto_url == payload.foto_url
+                and existente.tipo == payload.tipo
+                and existente.property_id == payload.property_id
+                and existente.persona_involucrada == payload.persona_involucrada
+            ):
                 return existente
 
             await manager.broadcast(
@@ -51,7 +58,13 @@ async def create_incident(
             )
             raise HTTPException(status.HTTP_409_CONFLICT, "Conflicto de sincronización: este client_id ya existe con otros datos.")
 
+    if payload.property_id is not None and await db.get(Property, payload.property_id) is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
+
     incidencia = Incident(
+        tipo=payload.tipo,
+        property_id=payload.property_id,
+        persona_involucrada=payload.persona_involucrada,
         reportado_por=uuid.UUID(current_user.user_id),
         descripcion=payload.descripcion,
         foto_url=payload.foto_url,
@@ -63,16 +76,28 @@ async def create_incident(
 
     await manager.broadcast(
         current_user.schema_name,
-        {"evento": "incidencia_creada", "incident_id": str(incidencia.id), "descripcion": incidencia.descripcion},
+        {
+            "evento": "incidencia_creada", "incident_id": str(incidencia.id),
+            "descripcion": incidencia.descripcion, "tipo": incidencia.tipo,
+        },
     )
     return incidencia
 
 
 @router.get("", response_model=list[IncidentRead], dependencies=ver_incidencias)
-async def list_incidents(estado: str | None = None, db: AsyncSession = Depends(get_tenant_db)):
+async def list_incidents(
+    estado: str | None = None,
+    tipo: str | None = None,
+    property_id: uuid.UUID | None = None,
+    db: AsyncSession = Depends(get_tenant_db),
+):
     query = select(Incident).order_by(Incident.created_at.desc())
     if estado is not None:
         query = query.where(Incident.estado == estado)
+    if tipo is not None:
+        query = query.where(Incident.tipo == tipo)
+    if property_id is not None:
+        query = query.where(Incident.property_id == property_id)
     result = await db.execute(query)
     return result.scalars().all()
 

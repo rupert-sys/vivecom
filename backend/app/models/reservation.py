@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey
+from sqlalchemy import Boolean, DateTime, Enum, ForeignKey, Numeric
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database_base import TenantBase
@@ -45,3 +45,9 @@ class Reservation(TenantBase):
     estado: Mapped[EstadoReserva] = mapped_column(Enum(EstadoReserva), default=EstadoReserva.pendiente)
     aprobador_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("user_account.id"), nullable=True)
     solicitada_en: Mapped[datetime] = mapped_column(DateTime)
+    # Reglamento (Condominio Arequipa, Art. 2 VI): la cuota por uso del área
+    # se entrega a tesorería al solicitar el uso — el tesorero la marca aquí.
+    cuota_pagada: Mapped[bool] = mapped_column(Boolean, default=False)
+    # Cuota de uso de la amenidad AL MOMENTO de solicitar (si el admin la cambia
+    # después, las reservaciones ya hechas conservan la que se les cobró).
+    cuota: Mapped[float] = mapped_column(Numeric(10, 2), default=0)

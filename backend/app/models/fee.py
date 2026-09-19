@@ -16,8 +16,10 @@ class Periodicidad(str, enum.Enum):
 class Fee(TenantBase):
     """
     Configuración de cuota del condominio (monto y periodicidad). El recargo
-    por mora NO vive aquí — es una regla global de la plataforma (10%, día 6
-    de cada mes), ver app/core/business_rules.py. Ver alcance, sección 3.1.
+    por mora NO vive aquí — sale del reglamento de cada condominio
+    (models/reglamento.py); sin configurar aplica el default de la
+    plataforma (10% único, día 6), ver app/core/business_rules.py. Ver
+    alcance, sección 3.1.
     """
 
     __tablename__ = "fee"

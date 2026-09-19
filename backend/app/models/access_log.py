@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey
+from sqlalchemy import DateTime, Enum, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database_base import TenantBase
@@ -34,3 +34,12 @@ class AccessLog(TenantBase):
     # offline. Permite que un reintento de sincronización (mismo client_id)
     # no cree un duplicado — ver POST /access-log.
     client_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, unique=True, index=True)
+    # Reglamento (Art. 17 V.1 y V.3): la bitácora de acceso debe llevar
+    # nombre del conductor o peatón, número de acompañantes y una
+    # identificación oficial vigente con fotografía (se devuelve a la
+    # salida), y contar con autorización previa del condómino (o llamarle si
+    # la visita es inesperada).
+    nombre_visitante: Mapped[str | None] = mapped_column(String, nullable=True)
+    acompanantes: Mapped[int] = mapped_column(Integer, default=0)
+    identificacion: Mapped[str | None] = mapped_column(String, nullable=True)  # ej. "INE 1234", "Licencia"
+    autorizado_por: Mapped[str | None] = mapped_column(String, nullable=True)  # residente_previo | telefono | otro

@@ -22,3 +22,6 @@ class ReservationRead(BaseModel):
     fecha_fin: datetime
     estado: EstadoReserva
     aprobador_id: uuid.UUID | None
+    cuota_pagada: bool = False
+    # Cuota de uso de la amenidad al solicitarla (0 = sin cuota) — la app la muestra.
+    cuota: float = 0

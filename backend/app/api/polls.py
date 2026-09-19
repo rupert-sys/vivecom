@@ -13,6 +13,7 @@ from app.models.user import Rol
 from app.schemas.poll import PollCreate, PollOptionRead, PollRead, PollResultOption, PollResults, VoteCreate
 from app.services.notification_providers.twilio_provider import TwilioProvider
 from app.services.poll_service import VotoInvalido, cast_vote, create_poll, get_poll_results, process_poll_closures
+from app.services.reglamento_service import get_reglamento, hoy_local, vivienda_en_mora
 
 router = APIRouter(prefix="/polls", tags=["polls"])
 
@@ -39,6 +40,16 @@ async def _ya_voto_por_poll(db: AsyncSession, property_id: str | None, poll_ids:
     return set(votados)
 
 
+async def _voto_restringido_por_mora(db: AsyncSession, current_user: CurrentUser) -> bool | None:
+    """None si no aplica; True/False si el condominio restringe el voto a morosos y es residente."""
+    if current_user.property_id is None:
+        return None
+    reglamento = await get_reglamento(db)
+    if not reglamento.morosos_sin_voto:
+        return None
+    return await vivienda_en_mora(db, uuid.UUID(current_user.property_id), hoy_local(), reglamento)
+
+
 async def _to_read(db: AsyncSession, poll: Poll, current_user: CurrentUser) -> PollRead:
     opciones = (await db.execute(select(PollOption).where(PollOption.poll_id == poll.id))).scalars().all()
     ya_votados = await _ya_voto_por_poll(db, current_user.property_id, [poll.id])
@@ -52,6 +63,7 @@ async def _to_read(db: AsyncSession, poll: Poll, current_user: CurrentUser) -> P
         reactivada=poll.reactivada,
         opciones=[PollOptionRead(id=o.id, texto=o.texto) for o in opciones],
         ya_voto=(poll.id in ya_votados) if es_residente else None,
+        voto_restringido_por_mora=await _voto_restringido_por_mora(db, current_user),
     )
 
 
@@ -98,6 +110,7 @@ async def list_polls(current_user: CurrentUser = Depends(get_current_user), db: 
 
     ya_votados = await _ya_voto_por_poll(db, current_user.property_id, poll_ids)
     es_residente = current_user.property_id is not None
+    restringido = await _voto_restringido_por_mora(db, current_user)
 
     return [
         PollRead(
@@ -106,6 +119,7 @@ async def list_polls(current_user: CurrentUser = Depends(get_current_user), db: 
             reactivada=poll.reactivada,
             opciones=[PollOptionRead(id=o.id, texto=o.texto) for o in opciones_por_poll.get(poll.id, [])],
             ya_voto=(poll.id in ya_votados) if es_residente else None,
+            voto_restringido_por_mora=restringido,
         )
         for poll in polls
     ]
@@ -135,6 +149,13 @@ async def vote(
     poll = await db.get(Poll, poll_id)
     if poll is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Votación no encontrada")
+
+    if await _voto_restringido_por_mora(db, current_user):
+        raise HTTPException(
+            status.HTTP_403_FORBIDDEN,
+            "Tu vivienda tiene cuotas vencidas: según el reglamento conservas voz, pero no voto, "
+            "hasta que regularices tu pago",
+        )
 
     try:
         await cast_vote(db, poll_id, uuid.UUID(current_user.property_id), payload.option_id)

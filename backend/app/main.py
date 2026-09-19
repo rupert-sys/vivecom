@@ -5,8 +5,8 @@ from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import (
     access_log, amenities, announcements, auth, budgets, expenses, fees, incidents, lost_found, packages, payments,
-    payments_webhook, polls, privacy, properties, reports, reservations, residents, signup, staff_auth,
-    staff_reports, tenant_config, users, visitor_qr,
+    payments_webhook, polls, privacy, properties, reglamento, reports, reservations, residents, signup,
+    staff_auth, staff_reports, tenant_config, users, visitor_qr,
 )
 from app.core.config import settings
 
@@ -45,6 +45,7 @@ app.include_router(properties.router)
 app.include_router(residents.router)
 app.include_router(fees.router)
 app.include_router(tenant_config.router)
+app.include_router(reglamento.router)
 app.include_router(payments.router)
 app.include_router(payments_webhook.router)
 app.include_router(expenses.router)

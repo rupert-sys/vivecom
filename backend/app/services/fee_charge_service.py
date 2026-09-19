@@ -12,11 +12,11 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.core.business_rules import RECARGO_DIA_DEL_MES, RECARGO_PORCENTAJE
 from app.models.fee import Fee
 from app.models.fee_charge import EstadoCargo, FeeCharge
 from app.models.property import Property
 from app.services.payment_reconciliation_service import TOLERANCIA_CENTAVOS
+from app.services.reglamento_service import get_reglamento, meses_con_recargo
 
 # Revisión (post-F2-20): el chequeo de "ya tiene cargo este periodo" era un
 # SELECT seguido de INSERTs condicionales, sin restricción única en
@@ -98,35 +98,48 @@ async def generate_charges_for_period(db: AsyncSession, periodo: date) -> list[F
         return nuevos_cargos
 
 
-def _fecha_limite_sin_recargo(periodo: date) -> date:
-    """
-    El recargo aplica a partir del minuto 1 del día 6 de CADA MES (regla
-    global, no por condominio — alcance sección 3.1). `periodo` es el primer
-    día del mes al que corresponde el cargo, así que el límite es el día
-    RECARGO_DIA_DEL_MES de ese mismo mes.
-    """
-    return date(periodo.year, periodo.month, RECARGO_DIA_DEL_MES)
-
-
 async def apply_late_surcharges(db: AsyncSession, hoy: date) -> list[FeeCharge]:
     """
-    Recorre los FeeCharge pendientes y, a quienes ya pasaron su fecha límite
-    sin pagar, les aplica el recargo global y los marca como vencidos.
-    Idempotente: si un cargo ya tiene recargo aplicado, no se vuelve a tocar
-    (evita recalcularlo cada vez que corre el job).
+    Recorre los FeeCharge sin pagar y les aplica el recargo por mora según el
+    reglamento del condominio (ver models/reglamento.py): a partir del día
+    siguiente al límite de pago de cada mes ("unico": una sola vez, la regla
+    global histórica) o, si el reglamento lo pide, de nuevo cada mes que la
+    cuota sigue sin pagarse ("mensual_sobre_saldo": Condominio Arequipa,
+    Art. 9 I — 5% mensual sobre saldos insolutos).
+
+    El monto se recalcula de forma absoluta (porcentaje × monto_base × meses
+    en mora), no incremental, así que correr el job varias veces el mismo día
+    es idempotente y un cargo que ya traía su recargo no se vuelve a tocar.
+    Nunca se reduce un recargo ya aplicado. Regresa solo los cargos que
+    cambiaron en esta corrida.
     """
+    reglamento = await get_reglamento(db)
     result = await db.execute(
-        select(FeeCharge).where(FeeCharge.estado == EstadoCargo.pendiente, FeeCharge.recargo_aplicado == 0)
+        select(FeeCharge).where(
+            FeeCharge.estado.in_([EstadoCargo.pendiente, EstadoCargo.vencido]), FeeCharge.payment_id.is_(None)
+        )
     )
-    candidatos = result.scalars().all()
 
     afectados = []
-    for charge in candidatos:
-        if hoy >= _fecha_limite_sin_recargo(charge.periodo):
-            charge.recargo_aplicado = round(float(charge.monto_base) * RECARGO_PORCENTAJE, 2)
+    hubo_cambios = False
+    for charge in result.scalars().all():
+        meses = meses_con_recargo(charge.periodo, hoy, reglamento.dia_recargo)
+        if meses == 0:
+            continue
+        if reglamento.recargo_modalidad == "unico":
+            meses = 1
+        esperado = round(float(charge.monto_base) * reglamento.recargo_porcentaje * meses, 2)
+        if esperado > float(charge.recargo_aplicado) + TOLERANCIA_CENTAVOS:
+            charge.recargo_aplicado = esperado
             charge.estado = EstadoCargo.vencido
             afectados.append(charge)
+            hubo_cambios = True
+        elif charge.estado == EstadoCargo.pendiente:
+            # Recargo ya aplicado antes (o porcentaje 0%): el cargo sigue en
+            # mora, solo falta reflejar su estado. No cuenta como "afectado".
+            charge.estado = EstadoCargo.vencido
+            hubo_cambios = True
 
-    if afectados:
+    if hubo_cambios:
         await db.commit()
     return afectados

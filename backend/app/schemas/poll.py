@@ -29,6 +29,11 @@ class PollRead(BaseModel):
     # tenía forma de saber si SU vivienda ya votó sin intentarlo y toparse
     # con el 409 de "ya_voto".
     ya_voto: bool | None = None
+    # Reglamento del condominio (Arequipa Art. 5 III): la vivienda en mora
+    # conserva voz pero pierde el voto. None si no aplica (no es residente, o
+    # el condominio no tiene esa regla) — la app muestra el motivo en vez de
+    # dejar al residente tocar "Votar" y toparse con un error.
+    voto_restringido_por_mora: bool | None = None
 
 
 class VoteCreate(BaseModel):

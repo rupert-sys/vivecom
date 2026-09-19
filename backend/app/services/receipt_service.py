@@ -30,14 +30,20 @@ def build_receipt_pdf(payment: Payment, propiedad: Property, tenant: Tenant) -> 
     pdf.cell(0, 8, tenant.nombre, new_x="LMARGIN", new_y="NEXT")
     pdf.ln(4)
 
+    # Un pago capturado a mano (efectivo — reglamento del Condominio Arequipa,
+    # Art. 9 IV) no tiene clave de rastreo SPEI: se muestra la forma de pago.
+    es_manual = payment.registrado_por is not None
+    forma_de_pago = {"efectivo": "Efectivo"}.get(payment.proveedor, "Transferencia SPEI")
     filas = [
         ("Folio", str(payment.id)),
         ("Vivienda", propiedad.identificador),
         ("Monto", f"${float(payment.monto):,.2f} MXN"),
-        ("Fecha del depósito", payment.fecha_deteccion.strftime("%d/%m/%Y %H:%M")),
-        ("Clave de rastreo", payment.clave_rastreo),
-        ("Estado", payment.estado.value.capitalize()),
+        ("Fecha del pago" if es_manual else "Fecha del depósito", payment.fecha_deteccion.strftime("%d/%m/%Y %H:%M")),
+        ("Forma de pago", forma_de_pago),
     ]
+    if not es_manual:
+        filas.append(("Clave de rastreo", payment.clave_rastreo))
+    filas.append(("Estado", payment.estado.value.capitalize()))
     pdf.set_font("helvetica", "", 11)
     for etiqueta, valor in filas:
         pdf.set_font("helvetica", "B", 11)

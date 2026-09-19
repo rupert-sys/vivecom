@@ -1,6 +1,6 @@
 import uuid
 from collections import defaultdict
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
@@ -11,24 +11,27 @@ from app.models.access_log import AccessLog, TipoAcceso
 from app.models.property import Property
 from app.models.user import Rol
 from app.models.vehicle import Vehicle
-from app.schemas.access_log import AccessLogCreate, AccessLogRead
+from app.schemas.access_log import AccessLogCreate, AccessLogRead, EstacionamientoVisitas
 from app.services.incident_broadcast import manager
+from app.services.reglamento_service import get_reglamento
 
 router = APIRouter(prefix="/access-log", tags=["access-log"])
 
 guardia_only = [Depends(require_roles(Rol.guardia, Rol.admin))]
 
 
+def _leer(log: AccessLog, placas: list[str]) -> AccessLogRead:
+    return AccessLogRead(
+        id=log.id, property_id=log.property_id, tipo=log.tipo,
+        hora_entrada=log.hora_entrada, hora_salida=log.hora_salida, placas=placas,
+        nombre_visitante=log.nombre_visitante, acompanantes=log.acompanantes or 0,
+        identificacion=log.identificacion, autorizado_por=log.autorizado_por,
+    )
+
+
 async def _to_read(db: AsyncSession, log: AccessLog) -> AccessLogRead:
     placas = (await db.execute(select(Vehicle.placa).where(Vehicle.access_log_id == log.id))).scalars().all()
-    return AccessLogRead(
-        id=log.id,
-        property_id=log.property_id,
-        tipo=log.tipo,
-        hora_entrada=log.hora_entrada,
-        hora_salida=log.hora_salida,
-        placas=list(placas),
-    )
+    return _leer(log, list(placas))
 
 
 @router.post(
@@ -63,6 +66,10 @@ async def register_entry(
                 existente.property_id == payload.property_id
                 and existente.tipo == payload.tipo
                 and placas_existentes == sorted(payload.placas)
+                and existente.nombre_visitante == payload.nombre_visitante
+                and (existente.acompanantes or 0) == payload.acompanantes
+                and existente.identificacion == payload.identificacion
+                and existente.autorizado_por == payload.autorizado_por
             ):
                 return await _to_read(db, existente)
 
@@ -87,6 +94,10 @@ async def register_entry(
         tipo=payload.tipo,
         hora_entrada=datetime.now(timezone.utc).replace(tzinfo=None),
         client_id=payload.client_id,
+        nombre_visitante=payload.nombre_visitante,
+        acompanantes=payload.acompanantes,
+        identificacion=payload.identificacion,
+        autorizado_por=payload.autorizado_por,
     )
     db.add(log)
     await db.flush()  # para tener log.id antes de crear los Vehicle (F2-03)
@@ -100,11 +111,7 @@ async def register_entry(
     # search_path del tenant, fijado con is_local=true, ya no aplica — ver
     # core/database.py y el mismo bug ya corregido en polls.py). Las placas
     # ya se conocen del propio payload, no hace falta volver a pedirlas.
-    return AccessLogRead(
-        id=log.id, property_id=log.property_id, tipo=log.tipo,
-        hora_entrada=log.hora_entrada, hora_salida=log.hora_salida,
-        placas=list(payload.placas),
-    )
+    return _leer(log, list(payload.placas))
 
 
 @router.post("/{access_log_id}/exit", response_model=AccessLogRead, dependencies=guardia_only)
@@ -154,14 +161,35 @@ async def list_access_logs(
     for access_log_id, placa in filas_vehiculo:
         placas_por_log[access_log_id].append(placa)
 
-    return [
-        AccessLogRead(
-            id=log.id, property_id=log.property_id, tipo=log.tipo,
-            hora_entrada=log.hora_entrada, hora_salida=log.hora_salida,
-            placas=placas_por_log.get(log.id, []),
+    return [_leer(log, placas_por_log.get(log.id, [])) for log in logs]
+
+
+@router.get("/estacionamiento-visitas", response_model=EstacionamientoVisitas, dependencies=guardia_only)
+async def visitor_parking(db: AsyncSession = Depends(get_tenant_db)):
+    """
+    Cajones de visitas libres ahora mismo (reglamento Art. 2 IX-XI y Art. 17
+    V.7): el vigilante decide si deja entrar un vehículo más o si el visitado
+    tiene lugar propio. Cuenta un cajón por cada acceso de visitante o
+    proveedor con vehículo que aún no registra salida.
+    """
+    reglamento = await get_reglamento(db)
+    abiertos = (
+        await db.execute(
+            select(AccessLog.id, AccessLog.hora_entrada)
+            .join(Vehicle, Vehicle.access_log_id == AccessLog.id)
+            .where(AccessLog.hora_salida.is_(None), AccessLog.tipo != TipoAcceso.residente)
+            .distinct()
         )
-        for log in logs
-    ]
+    ).all()
+    limite = datetime.now(timezone.utc).replace(tzinfo=None) - timedelta(hours=reglamento.horas_max_estacionamiento_visitas)
+    ocupados = len(abiertos)
+    return EstacionamientoVisitas(
+        total_cajones=reglamento.cajones_visitas,
+        ocupados=ocupados,
+        libres=max(0, reglamento.cajones_visitas - ocupados),
+        horas_maximas=reglamento.horas_max_estacionamiento_visitas,
+        excedidos=[fila.id for fila in abiertos if fila.hora_entrada < limite],
+    )
 
 
 @router.get("/{access_log_id}", response_model=AccessLogRead, dependencies=guardia_only)

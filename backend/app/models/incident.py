@@ -2,7 +2,7 @@ import enum
 import uuid
 from datetime import datetime
 
-from sqlalchemy import DateTime, Enum, ForeignKey, Text
+from sqlalchemy import DateTime, Enum, ForeignKey, String, Text
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database_base import TenantBase
@@ -41,6 +41,13 @@ class Incident(TenantBase):
     # F2-07/F2-11: mismo propósito que AccessLog.client_id — idempotencia de
     # sync offline desde la app caseta.
     client_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, unique=True, index=True)
+    # Reglamento (Art. 17 V.2): la bitácora de incidencias del turno debe
+    # anotar "el nombre de la persona externa o interna" y "el número de casa
+    # involucrada". tipo distingue seguridad de mantenimiento (reportar una
+    # falla no es lo mismo que administrar el mantenimiento — ver alcance §1).
+    tipo: Mapped[str] = mapped_column(String, default="seguridad")
+    property_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("property.id"), nullable=True)
+    persona_involucrada: Mapped[str | None] = mapped_column(String, nullable=True)
 
 
 class IncidentUpdate(TenantBase):
