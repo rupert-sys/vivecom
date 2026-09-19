@@ -303,3 +303,19 @@ def test_mis_dudas_y_marcar_vistas_sin_vivienda(client):
     _como("guardia")
     assert client.get("/announcement-questions/mine").json() == []
     assert client.post("/announcement-questions/mine/seen").status_code == 400
+
+
+def test_marcar_vistas_de_un_aviso_no_apaga_las_respuestas_de_otro(client):
+    casa1, _, aviso_a = _condominio(client)
+    aviso_b = client.post("/announcements", json={"titulo": "Junta", "contenido": "x", "permite_dudas": True}).json()["id"]
+    _como("residente", property_id=casa1)
+    duda_a = _preguntar(client, aviso_a, "Duda A").json()["id"]
+    duda_b = _preguntar(client, aviso_b, "Duda B").json()["id"]
+    _como("admin")
+    for duda in (duda_a, duda_b):
+        client.post(f"/announcement-questions/{duda}/answer", json={"respuesta": "Listo."})
+
+    _como("residente", property_id=casa1)
+    assert client.post("/announcement-questions/mine/seen", params={"announcement_id": aviso_a}).status_code == 204
+    nuevas = {d["texto"]: d["respuesta_nueva"] for d in client.get("/announcement-questions/mine").json()}
+    assert nuevas == {"Duda A": False, "Duda B": True}

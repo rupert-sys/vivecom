@@ -189,20 +189,24 @@ async def my_questions(
 
 @router.post("/announcement-questions/mine/seen", status_code=status.HTTP_204_NO_CONTENT)
 async def mark_my_answers_seen(
-    current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_tenant_db)
+    announcement_id: uuid.UUID | None = None,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
 ):
-    """El residente abrió sus dudas: las respuestas dejan de marcarse como nuevas."""
+    """
+    El residente abrió sus dudas: las respuestas dejan de marcarse como nuevas. Con `announcement_id` solo las
+    de ese aviso (la app las marca al abrir el aviso, para no apagar las de otros que aún no ha visto).
+    """
     if current_user.property_id is None:
         raise HTTPException(status.HTTP_400_BAD_REQUEST, "Esta acción es solo para residentes ligados a una vivienda")
-    pendientes = (
-        await db.execute(
-            select(AnnouncementQuestion).where(
-                AnnouncementQuestion.property_id == uuid.UUID(current_user.property_id),
-                AnnouncementQuestion.estado == "respondida",
-                AnnouncementQuestion.respuesta_vista.is_(False),
-            )
-        )
-    ).scalars().all()
+    consulta = select(AnnouncementQuestion).where(
+        AnnouncementQuestion.property_id == uuid.UUID(current_user.property_id),
+        AnnouncementQuestion.estado == "respondida",
+        AnnouncementQuestion.respuesta_vista.is_(False),
+    )
+    if announcement_id is not None:
+        consulta = consulta.where(AnnouncementQuestion.announcement_id == announcement_id)
+    pendientes = (await db.execute(consulta)).scalars().all()
     for duda in pendientes:
         duda.respuesta_vista = True
     await db.commit()

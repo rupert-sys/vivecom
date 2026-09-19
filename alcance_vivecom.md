@@ -1,7 +1,7 @@
 # Documento de alcance — Vivecom (México)
 
 **Tarea relacionada:** F0-01 — Definir alcance detallado del MVP
-**Estado:** ✅ Cerrado (v3.3) — 26 historias de usuario, incorpora hallazgos de entrevistas y, desde v3.3, el reglamento interior de cada condominio como configuración (sección 3.4), que **supera** cuatro decisiones anteriores (marcadas «superada por 3.4» abajo)
+**Estado:** ✅ Cerrado (v3.3) — 27 historias de usuario, incorpora hallazgos de entrevistas y, desde v3.3, el reglamento interior de cada condominio como configuración (sección 3.4), que **supera** cuatro decisiones anteriores (marcadas «superada por 3.4» abajo)
 **Versión:** 3.3
 
 ---
@@ -109,6 +109,7 @@ Los administradores entregaron el reglamento interior real de un condominio (Are
 | Art. 8: gastos programados/extraordinarios > $10,000 requieren asamblea y 3 cotizaciones; remisión o factura | `gasto_umbral_asamblea`, `cotizaciones_minimas`; `Expense.tipo`, `aprobado_en_asamblea`, `acta_referencia`, `cotizaciones`, `tipo_comprobante`. |
 | Art. 7 VI: estado de cuenta cuatrimestral a cada condómino | `GET /expenses/summary?desde&hasta` (ingresos, gastos, saldo a favor o en contra, por cobrar, gastos por tipo y categoría), abierto a todo rol autenticado. |
 | Cobranza: quién pagó, quién falta, quién es moroso | `GET /reports/collection-status` (tesorero/admin): por vivienda `al_corriente` \| `pendiente` \| `moroso`, adeudo y conteos. Moroso se calcula por fecha, no depende de que el job diario ya haya corrido. |
+| Avisos: retroalimentación de los residentes | Dudas por aviso (HU-C08): `Announcement.permite_dudas` / `dudas_hasta`, `AnnouncementQuestion` (privada, la responde el administrador o el comité aprobador y puede publicarse como aclaración anónima); valor por defecto en `dudas_en_avisos_por_defecto`. |
 | Art. 16: constancia de no adeudo para la venta | `GET /reports/no-debt-certificate/{property_id}` — PDF NO fiscal; 409 si hay cualquier cargo sin pagar. |
 
 **Interpretaciones a confirmar con el cliente:** (1) "5% mensual sobre saldo" se modeló como interés simple sobre el monto base por cada mes vencido, no compuesto; (2) el reglamento fija 8 días de anticipación **mínimos** (antes era solo informativo); (3) la prórroga de cuotas (Art. 1 VIII y 9 VII) **no está implementada**: falta definir quién la solicita, quién la aprueba y cómo afecta el recargo y el estatus de moroso; (4) la restricción a morosos es solo de **voto y áreas comunes** — Vivecom sigue sin negar el acceso físico a la vivienda ni a sus visitas (ver la nota «No construir» de la sección 13); (5) la caseta offline no puede conocer la mora, por lo que no bloquea accesos.
@@ -117,11 +118,13 @@ Los administradores entregaron el reglamento interior real de un condominio (Are
 
 **App caseta (implementado):** bitácora con nombre, acompañantes, identificación y autorización; cajones de visitas libres; incidencias de seguridad o mantenimiento con casa y persona; paquetería (llegada offline, aviso al residente, entrega); y códigos QR de un solo uso que el guardia emite a proveedores, con la validación mostrando a quién se deja pasar y a dónde. La caseta no bloquea accesos por adeudo (sección 13, «No construir»).
 
-**Panel admin (implementado):** página Reglamento (configuración de las reglas del condominio), Cobranza (quién pagó, quién falta, quién es moroso, con constancia de no adeudo), Gastos con resumen financiero y sustento (asamblea y cotizaciones), Amenidades con sus reglas, Reservaciones con las cuotas de uso que tesorería recibe, Seguridad con tipo de incidencia, datos de la bitácora y cajones de visitas, y en el detalle de cada vivienda su estado de cuenta con el aviso de mora y el registro de pagos en efectivo.
+**Panel admin (implementado):** página Reglamento (configuración de las reglas del condominio), Cobranza (quién pagó, quién falta, quién es moroso, con constancia de no adeudo), Gastos con resumen financiero y sustento (asamblea y cotizaciones), Amenidades con sus reglas, Reservaciones con las cuotas de uso que tesorería recibe, Seguridad con tipo de incidencia, datos de la bitácora y cajones de visitas, la bandeja de Dudas de los avisos, y en el detalle de cada vivienda su estado de cuenta con el aviso de mora y el registro de pagos en efectivo.
 
 **Comprobantes como archivo (implementado):** el administrador adjunta la foto o el PDF de cada gasto (y de sus cotizaciones), y el residente adjunta la captura o el PDF de su transferencia desde la app: tesorería lo revisa y lo acepta (se registra el pago) o lo rechaza con un motivo. Un comprobante nunca concilia por sí solo, y aceptarlo avisa si el SPEI ya detectó ese mismo pago para no contarlo dos veces. La caseta también adjunta una foto a cada incidencia (con la cámara, y sin conexión: la foto se guarda en el teléfono y se sube al sincronizar). Se aceptan fotos (JPG, PNG, WEBP, HEIC) y PDF de hasta 10 MB; los archivos viven en un almacenamiento privado (disco local en desarrollo, S3 en producción) y se abren con enlaces firmados de vida corta.
 
-**Pendiente de producto (retroalimentación de administradores, sin implementar):** retroalimentación/preguntas en avisos (el alcance excluye chat: falta decidir un formato acotado); resumen de paquetes en el panel admin.
+**Dudas en avisos (implementado):** ver HU-C08 — el residente pregunta desde el aviso, la administración responde desde una bandeja del panel y puede publicar la aclaración para todos.
+
+**Pendiente de producto (retroalimentación de administradores, sin implementar):** resumen de paquetes en el panel admin.
 
 ---
 
@@ -178,7 +181,7 @@ Vamos marcando esta lista conforme resolvamos cada punto — es el "qué falta" 
 - [x] **Reglamento del condominio (detalle):** sin límite de visitantes, sin horario restringido de acceso. Amenidades: mínimo 2 días de antelación para reservar (o menos si el horario sigue disponible), con expiración automática al terminar el bloque de tiempo reservado (uno o varios días). Ver sección 3.2 y 3.3.
 - [x] **Historias de usuario y criterios de aceptación — Administrativo:** ver sección 10.1 (11 historias, HU-A01 a HU-A11).
 - [x] **Historias de usuario y criterios de aceptación — Seguridad:** ver sección 10.2 (7 historias, HU-S01 a HU-S07).
-- [x] **Historias de usuario y criterios de aceptación — Comunicación:** ver sección 10.3 (7 historias, HU-C01 a HU-C07).
+- [x] **Historias de usuario y criterios de aceptación — Comunicación:** ver sección 10.3 (8 historias, HU-C01 a HU-C08).
 - [x] **Monto/porcentaje del recargo por mora:** 10% de recargo global, aplicado a partir del minuto 1 del día 6 de cada mes (5 días de gracia). Recordatorios automáticos desde el día 1 hasta que se pague, y confirmación al registrarse el pago. Ver sección 3.1.
 - [x] **Recargo en cuotas bimestrales:** el recargo se evalúa mes a mes según la regla del día 6, sin importar la periodicidad de facturación. Como el residente puede pagar por adelantado de 1 a 12 meses (ver sección 3.1), esta es la forma prevista de evitar el recargo en meses futuros, incluso en condominios con cuota bimestral.
 - [x] **Vista consolidada para propietarios con varias viviendas:** queda fuera del MVP, como mejora futura.
@@ -325,6 +328,15 @@ Como aprobador (miembro del comité designado), quiero recibir una notificación
 - Notificación por los 3 canales definidos (app, WhatsApp, SMS de respaldo).
 - Si nadie responde dentro del periodo límite configurado para esa amenidad, la reservación se rechaza automáticamente.
 - El residente ve el estado de su reservación (pendiente/aprobada/rechazada) en todo momento.
+
+**HU-C08 — Dudas sobre un aviso** *(v3.3, a partir del feedback de administradores)*
+Como residente, quiero poder preguntar mis dudas sobre un aviso a la administración, para no tener que buscarlos por WhatsApp; y como administrador, quiero aclarar una duda una sola vez para todos.
+- Es un canal **acotado, no un chat entre vecinos**: la duda va solo a la administración y al comité; una duda recibe una respuesta (si el residente quiere seguir, pregunta de nuevo); no hay comentarios entre vecinos.
+- El administrador activa las dudas **por aviso** al publicarlo (con fecha límite opcional); el valor por defecto lo define el reglamento de cada condominio (apagado si no se configura). Los avisos anteriores no las tienen.
+- Hasta 3 dudas sin responder por vivienda y aviso; 500 caracteres cada una.
+- Responden el administrador y el comité aprobador (el comité de solo lectura solo las ve). Al responder pueden **publicarla como aclaración**: la ven todos debajo del aviso, sin nombre ni vivienda.
+- El residente se entera de la respuesta **dentro de la app** (una insignia en Comunidad/Avisos y la marca «Nueva»). No se manda WhatsApp: tiene costo por mensaje y hoy no hay cuenta real de Twilio.
+- Las dudas se anclan a la vivienda, como el resto del modelo. **No entran al borrado de datos personales de LFPDPPP**, que funciona por residente: la duda no lleva el nombre de nadie y una aclaración publicada es anónima, pero el texto libre podría contener datos personales; si el cliente lo pide se agrega un borrado por vivienda.
 
 ---
 

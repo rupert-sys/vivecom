@@ -31,6 +31,9 @@ class CommunityScreen extends StatelessWidget {
   // insignia en la pestaña para que el residente sepa que hay algo por votar.
   final int votacionesPendientes;
   final ValueChanged<int>? onVotacionesPendientes;
+  // Respuestas a mis dudas de avisos que aún no he visto (insignia en la pestaña Avisos).
+  final int respuestasNuevas;
+  final ValueChanged<int>? onRespuestasNuevas;
 
   const CommunityScreen({
     super.key,
@@ -43,6 +46,8 @@ class CommunityScreen extends StatelessWidget {
     required this.visitService,
     this.votacionesPendientes = 0,
     this.onVotacionesPendientes,
+    this.respuestasNuevas = 0,
+    this.onRespuestasNuevas,
   });
 
   @override
@@ -55,7 +60,14 @@ class CommunityScreen extends StatelessWidget {
           bottom: TabBar(
             isScrollable: true,
             tabs: [
-              const Tab(text: 'Avisos'),
+              Tab(
+                child: Badge(
+                  isLabelVisible: respuestasNuevas > 0,
+                  label: Text('$respuestasNuevas'),
+                  offset: const Offset(12, -8),
+                  child: const Text('Avisos'),
+                ),
+              ),
               Tab(
                 child: Badge(
                   isLabelVisible: votacionesPendientes > 0,
@@ -72,7 +84,11 @@ class CommunityScreen extends StatelessWidget {
         ),
         body: TabBarView(
           children: [
-            AnnouncementsScreen(token: token, announcementService: announcementService),
+            AnnouncementsScreen(
+              token: token,
+              announcementService: announcementService,
+              onRespuestasNuevas: onRespuestasNuevas,
+            ),
             PollsScreen(token: token, pollService: pollService, onPendientesCambiaron: onVotacionesPendientes),
             VisitsScreen(token: token, visitService: visitService),
             ReservationsScreen(

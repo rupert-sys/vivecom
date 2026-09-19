@@ -72,11 +72,23 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
   // Votaciones abiertas por votar: se muestra como insignia en "Comunidad" para
   // que el residente sepa que hay una votación esperándolo sin buscarla.
   int _votacionesPendientes = 0;
+  // Respuestas a mis dudas de avisos que aún no he visto: también se señalan en "Comunidad".
+  int _respuestasNuevas = 0;
 
   @override
   void initState() {
     super.initState();
     _cargarVotacionesPendientes();
+    _cargarRespuestasNuevas();
+  }
+
+  Future<void> _cargarRespuestasNuevas() async {
+    try {
+      final mias = await widget.announcementService.listarMisDudas(widget.token);
+      if (mounted) setState(() => _respuestasNuevas = mias.where((d) => d.respuestaNueva).length);
+    } catch (_) {
+      // Solo un indicador; la pestaña de Avisos muestra sus propios errores.
+    }
   }
 
   Future<void> _cargarVotacionesPendientes() async {
@@ -125,6 +137,10 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         onVotacionesPendientes: (n) {
           if (n != _votacionesPendientes) setState(() => _votacionesPendientes = n);
         },
+        respuestasNuevas: _respuestasNuevas,
+        onRespuestasNuevas: (n) {
+          if (n != _respuestasNuevas) setState(() => _respuestasNuevas = n);
+        },
       ),
       ClabeScreen(token: widget.token, clabeService: widget.clabeService),
     ];
@@ -141,8 +157,8 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
           NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Gastos'),
           NavigationDestination(
             icon: Badge(
-              isLabelVisible: _votacionesPendientes > 0,
-              label: Text('$_votacionesPendientes'),
+              isLabelVisible: _votacionesPendientes + _respuestasNuevas > 0,
+              label: Text('${_votacionesPendientes + _respuestasNuevas}'),
               child: const Icon(Icons.groups),
             ),
             label: 'Comunidad',

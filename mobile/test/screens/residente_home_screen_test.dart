@@ -160,4 +160,62 @@ void main() {
 
     expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('1')), findsOneWidget);
   });
+
+  testWidgets('la insignia de Comunidad suma las votaciones por votar y las respuestas nuevas a mis dudas', (tester) async {
+    final mockClient = MockClient((request) async {
+      final path = request.url.path;
+      if (path == '/polls') {
+        return http.Response(
+          '''[{"id": "v1", "pregunta": "¿Cambiamos el portón?", "fecha_cierre": "2099-01-01", "resultados_en_vivo": false,
+  "quorum_alcanzado": false, "reactivada": false, "opciones": [{"id": "o1", "texto": "Sí"}, {"id": "o2", "texto": "No"}],
+  "ya_voto": false, "voto_restringido_por_mora": false}]''',
+          200,
+        );
+      }
+      if (path == '/announcement-questions/mine') {
+        return http.Response(
+          '''[{"id": "q1", "announcement_id": "a1", "aviso_titulo": "Corte", "texto": "¿?", "estado": "respondida", "respuesta": "Sí",
+  "respondido_en": null, "publica": false, "created_at": "2026-09-18T15:00:00", "propia": true, "vivienda": null, "respuesta_nueva": true},
+ {"id": "q2", "announcement_id": "a1", "aviso_titulo": "Corte", "texto": "¿?", "estado": "abierta", "respuesta": null,
+  "respondido_en": null, "publica": false, "created_at": "2026-09-18T15:00:00", "propia": true, "vivienda": null, "respuesta_nueva": false}]''',
+          200,
+        );
+      }
+      if (path.endsWith('/statement')) {
+        return http.Response(
+          '{"property_id": "p1", "identificador": "Casa 1", "saldo_a_favor": 0.0, "deuda_total": 0.0, "cargos": [], "pagos": []}',
+          200,
+        );
+      }
+      return http.Response('[]', 200);
+    });
+    final api = ApiClient(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ResidenteHomeScreen(
+          propertyId: 'p1',
+          token: 'un-token',
+          statementService: StatementService(api: api),
+          clabeService: ClabeService(api: api),
+          propertyService: PropertyService(api: api),
+          feeService: FeeService(api: api),
+          receiptService: ReceiptService(api: api),
+          expenseService: ExpenseService(api: api),
+          announcementService: AnnouncementService(api: api),
+          pollService: PollService(api: api),
+          lostFoundService: LostFoundService(api: api),
+          amenityService: AmenityService(api: api),
+          reservationService: ReservationService(api: api),
+          visitService: VisitService(api: api),
+          proofService: PaymentProofService(api: api),
+          onLogout: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 1 votación por votar + 1 respuesta nueva (la duda sin responder no cuenta)
+    expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('2')), findsOneWidget);
+  });
 }

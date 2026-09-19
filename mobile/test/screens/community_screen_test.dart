@@ -53,4 +53,53 @@ void main() {
     await tester.pumpAndSettle();
     expect(find.text('Todavía no hay amenidades configuradas.'), findsOneWidget);
   });
+
+  testWidgets('la pestaña Avisos lleva una insignia con las respuestas nuevas a mis dudas', (tester) async {
+    final mockClient = MockClient((request) async => http.Response('[]', 200));
+    final api = ApiClient(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityScreen(
+          token: 'un-token',
+          announcementService: AnnouncementService(api: api),
+          pollService: PollService(api: api),
+          lostFoundService: LostFoundService(api: api),
+          amenityService: AmenityService(api: api),
+          reservationService: ReservationService(api: api),
+          visitService: VisitService(api: api),
+          respuestasNuevas: 2,
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final avisos = find.ancestor(of: find.text('Avisos'), matching: find.byType(Badge));
+    expect(avisos, findsOneWidget);
+    expect(tester.widget<Badge>(avisos).isLabelVisible, isTrue);
+    expect(find.descendant(of: avisos, matching: find.text('2')), findsOneWidget);
+  });
+
+  testWidgets('sin respuestas nuevas la pestaña Avisos no lleva insignia', (tester) async {
+    final mockClient = MockClient((request) async => http.Response('[]', 200));
+    final api = ApiClient(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: CommunityScreen(
+          token: 'un-token',
+          announcementService: AnnouncementService(api: api),
+          pollService: PollService(api: api),
+          lostFoundService: LostFoundService(api: api),
+          amenityService: AmenityService(api: api),
+          reservationService: ReservationService(api: api),
+          visitService: VisitService(api: api),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final avisos = find.ancestor(of: find.text('Avisos'), matching: find.byType(Badge));
+    expect(tester.widget<Badge>(avisos).isLabelVisible, isFalse);
+  });
 }
