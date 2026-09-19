@@ -38,6 +38,7 @@ class Reglamento:
     cotizaciones_minimas: int = 3
     cajones_visitas: int = 0
     horas_max_estacionamiento_visitas: int = 24
+    dudas_en_avisos_por_defecto: bool = False
 
     @property
     def dia_recargo(self) -> int:
@@ -59,6 +60,7 @@ def reglamento_de_fila(fila: ReglamentoConfig | None) -> Reglamento:
         cotizaciones_minimas=fila.cotizaciones_minimas,
         cajones_visitas=fila.cajones_visitas,
         horas_max_estacionamiento_visitas=fila.horas_max_estacionamiento_visitas,
+        dudas_en_avisos_por_defecto=fila.dudas_en_avisos_por_defecto,
     )
 
 

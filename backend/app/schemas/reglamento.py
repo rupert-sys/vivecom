@@ -15,6 +15,7 @@ class ReglamentoRead(BaseModel):
     cotizaciones_minimas: int
     cajones_visitas: int
     horas_max_estacionamiento_visitas: int
+    dudas_en_avisos_por_defecto: bool
 
 
 class ReglamentoUpdate(BaseModel):
@@ -28,3 +29,4 @@ class ReglamentoUpdate(BaseModel):
     cotizaciones_minimas: int | None = Field(default=None, ge=0, le=10)
     cajones_visitas: int | None = Field(default=None, ge=0, le=500)
     horas_max_estacionamiento_visitas: int | None = Field(default=None, ge=1, le=720)
+    dudas_en_avisos_por_defecto: bool | None = None

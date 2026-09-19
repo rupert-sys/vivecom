@@ -72,6 +72,10 @@ COLUMNAS_NUEVAS: list[tuple[str, str, str]] = [
     ("package", "client_id", "UUID"),
     ("visitor_qr", "tipo", "VARCHAR NOT NULL DEFAULT 'visitante'"),
     ("visitor_qr", "descripcion", "VARCHAR"),
+    # Dudas en avisos (la tabla announcement_question la crea create_all).
+    ("announcement", "permite_dudas", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("announcement", "dudas_hasta", "DATE"),
+    ("reglamento_config", "dudas_en_avisos_por_defecto", "BOOLEAN NOT NULL DEFAULT FALSE"),
 ]
 
 # Cambios a columnas que ya existían (idempotentes en Postgres).

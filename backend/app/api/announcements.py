@@ -15,8 +15,10 @@ from app.core.config import settings
 from app.models.announcement import Announcement, ReadReceipt
 from app.models.user import Rol
 from app.schemas.announcement import AnnouncementCreate, AnnouncementRead, AnnouncementUpdate, ReadStatusEntry
+from app.services.announcement_question_service import dudas_abiertas
 from app.services.announcement_service import get_read_status, mark_announcement_read, send_announcement_notifications
 from app.services.notification_providers.twilio_provider import TwilioProvider
+from app.services.reglamento_service import get_reglamento, hoy_local
 
 router = APIRouter(prefix="/announcements", tags=["announcements"])
 
@@ -40,16 +42,30 @@ def _ahora_naive_utc() -> datetime:
     return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
+def _a_lectura(aviso: Announcement, leido: bool | None = None) -> AnnouncementRead:
+    """Suma a lo guardado lo que se calcula al leer: si el aviso admite dudas HOY (activadas y dentro del plazo)."""
+    lectura = AnnouncementRead.model_validate(aviso, from_attributes=True)
+    return lectura.model_copy(update={"leido": leido, "dudas_abiertas": dudas_abiertas(aviso, hoy_local())})
+
+
 @router.post("", response_model=AnnouncementRead, status_code=status.HTTP_201_CREATED, dependencies=admin_only)
 async def create_announcement(payload: AnnouncementCreate, db: AsyncSession = Depends(get_tenant_db)):
+    # Sin decirlo al publicar, las dudas siguen el valor por defecto del reglamento del condominio.
+    permite_dudas = (
+        payload.permite_dudas
+        if payload.permite_dudas is not None
+        else (await get_reglamento(db)).dudas_en_avisos_por_defecto
+    )
     aviso = Announcement(
         titulo=payload.titulo,
         contenido=payload.contenido,
         fecha_publicacion=_a_naive_utc(payload.fecha_publicacion) if payload.fecha_publicacion else _ahora_naive_utc(),
+        permite_dudas=permite_dudas,
+        dudas_hasta=payload.dudas_hasta if permite_dudas else None,
     )
     db.add(aviso)
     await db.commit()
-    return aviso
+    return _a_lectura(aviso)
 
 
 async def _ids_leidos(db: AsyncSession, property_id: str | None, announcement_ids: list[uuid.UUID]) -> set[uuid.UUID]:
@@ -86,12 +102,7 @@ async def list_announcements(
 
     leidos = await _ids_leidos(db, current_user.property_id, [a.id for a in avisos])
     es_residente = current_user.property_id is not None
-    return [
-        AnnouncementRead.model_validate(aviso, from_attributes=True).model_copy(
-            update={"leido": (aviso.id in leidos) if es_residente else None}
-        )
-        for aviso in avisos
-    ]
+    return [_a_lectura(aviso, (aviso.id in leidos) if es_residente else None) for aviso in avisos]
 
 
 @router.get("/{announcement_id}", response_model=AnnouncementRead)
@@ -110,9 +121,7 @@ async def get_announcement(
 
     leidos = await _ids_leidos(db, current_user.property_id, [aviso.id])
     es_residente = current_user.property_id is not None
-    return AnnouncementRead.model_validate(aviso, from_attributes=True).model_copy(
-        update={"leido": (aviso.id in leidos) if es_residente else None}
-    )
+    return _a_lectura(aviso, (aviso.id in leidos) if es_residente else None)
 
 
 @router.patch("/{announcement_id}", response_model=AnnouncementRead, dependencies=admin_only)
@@ -126,8 +135,10 @@ async def update_announcement(
         if field == "fecha_publicacion" and value is not None:
             value = _a_naive_utc(value)
         setattr(aviso, field, value)
+    if not aviso.permite_dudas:
+        aviso.dudas_hasta = None  # sin dudas no tiene sentido un plazo
     await db.commit()
-    return aviso
+    return _a_lectura(aviso)
 
 
 @router.post("/{announcement_id}/read", status_code=status.HTTP_204_NO_CONTENT)

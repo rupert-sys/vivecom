@@ -1,5 +1,5 @@
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -8,12 +8,17 @@ class AnnouncementCreate(BaseModel):
     titulo: str
     contenido: str
     fecha_publicacion: datetime | None = None  # None = publicar de inmediato
+    # None = lo que diga el reglamento del condominio (dudas_en_avisos_por_defecto).
+    permite_dudas: bool | None = None
+    dudas_hasta: date | None = None  # última fecha para mandar dudas; None = sin límite
 
 
 class AnnouncementUpdate(BaseModel):
     titulo: str | None = None
     contenido: str | None = None
     fecha_publicacion: datetime | None = None
+    permite_dudas: bool | None = None
+    dudas_hasta: date | None = None
 
 
 class AnnouncementRead(BaseModel):
@@ -30,6 +35,10 @@ class AnnouncementRead(BaseModel):
     # no solo en GET /{id}/read-status, que es admin-only y agrega TODAS
     # las viviendas).
     leido: bool | None = None
+    permite_dudas: bool = False
+    dudas_hasta: date | None = None
+    # ¿Se pueden mandar dudas ahora? (activadas y dentro del plazo) — la app lo usa para mostrar el botón.
+    dudas_abiertas: bool = False
 
 
 class ReadStatusEntry(BaseModel):

@@ -45,3 +45,7 @@ class ReglamentoConfig(TenantBase):
     # Estacionamiento de visitantes (Art. 2 IX-XIII, Art. 17 V.7). 0 = no aplica.
     cajones_visitas: Mapped[int] = mapped_column(Integer, default=0)
     horas_max_estacionamiento_visitas: Mapped[int] = mapped_column(Integer, default=24)
+
+    # Avisos: si un aviso nuevo recibe dudas de los residentes salvo que el administrador diga lo
+    # contrario al publicarlo. Apagado por defecto: el canal de dudas es opt-in por condominio.
+    dudas_en_avisos_por_defecto: Mapped[bool] = mapped_column(Boolean, default=False)
