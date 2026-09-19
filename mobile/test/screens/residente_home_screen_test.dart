@@ -6,6 +6,7 @@ import 'package:app_residente/services/clabe_service.dart';
 import 'package:app_residente/services/expense_service.dart';
 import 'package:app_residente/services/fee_service.dart';
 import 'package:app_residente/services/lost_found_service.dart';
+import 'package:app_residente/services/payment_proof_service.dart';
 import 'package:app_residente/services/poll_service.dart';
 import 'package:app_residente/services/property_service.dart';
 import 'package:app_residente/services/receipt_service.dart';
@@ -71,6 +72,7 @@ void main() {
           amenityService: AmenityService(api: ApiClient(client: mockClient)),
           reservationService: ReservationService(api: ApiClient(client: mockClient)),
           visitService: VisitService(api: ApiClient(client: mockClient)),
+          proofService: PaymentProofService(api: ApiClient(client: mockClient)),
           onLogout: () {},
         ),
       ),
@@ -149,6 +151,7 @@ void main() {
           amenityService: AmenityService(api: api),
           reservationService: ReservationService(api: api),
           visitService: VisitService(api: api),
+          proofService: PaymentProofService(api: api),
           onLogout: () {},
         ),
       ),

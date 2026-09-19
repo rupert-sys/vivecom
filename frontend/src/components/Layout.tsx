@@ -26,6 +26,7 @@ export function Layout() {
             <Link to="/properties">Viviendas</Link>
             <Link to="/fees">Cuotas</Link>
             <Link to="/collection">Cobranza</Link>
+            <Link to="/payment-proofs">Comprobantes</Link>
             <Link to="/clabe">CLABE</Link>
             <Link to="/dashboard">Dashboard</Link>
             <Link to="/expenses">Gastos</Link>

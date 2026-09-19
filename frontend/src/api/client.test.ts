@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { apiFetch, ApiError, getToken, setToken } from './client'
+import { apiFetch, apiUpload, ApiError, getToken, setToken } from './client'
 
 describe('apiFetch', () => {
   beforeEach(() => {
@@ -98,5 +98,52 @@ describe('apiFetch', () => {
       expect(err).toBeInstanceOf(ApiError)
       expect((err as ApiError).status).toBe(404)
     }
+  })
+})
+
+describe('apiUpload', () => {
+  beforeEach(() => {
+    localStorage.clear()
+    vi.stubGlobal('fetch', vi.fn())
+  })
+
+  afterEach(() => {
+    vi.unstubAllGlobals()
+  })
+
+  it('manda el FormData con el token y SIN fijar Content-Type (lo arma el navegador con el boundary)', async () => {
+    setToken('un-token-jwt')
+    vi.mocked(fetch).mockResolvedValue(
+      new Response(JSON.stringify({ id: 'f1' }), { status: 201, headers: { 'content-type': 'application/json' } }),
+    )
+    const formData = new FormData()
+    formData.append('kind', 'gasto')
+
+    const resultado = await apiUpload<{ id: string }>('/files', formData)
+
+    const [url, options] = vi.mocked(fetch).mock.calls[0]
+    expect(String(url)).toMatch(/\/files$/)
+    expect(options?.method).toBe('POST')
+    expect(options?.body).toBe(formData)
+    const headers = options?.headers as Record<string, string>
+    expect(headers.Authorization).toBe('Bearer un-token-jwt')
+    expect(headers['Content-Type']).toBeUndefined()
+    expect(resultado).toEqual({ id: 'f1' })
+  })
+
+  it('convierte un error del backend en ApiError con su mensaje', async () => {
+    // Una respuesta nueva por llamada: el cuerpo de una Response solo se puede leer una vez.
+    vi.mocked(fetch).mockImplementation(async () =>
+      new Response(JSON.stringify({ detail: 'El archivo pesa más de 10 MB.' }), {
+        status: 413,
+        headers: { 'content-type': 'application/json' },
+      }),
+    )
+
+    await expect(apiUpload('/files', new FormData())).rejects.toMatchObject({
+      status: 413,
+      message: 'El archivo pesa más de 10 MB.',
+    })
+    await expect(apiUpload('/files', new FormData())).rejects.toBeInstanceOf(ApiError)
   })
 })

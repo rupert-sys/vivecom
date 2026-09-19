@@ -2,6 +2,7 @@ import 'package:app_residente/screens/payment_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/clabe_service.dart';
 import 'package:app_residente/services/fee_service.dart';
+import 'package:app_residente/services/payment_proof_service.dart';
 import 'package:app_residente/services/property_service.dart';
 import 'package:app_residente/services/statement_service.dart';
 import 'package:flutter/material.dart';
@@ -40,6 +41,7 @@ Future<void> _pumpPayment(
         propertyService: PropertyService(api: ApiClient(client: client)),
         feeService: FeeService(api: ApiClient(client: client)),
         clabeService: ClabeService(api: ApiClient(client: client)),
+        proofService: PaymentProofService(api: ApiClient(client: client)),
       ),
     ),
   );
@@ -135,5 +137,24 @@ void main() {
     await _pumpPayment(tester, mockClient);
 
     expect(find.text('No tienes acceso'), findsOneWidget);
+  });
+
+  testWidgets('ofrece "Ya pagué" y abre la pantalla para adjuntar el comprobante', (tester) async {
+    final mockClient = MockClient((request) async {
+      final path = request.url.path;
+      if (path.endsWith('/statement')) return _statementResponse();
+      if (path.endsWith('/clabe')) return http.Response(_fixtureClabe, 200);
+      if (path == '/properties/p1') return http.Response(_fixturePropiedad, 200);
+      if (path == '/fees') return _cuotaMensualResponse();
+      if (path == '/payment-proofs') return http.Response('[]', 200);
+      return http.Response('not found', 404);
+    });
+
+    await _pumpPayment(tester, mockClient);
+    await tester.tap(find.byKey(const Key('adjuntar_comprobante')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Comprobantes de pago'), findsOneWidget);
+    expect(find.text('Todavía no has enviado comprobantes.'), findsOneWidget);
   });
 }

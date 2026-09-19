@@ -34,6 +34,18 @@ class Settings(BaseSettings):
     twilio_whatsapp_from: str = "+10000000000"  # número de WhatsApp Business aprobado por Twilio
     twilio_sms_from: str = "+10000000000"  # número SMS de respaldo
 
+    # Almacenamiento de archivos (comprobantes de pago y de gastos). En desarrollo
+    # se guardan en disco local; en producción, en S3 (STORAGE_BACKEND=s3) — un
+    # contenedor tiene disco efímero, lo que se guarde ahí se pierde al redesplegar.
+    storage_backend: str = "local"  # local | s3
+    storage_local_dir: str = "./storage"
+    storage_s3_bucket: str = ""
+    storage_s3_region: str = "us-east-1"
+    max_upload_bytes: int = 10 * 1024 * 1024  # 10 MB por archivo
+    # Base de los enlaces firmados a archivos (los abre el navegador o la app, no la API).
+    public_base_url: str = "http://localhost:8000"
+    file_link_ttl_seconds: int = 60 * 60  # vigencia de un enlace firmado
+
     # Logging y monitoreo en producción (F1-36). sentry_dsn vacío (default)
     # deja el SDK de Sentry inerte — no manda nada a ningún lado hasta que se
     # configure un DSN real. Las métricas (Datadog/Grafana) no necesitan

@@ -28,3 +28,6 @@ infra/*.tfvars
 
 # Node (por si el frontend/mobile se agrega en este mismo repo más adelante)
 node_modules/
+
+# Archivos subidos en desarrollo (comprobantes) — STORAGE_BACKEND=local
+backend/storage/

@@ -16,3 +16,5 @@ openpyxl==3.1.5
 sentry-sdk==2.69.2
 prometheus-fastapi-instrumentator==6.1.0
 tzdata==2024.2
+python-multipart==0.0.9  # subida de archivos (comprobantes)
+boto3==1.35.99  # almacenamiento S3 en producción (STORAGE_BACKEND=s3)

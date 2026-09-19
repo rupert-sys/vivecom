@@ -4,6 +4,7 @@ una base de datos SQLite en memoria en vez de Postgres real (más rápido para
 CI). Las pruebas de integración contra Postgres real viven aparte.
 """
 
+import tempfile
 import uuid
 
 import pytest
@@ -11,13 +12,23 @@ from fastapi.testclient import TestClient
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.pool import StaticPool
 
-from app.api.deps import get_current_user, get_tenant_db
+from app.api.deps import get_current_user, get_link_tenant_db, get_tenant_db
 from app.core.database_base import ControlBase, TenantBase
 from app.main import app
 from app.models.tenant import Tenant
 from app.schemas.auth import CurrentUser
+from app.services.file_storage import LocalFileStorage, set_storage
 
 TEST_TENANT_ID = str(uuid.uuid4())
+
+
+@pytest.fixture(autouse=True)
+def almacenamiento_temporal():
+    """Ninguna prueba escribe en ./storage: cada una tiene su propio directorio temporal."""
+    with tempfile.TemporaryDirectory() as directorio:
+        set_storage(LocalFileStorage(directorio))
+        yield
+        set_storage(None)
 
 
 @pytest.fixture()
@@ -64,6 +75,7 @@ def client():
         )
 
     app.dependency_overrides[get_tenant_db] = override_get_tenant_db
+    app.dependency_overrides[get_link_tenant_db] = override_get_tenant_db
     app.dependency_overrides[get_current_user] = override_get_current_admin
 
     with TestClient(app) as c:

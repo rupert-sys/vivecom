@@ -81,7 +81,9 @@ async def build_expenses_excel(
     hoja.title = "Gastos"
     hoja.append(["Categoría", "Monto", "Fecha", "Comprobante"])
     for gasto in gastos:
-        hoja.append([gasto.categoria, float(gasto.monto), gasto.fecha, gasto.comprobante_url])
+        # Un comprobante subido es una referencia interna (/files/<id>), no un enlace que sirva en Excel.
+        comprobante = "Archivo adjunto en Vivecom" if gasto.comprobante_url.startswith("/files/") else gasto.comprobante_url
+        hoja.append([gasto.categoria, float(gasto.monto), gasto.fecha, comprobante])
 
     return _workbook_to_bytes(wb)
 

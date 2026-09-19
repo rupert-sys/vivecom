@@ -1,15 +1,17 @@
 import { apiFetch } from './client'
-import type { Cotizacion, Expense, FinancialSummary, TipoComprobante, TipoGasto } from '../types'
+import type { Expense, FinancialSummary, TipoComprobante, TipoGasto } from '../types'
 
 export interface ExpenseInput {
   categoria: string
   monto: number
-  comprobante_url: string
+  // Uno de los dos es obligatorio: el archivo subido (foto o PDF) o un enlace.
+  comprobante_url?: string
+  comprobante_archivo_id?: string
   fecha: string
   tipo?: TipoGasto
   aprobado_en_asamblea?: boolean
   acta_referencia?: string
-  cotizaciones?: Cotizacion[]
+  cotizaciones?: { proveedor: string; monto: number; archivo_id?: string }[]
   tipo_comprobante?: TipoComprobante
 }
 

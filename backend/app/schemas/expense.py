@@ -2,7 +2,7 @@ import uuid
 from datetime import date
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 TipoGasto = Literal["operativo", "programado", "extraordinario"]
 TipoComprobante = Literal["remision", "factura"]
@@ -11,13 +11,18 @@ TipoComprobante = Literal["remision", "factura"]
 class Cotizacion(BaseModel):
     proveedor: str = Field(min_length=1)
     monto: float = Field(gt=0)
-    url: str | None = None  # foto o PDF de la cotización
+    url: str | None = None  # enlace a la foto o PDF de la cotización
+    # Alternativa a `url`: un archivo ya subido (POST /files, kind=gasto). Solo de entrada.
+    archivo_id: uuid.UUID | None = None
 
 
 class ExpenseCreate(BaseModel):
     categoria: str
     monto: float
-    comprobante_url: str = Field(min_length=1)  # obligatorio, ver HU-A09
+    # Obligatorio en alguna de sus dos formas (HU-A09): un archivo subido (foto o PDF, POST /files
+    # con kind=gasto) o, como antes, un enlace.
+    comprobante_url: str | None = Field(default=None, min_length=1)
+    comprobante_archivo_id: uuid.UUID | None = None
     fecha: date
     # Reglamento Art. 8: los gastos programados/extraordinarios grandes se
     # aprueban en asamblea y se sustentan con cotizaciones.
@@ -26,6 +31,12 @@ class ExpenseCreate(BaseModel):
     acta_referencia: str | None = None
     cotizaciones: list[Cotizacion] = []
     tipo_comprobante: TipoComprobante | None = None
+
+    @model_validator(mode="after")
+    def _exige_comprobante(self):
+        if self.comprobante_url is None and self.comprobante_archivo_id is None:
+            raise ValueError("Adjunta el comprobante del gasto (foto o PDF), o indica su enlace.")
+        return self
 
 
 class ExpenseRead(BaseModel):

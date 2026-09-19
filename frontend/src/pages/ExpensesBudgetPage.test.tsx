@@ -5,6 +5,7 @@ import { ExpensesBudgetPage } from './ExpensesBudgetPage'
 import * as expensesApi from '../api/expenses'
 import * as budgetsApi from '../api/budgets'
 import * as reglamentoApi from '../api/reglamento'
+import * as filesApi from '../api/files'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { BudgetComparison, Expense, FinancialSummary, Reglamento } from '../types'
@@ -111,7 +112,7 @@ describe('ExpensesBudgetPage', () => {
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
@@ -144,7 +145,7 @@ describe('ExpensesBudgetPage', () => {
       periodo: '2026-09-01',
       monto_planeado: 5000,
     })
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay presupuesto/i)
@@ -220,7 +221,7 @@ describe('ExpensesBudgetPage', () => {
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const spy = vi.spyOn(expensesApi, 'getFinancialSummary').mockResolvedValue(resumen)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
 
     render(<ExpensesBudgetPage />)
     await screen.findByText('$9000.50')
@@ -274,7 +275,7 @@ describe('ExpensesBudgetPage', () => {
     mockUser('admin')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
@@ -292,7 +293,7 @@ describe('ExpensesBudgetPage', () => {
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
@@ -335,7 +336,7 @@ describe('ExpensesBudgetPage', () => {
     vi.spyOn(expensesApi, 'createExpense').mockRejectedValue(
       new ApiError(422, 'Un gasto extraordinario mayor a $10,000.00 requiere aprobación de la asamblea.'),
     )
-    const user = userEvent.setup()
+    const user = userEvent.setup({ delay: null })
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
@@ -347,5 +348,111 @@ describe('ExpensesBudgetPage', () => {
     await user.click(screen.getByRole('button', { name: /registrar gasto/i }))
 
     expect(await screen.findByText(/mayor a \$10,000\.00 requiere aprobación/i)).toBeInTheDocument()
+  })
+
+  it('sube el comprobante como archivo y el gasto lleva su identificador, no un enlace', async () => {
+    mockUser('admin')
+    vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
+    vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
+    const uploadSpy = vi
+      .spyOn(filesApi, 'uploadFile')
+      .mockResolvedValue({ id: 'arch-1', nombre_original: 'factura.pdf', content_type: 'application/pdf', size: 10, ref: '/files/arch-1' })
+    const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
+    const user = userEvent.setup({ delay: null })
+
+    render(<ExpensesBudgetPage />)
+    await screen.findByText(/todavía no hay gastos/i)
+    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Jardinería')
+    await user.type(screen.getByPlaceholderText('Monto'), '3200')
+    await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
+    const archivo = new File(['%PDF-1.7'], 'factura.pdf', { type: 'application/pdf' })
+    await user.upload(screen.getByLabelText(/comprobante \(foto o pdf/i), archivo)
+    await user.click(screen.getByRole('button', { name: /registrar gasto/i }))
+
+    await waitFor(() => expect(createSpy).toHaveBeenCalledTimes(1))
+    expect(uploadSpy).toHaveBeenCalledWith(archivo, 'gasto')
+    expect(createSpy).toHaveBeenCalledWith({
+      categoria: 'Jardinería',
+      monto: 3200,
+      fecha: '2026-09-05',
+      comprobante_archivo_id: 'arch-1',
+      tipo: 'operativo',
+    })
+  })
+
+  it('sin archivo ni enlace no se manda el gasto y se pide adjuntar el comprobante', async () => {
+    mockUser('admin')
+    vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
+    vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
+    const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
+    const user = userEvent.setup({ delay: null })
+
+    render(<ExpensesBudgetPage />)
+    await screen.findByText(/todavía no hay gastos/i)
+    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Jardinería')
+    await user.type(screen.getByPlaceholderText('Monto'), '3200')
+    await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
+    await user.click(screen.getByRole('button', { name: /registrar gasto/i }))
+
+    expect(await screen.findByText(/adjunta el comprobante del gasto/i)).toBeInTheDocument()
+    expect(createSpy).not.toHaveBeenCalled()
+  })
+
+  it('sube también el archivo de cada cotización', async () => {
+    mockUser('admin')
+    vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
+    vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
+    let contador = 0
+    vi.spyOn(filesApi, 'uploadFile').mockImplementation(async () => ({
+      id: `arch-${++contador}`,
+      nombre_original: 'a.pdf',
+      content_type: 'application/pdf',
+      size: 1,
+      ref: '/files/x',
+    }))
+    const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
+    const user = userEvent.setup({ delay: null })
+
+    render(<ExpensesBudgetPage />)
+    await screen.findByText(/todavía no hay gastos/i)
+    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Portón')
+    await user.type(screen.getByPlaceholderText('Monto'), '45000')
+    await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
+    await user.type(screen.getByLabelText(/o pega el enlace/i), 'https://ejemplo.com/f.pdf')
+    await user.selectOptions(screen.getByLabelText('Tipo de gasto'), 'programado')
+    await user.type(screen.getByPlaceholderText('Proveedor de la cotización 1'), 'Herrería López')
+    await user.type(screen.getByLabelText('Monto de la cotización 1'), '45000')
+    await user.upload(
+      screen.getByLabelText('Archivo de la cotización 1'),
+      new File(['%PDF-1.7'], 'cot.pdf', { type: 'application/pdf' }),
+    )
+    await user.click(screen.getByRole('button', { name: /registrar gasto/i }))
+
+    await waitFor(() => expect(createSpy).toHaveBeenCalledTimes(1))
+    expect(createSpy.mock.calls[0][0]).toMatchObject({
+      comprobante_url: 'https://ejemplo.com/f.pdf', // sin archivo de comprobante: sigue valiendo el enlace
+      cotizaciones: [{ proveedor: 'Herrería López', monto: 45000, archivo_id: 'arch-1' }],
+    })
+  })
+
+  it('si la subida falla, muestra el motivo y no registra el gasto', async () => {
+    mockUser('admin')
+    vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
+    vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
+    vi.spyOn(filesApi, 'uploadFile').mockRejectedValue(new ApiError(415, 'Solo se aceptan fotos (JPG, PNG, WEBP, HEIC) o PDF.'))
+    const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
+    // El input filtra por `accept`; se desactiva para simular un archivo no aceptado que el navegador dejó pasar.
+    const user = userEvent.setup({ delay: null, applyAccept: false })
+
+    render(<ExpensesBudgetPage />)
+    await screen.findByText(/todavía no hay gastos/i)
+    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Jardinería')
+    await user.type(screen.getByPlaceholderText('Monto'), '3200')
+    await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
+    await user.upload(screen.getByLabelText(/comprobante \(foto o pdf/i), new File(['x'], 'x.exe', { type: 'application/octet-stream' }))
+    await user.click(screen.getByRole('button', { name: /registrar gasto/i }))
+
+    expect(await screen.findByText(/solo se aceptan fotos/i)).toBeInTheDocument()
+    expect(createSpy).not.toHaveBeenCalled()
   })
 })

@@ -6,6 +6,7 @@ import '../services/clabe_service.dart';
 import '../services/expense_service.dart';
 import '../services/fee_service.dart';
 import '../services/lost_found_service.dart';
+import '../services/payment_proof_service.dart';
 import '../services/poll_service.dart';
 import '../services/property_service.dart';
 import '../services/receipt_service.dart';
@@ -39,6 +40,7 @@ class ResidenteHomeScreen extends StatefulWidget {
   final AmenityService amenityService;
   final ReservationService reservationService;
   final VisitService visitService;
+  final PaymentProofService proofService;
   final VoidCallback onLogout;
 
   const ResidenteHomeScreen({
@@ -57,6 +59,7 @@ class ResidenteHomeScreen extends StatefulWidget {
     required this.amenityService,
     required this.reservationService,
     required this.visitService,
+    required this.proofService,
     required this.onLogout,
   });
 
@@ -101,6 +104,7 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         propertyService: widget.propertyService,
         feeService: widget.feeService,
         clabeService: widget.clabeService,
+        proofService: widget.proofService,
       ),
       PaymentHistoryScreen(
         propertyId: widget.propertyId,

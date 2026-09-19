@@ -41,6 +41,22 @@ function extraerMensajeDeError(detail: unknown): string {
   return 'Ocurrió un error inesperado.'
 }
 
+// Subida de un archivo (multipart/form-data). No se fija Content-Type a mano: el navegador lo arma
+// con el boundary correcto.
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(`${API_URL}${path}`, { method: 'POST', headers, body: formData })
+  const isJson = response.headers.get('content-type')?.includes('application/json')
+  const data = isJson ? await response.json() : undefined
+  if (!response.ok) {
+    throw new ApiError(response.status, extraerMensajeDeError(data?.detail))
+  }
+  return data as T
+}
+
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true } = options
 

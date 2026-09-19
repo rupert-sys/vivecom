@@ -5,10 +5,12 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_tenant_db, require_roles
+from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.models.expense import Expense
+from app.models.stored_file import StoredFile
 from app.models.user import Rol
 from app.schemas.expense import ExpenseCreate, ExpenseRead, FinancialSummary
+from app.services.file_links import referencia_interna, resolver_url
 from app.services.financial_summary_service import get_financial_summary
 from app.services.reglamento_service import get_reglamento
 
@@ -17,8 +19,28 @@ router = APIRouter(prefix="/expenses", tags=["expenses"])
 admin_only = [Depends(require_roles(Rol.admin))]
 
 
+def _a_lectura(gasto: Expense, schema_name: str) -> ExpenseRead:
+    """Los comprobantes subidos se guardan como referencia interna (/files/<id>): se entregan como enlace firmado."""
+    lectura = ExpenseRead.model_validate(gasto)
+    lectura.comprobante_url = resolver_url(lectura.comprobante_url, schema_name) or lectura.comprobante_url
+    for cotizacion in lectura.cotizaciones or []:
+        cotizacion.url = resolver_url(cotizacion.url, schema_name)
+    return lectura
+
+
+async def _archivo_de_gasto(db: AsyncSession, archivo_id: uuid.UUID) -> str:
+    archivo = await db.get(StoredFile, archivo_id)
+    if archivo is None or archivo.kind != "gasto":
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "El archivo adjunto no existe o no es un comprobante de gasto.")
+    return referencia_interna(archivo_id)
+
+
 @router.post("", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED, dependencies=admin_only)
-async def create_expense(payload: ExpenseCreate, db: AsyncSession = Depends(get_tenant_db)):
+async def create_expense(
+    payload: ExpenseCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
     """
     Reglamento Art. 8: un gasto programado o extraordinario que supere el
     umbral del condominio (Arequipa: $10,000) solo se registra con la
@@ -41,15 +63,25 @@ async def create_expense(payload: ExpenseCreate, db: AsyncSession = Depends(get_
                 f"(hay {len(proveedores)}).",
             )
 
+    comprobante = (
+        await _archivo_de_gasto(db, payload.comprobante_archivo_id)
+        if payload.comprobante_archivo_id is not None
+        else payload.comprobante_url
+    )
+    cotizaciones = []
+    for c in payload.cotizaciones:
+        url = await _archivo_de_gasto(db, c.archivo_id) if c.archivo_id is not None else c.url
+        cotizaciones.append({"proveedor": c.proveedor, "monto": c.monto, "url": url})
+
     expense = Expense(
-        categoria=payload.categoria, monto=payload.monto, comprobante_url=payload.comprobante_url,
+        categoria=payload.categoria, monto=payload.monto, comprobante_url=comprobante,
         fecha=payload.fecha, tipo=payload.tipo, aprobado_en_asamblea=payload.aprobado_en_asamblea,
         acta_referencia=payload.acta_referencia, tipo_comprobante=payload.tipo_comprobante,
-        cotizaciones=[c.model_dump() for c in payload.cotizaciones] or None,
+        cotizaciones=cotizaciones or None,
     )
     db.add(expense)
     await db.commit()
-    return expense
+    return _a_lectura(expense, current_user.schema_name)
 
 
 @router.get("/summary", response_model=FinancialSummary)
@@ -70,6 +102,7 @@ async def list_expenses(
     hasta: date | None = None,
     categoria: str | None = None,
     tipo: str | None = None,
+    current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_tenant_db),
 ):
     """
@@ -86,12 +119,16 @@ async def list_expenses(
     if tipo is not None:
         query = query.where(Expense.tipo == tipo)
     result = await db.execute(query)
-    return result.scalars().all()
+    return [_a_lectura(gasto, current_user.schema_name) for gasto in result.scalars().all()]
 
 
 @router.get("/{expense_id}", response_model=ExpenseRead)
-async def get_expense(expense_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
+async def get_expense(
+    expense_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
     expense = await db.get(Expense, expense_id)
     if expense is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Gasto no encontrado")
-    return expense
+    return _a_lectura(expense, current_user.schema_name)

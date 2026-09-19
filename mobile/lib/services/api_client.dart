@@ -35,6 +35,24 @@ class ApiClient {
     return _handle(response);
   }
 
+  // Subida de un archivo (multipart/form-data): comprobantes de pago. El Content-Type
+  // (con su boundary) lo arma MultipartRequest; el backend valida el tipo por los bytes.
+  Future<dynamic> postMultipart(
+    String path, {
+    required Map<String, String> fields,
+    required String fileField,
+    required List<int> bytes,
+    required String filename,
+    String? token,
+  }) async {
+    final request = http.MultipartRequest('POST', Uri.parse('$baseUrl$path'))
+      ..fields.addAll(fields)
+      ..files.add(http.MultipartFile.fromBytes(fileField, bytes, filename: filename))
+      ..headers.addAll(_headers(token));
+    final response = await http.Response.fromStream(await _client.send(request));
+    return _handle(response);
+  }
+
   // Para respuestas binarias (ej. el PDF del recibo de F1-11/F1-27) —
   // apiFetch() del panel admin asume JSON en todo el proyecto y por eso tuvo
   // que agregar downloadFile.ts aparte (F1-23); aquí se resuelve como un

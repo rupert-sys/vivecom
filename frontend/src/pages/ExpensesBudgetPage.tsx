@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { createExpense, getFinancialSummary, listExpenses } from '../api/expenses'
 import { createBudget, getBudgetReport } from '../api/budgets'
 import { getReglamento } from '../api/reglamento'
+import { TIPOS_DE_ARCHIVO_ACEPTADOS, uploadFile } from '../api/files'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StatCard } from '../components/StatCard'
@@ -24,6 +25,7 @@ const ETIQUETA_TIPO: Record<TipoGasto, string> = {
 interface CotizacionForm {
   proveedor: string
   monto: string
+  archivo: File | null
 }
 
 function money(valor: number): string {
@@ -43,12 +45,13 @@ export function ExpensesBudgetPage() {
   const [monto, setMonto] = useState('')
   const [fecha, setFecha] = useState('')
   const [comprobanteUrl, setComprobanteUrl] = useState('')
+  const [comprobanteArchivo, setComprobanteArchivo] = useState<File | null>(null)
   const [creandoGasto, setCreandoGasto] = useState(false)
   const [tipo, setTipo] = useState<TipoGasto>('operativo')
   const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante | ''>('')
   const [aprobadoAsamblea, setAprobadoAsamblea] = useState(false)
   const [acta, setActa] = useState('')
-  const [cotizaciones, setCotizaciones] = useState<CotizacionForm[]>([{ proveedor: '', monto: '' }])
+  const [cotizaciones, setCotizaciones] = useState<CotizacionForm[]>([{ proveedor: '', monto: '', archivo: null }])
 
   const [resumen, setResumen] = useState<FinancialSummary | null>(null)
   const [reglamento, setReglamento] = useState<Reglamento | null>(null)
@@ -101,16 +104,28 @@ export function ExpensesBudgetPage() {
 
   async function handleCreateExpense(event: FormEvent) {
     event.preventDefault()
+    if (!comprobanteArchivo && comprobanteUrl.trim() === '') {
+      setError('Adjunta el comprobante del gasto (foto o PDF), o pega su enlace.')
+      return
+    }
     setCreandoGasto(true)
     try {
-      const cotizacionesValidas = cotizaciones
-        .filter((c) => c.proveedor.trim() !== '' && c.monto !== '')
-        .map((c) => ({ proveedor: c.proveedor.trim(), monto: Number(c.monto) }))
+      // Los archivos se suben primero; el gasto solo lleva sus identificadores.
+      const comprobanteSubido = comprobanteArchivo ? await uploadFile(comprobanteArchivo, 'gasto') : null
+      const cotizacionesValidas = await Promise.all(
+        cotizaciones
+          .filter((c) => c.proveedor.trim() !== '' && c.monto !== '')
+          .map(async (c) => ({
+            proveedor: c.proveedor.trim(),
+            monto: Number(c.monto),
+            ...(c.archivo ? { archivo_id: (await uploadFile(c.archivo, 'gasto')).id } : {}),
+          })),
+      )
       await createExpense({
         categoria,
         monto: Number(monto),
         fecha,
-        comprobante_url: comprobanteUrl,
+        ...(comprobanteSubido ? { comprobante_archivo_id: comprobanteSubido.id } : { comprobante_url: comprobanteUrl.trim() }),
         tipo,
         ...(tipoComprobante ? { tipo_comprobante: tipoComprobante } : {}),
         ...(requiereSustento
@@ -125,11 +140,13 @@ export function ExpensesBudgetPage() {
       setMonto('')
       setFecha('')
       setComprobanteUrl('')
+      setComprobanteArchivo(null)
       setTipo('operativo')
       setTipoComprobante('')
       setAprobadoAsamblea(false)
       setActa('')
-      setCotizaciones([{ proveedor: '', monto: '' }])
+      setCotizaciones([{ proveedor: '', monto: '', archivo: null }])
+      setError(null)
       await reload()
       await reloadResumen()
     } catch (err) {
@@ -223,11 +240,19 @@ export function ExpensesBudgetPage() {
           <input placeholder="Categoría del gasto" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />
           <input type="number" step="0.01" placeholder="Monto" value={monto} onChange={(e) => setMonto(e.target.value)} required />
           <input type="date" aria-label="Fecha del gasto" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
+          <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flexBasis: '100%' }}>
+            Comprobante (foto o PDF, hasta 10 MB)
+            <input
+              type="file"
+              accept={TIPOS_DE_ARCHIVO_ACEPTADOS}
+              onChange={(e) => setComprobanteArchivo(e.target.files?.[0] ?? null)}
+            />
+          </label>
           <input
             placeholder="URL del comprobante"
+            aria-label="O pega el enlace del comprobante"
             value={comprobanteUrl}
             onChange={(e) => setComprobanteUrl(e.target.value)}
-            required
           />
           <select aria-label="Tipo de gasto" value={tipo} onChange={(e) => setTipo(e.target.value as TipoGasto)}>
             {(Object.keys(ETIQUETA_TIPO) as TipoGasto[]).map((t) => (
@@ -285,6 +310,14 @@ export function ExpensesBudgetPage() {
                       setCotizaciones(cotizaciones.map((x, i) => (i === indice ? { ...x, monto: e.target.value } : x)))
                     }
                   />
+                  <input
+                    type="file"
+                    accept={TIPOS_DE_ARCHIVO_ACEPTADOS}
+                    aria-label={`Archivo de la cotización ${indice + 1}`}
+                    onChange={(e) =>
+                      setCotizaciones(cotizaciones.map((x, i) => (i === indice ? { ...x, archivo: e.target.files?.[0] ?? null } : x)))
+                    }
+                  />
                   {cotizaciones.length > 1 && (
                     <button type="button" onClick={() => setCotizaciones(cotizaciones.filter((_, i) => i !== indice))}>
                       Quitar
@@ -292,7 +325,7 @@ export function ExpensesBudgetPage() {
                   )}
                 </div>
               ))}
-              <button type="button" onClick={() => setCotizaciones([...cotizaciones, { proveedor: '', monto: '' }])}>
+              <button type="button" onClick={() => setCotizaciones([...cotizaciones, { proveedor: '', monto: '', archivo: null }])}>
                 Agregar cotización
               </button>
             </fieldset>

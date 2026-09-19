@@ -1,5 +1,4 @@
 import uuid
-from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException, Response, status
 from sqlalchemy import select
@@ -11,9 +10,8 @@ from app.models.property import Property
 from app.models.tenant import Tenant
 from app.models.user import Rol
 from app.schemas.payment import ManualPaymentCreate, PaymentRead, PaymentResolveRequest
-from app.services.payment_reconciliation_service import (
-    _locks_por_propiedad, reconcile_payment, reconcile_payment_ya_con_candado,
-)
+from app.services.manual_payment_service import registrar_pago_manual
+from app.services.payment_reconciliation_service import reconcile_payment
 from app.services.reglamento_service import get_reglamento
 from app.services.receipt_service import build_receipt_pdf
 
@@ -60,20 +58,9 @@ async def register_manual_payment(
     if propiedad is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
 
-    payment = Payment(
-        property_id=propiedad.id,
-        monto=payload.monto,
-        estado=EstadoPago.confirmado,
-        referencia_recibida=propiedad.referencia_pago,
-        clave_rastreo=f"MANUAL-{uuid.uuid4().hex}",
-        proveedor=payload.metodo,
-        fecha_deteccion=datetime.now(timezone.utc).replace(tzinfo=None),
-        registrado_por=uuid.UUID(current_user.user_id),
+    payment = await registrar_pago_manual(
+        db, propiedad, payload.monto, payload.metodo, uuid.UUID(current_user.user_id)
     )
-    async with _locks_por_propiedad[propiedad.id]:
-        db.add(payment)
-        await db.flush()
-        await reconcile_payment_ya_con_candado(db, payment)
     await db.commit()
     return payment
 

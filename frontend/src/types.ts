@@ -99,6 +99,23 @@ export interface CollectionsSummary {
   por_vivienda: PropertyCollectionsSummary[]
 }
 
+export type EstadoComprobante = 'pendiente' | 'aceptado' | 'rechazado'
+
+// Comprobante de pago que el residente adjunta desde su app; tesorería lo acepta o rechaza.
+export interface PaymentProof {
+  id: string
+  property_id: string
+  monto: number
+  fecha_pago: string | null
+  nota: string | null
+  estado: EstadoComprobante
+  created_at: string
+  revisado_en: string | null
+  motivo_rechazo: string | null
+  payment_id: string | null
+  archivo_url: string // enlace firmado de vida corta al archivo
+}
+
 export type TipoGasto = 'operativo' | 'programado' | 'extraordinario'
 export type TipoComprobante = 'remision' | 'factura'
 
