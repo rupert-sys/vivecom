@@ -821,6 +821,54 @@ class $PendingIncidentsTable extends PendingIncidents
         type: DriftSqlType.string,
         requiredDuringInsert: false,
       );
+  static const VerificationMeta _fotoBytesMeta = const VerificationMeta(
+    'fotoBytes',
+  );
+  @override
+  late final GeneratedColumn<Uint8List> fotoBytes = GeneratedColumn<Uint8List>(
+    'foto_bytes',
+    aliasedName,
+    true,
+    type: DriftSqlType.blob,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fotoNombreMeta = const VerificationMeta(
+    'fotoNombre',
+  );
+  @override
+  late final GeneratedColumn<String> fotoNombre = GeneratedColumn<String>(
+    'foto_nombre',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fotoArchivoIdMeta = const VerificationMeta(
+    'fotoArchivoId',
+  );
+  @override
+  late final GeneratedColumn<String> fotoArchivoId = GeneratedColumn<String>(
+    'foto_archivo_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _fotoDescartadaMeta = const VerificationMeta(
+    'fotoDescartada',
+  );
+  @override
+  late final GeneratedColumn<bool> fotoDescartada = GeneratedColumn<bool>(
+    'foto_descartada',
+    aliasedName,
+    false,
+    type: DriftSqlType.bool,
+    requiredDuringInsert: false,
+    defaultConstraints: GeneratedColumn.constraintIsAlways(
+      'CHECK ("foto_descartada" IN (0, 1))',
+    ),
+    defaultValue: const Constant(false),
+  );
   static const VerificationMeta _createdAtLocalMeta = const VerificationMeta(
     'createdAtLocal',
   );
@@ -875,6 +923,10 @@ class $PendingIncidentsTable extends PendingIncidents
     tipo,
     propertyId,
     personaInvolucrada,
+    fotoBytes,
+    fotoNombre,
+    fotoArchivoId,
+    fotoDescartada,
     createdAtLocal,
     syncStatus,
     errorMessage,
@@ -935,6 +987,36 @@ class $PendingIncidentsTable extends PendingIncidents
         personaInvolucrada.isAcceptableOrUnknown(
           data['persona_involucrada']!,
           _personaInvolucradaMeta,
+        ),
+      );
+    }
+    if (data.containsKey('foto_bytes')) {
+      context.handle(
+        _fotoBytesMeta,
+        fotoBytes.isAcceptableOrUnknown(data['foto_bytes']!, _fotoBytesMeta),
+      );
+    }
+    if (data.containsKey('foto_nombre')) {
+      context.handle(
+        _fotoNombreMeta,
+        fotoNombre.isAcceptableOrUnknown(data['foto_nombre']!, _fotoNombreMeta),
+      );
+    }
+    if (data.containsKey('foto_archivo_id')) {
+      context.handle(
+        _fotoArchivoIdMeta,
+        fotoArchivoId.isAcceptableOrUnknown(
+          data['foto_archivo_id']!,
+          _fotoArchivoIdMeta,
+        ),
+      );
+    }
+    if (data.containsKey('foto_descartada')) {
+      context.handle(
+        _fotoDescartadaMeta,
+        fotoDescartada.isAcceptableOrUnknown(
+          data['foto_descartada']!,
+          _fotoDescartadaMeta,
         ),
       );
     }
@@ -1003,6 +1085,22 @@ class $PendingIncidentsTable extends PendingIncidents
         DriftSqlType.string,
         data['${effectivePrefix}persona_involucrada'],
       ),
+      fotoBytes: attachedDatabase.typeMapping.read(
+        DriftSqlType.blob,
+        data['${effectivePrefix}foto_bytes'],
+      ),
+      fotoNombre: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foto_nombre'],
+      ),
+      fotoArchivoId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}foto_archivo_id'],
+      ),
+      fotoDescartada: attachedDatabase.typeMapping.read(
+        DriftSqlType.bool,
+        data['${effectivePrefix}foto_descartada'],
+      )!,
       createdAtLocal: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at_local'],
@@ -1035,6 +1133,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
   final String tipo;
   final String? propertyId;
   final String? personaInvolucrada;
+  final Uint8List? fotoBytes;
+  final String? fotoNombre;
+  final String? fotoArchivoId;
+  final bool fotoDescartada;
   final DateTime createdAtLocal;
   final String syncStatus;
   final String? errorMessage;
@@ -1046,6 +1148,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     required this.tipo,
     this.propertyId,
     this.personaInvolucrada,
+    this.fotoBytes,
+    this.fotoNombre,
+    this.fotoArchivoId,
+    required this.fotoDescartada,
     required this.createdAtLocal,
     required this.syncStatus,
     this.errorMessage,
@@ -1066,6 +1172,16 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     if (!nullToAbsent || personaInvolucrada != null) {
       map['persona_involucrada'] = Variable<String>(personaInvolucrada);
     }
+    if (!nullToAbsent || fotoBytes != null) {
+      map['foto_bytes'] = Variable<Uint8List>(fotoBytes);
+    }
+    if (!nullToAbsent || fotoNombre != null) {
+      map['foto_nombre'] = Variable<String>(fotoNombre);
+    }
+    if (!nullToAbsent || fotoArchivoId != null) {
+      map['foto_archivo_id'] = Variable<String>(fotoArchivoId);
+    }
+    map['foto_descartada'] = Variable<bool>(fotoDescartada);
     map['created_at_local'] = Variable<DateTime>(createdAtLocal);
     map['sync_status'] = Variable<String>(syncStatus);
     if (!nullToAbsent || errorMessage != null) {
@@ -1091,6 +1207,16 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
       personaInvolucrada: personaInvolucrada == null && nullToAbsent
           ? const Value.absent()
           : Value(personaInvolucrada),
+      fotoBytes: fotoBytes == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoBytes),
+      fotoNombre: fotoNombre == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoNombre),
+      fotoArchivoId: fotoArchivoId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(fotoArchivoId),
+      fotoDescartada: Value(fotoDescartada),
       createdAtLocal: Value(createdAtLocal),
       syncStatus: Value(syncStatus),
       errorMessage: errorMessage == null && nullToAbsent
@@ -1116,6 +1242,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
       personaInvolucrada: serializer.fromJson<String?>(
         json['personaInvolucrada'],
       ),
+      fotoBytes: serializer.fromJson<Uint8List?>(json['fotoBytes']),
+      fotoNombre: serializer.fromJson<String?>(json['fotoNombre']),
+      fotoArchivoId: serializer.fromJson<String?>(json['fotoArchivoId']),
+      fotoDescartada: serializer.fromJson<bool>(json['fotoDescartada']),
       createdAtLocal: serializer.fromJson<DateTime>(json['createdAtLocal']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
@@ -1132,6 +1262,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
       'tipo': serializer.toJson<String>(tipo),
       'propertyId': serializer.toJson<String?>(propertyId),
       'personaInvolucrada': serializer.toJson<String?>(personaInvolucrada),
+      'fotoBytes': serializer.toJson<Uint8List?>(fotoBytes),
+      'fotoNombre': serializer.toJson<String?>(fotoNombre),
+      'fotoArchivoId': serializer.toJson<String?>(fotoArchivoId),
+      'fotoDescartada': serializer.toJson<bool>(fotoDescartada),
       'createdAtLocal': serializer.toJson<DateTime>(createdAtLocal),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'errorMessage': serializer.toJson<String?>(errorMessage),
@@ -1146,6 +1280,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     String? tipo,
     Value<String?> propertyId = const Value.absent(),
     Value<String?> personaInvolucrada = const Value.absent(),
+    Value<Uint8List?> fotoBytes = const Value.absent(),
+    Value<String?> fotoNombre = const Value.absent(),
+    Value<String?> fotoArchivoId = const Value.absent(),
+    bool? fotoDescartada,
     DateTime? createdAtLocal,
     String? syncStatus,
     Value<String?> errorMessage = const Value.absent(),
@@ -1159,6 +1297,12 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     personaInvolucrada: personaInvolucrada.present
         ? personaInvolucrada.value
         : this.personaInvolucrada,
+    fotoBytes: fotoBytes.present ? fotoBytes.value : this.fotoBytes,
+    fotoNombre: fotoNombre.present ? fotoNombre.value : this.fotoNombre,
+    fotoArchivoId: fotoArchivoId.present
+        ? fotoArchivoId.value
+        : this.fotoArchivoId,
+    fotoDescartada: fotoDescartada ?? this.fotoDescartada,
     createdAtLocal: createdAtLocal ?? this.createdAtLocal,
     syncStatus: syncStatus ?? this.syncStatus,
     errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
@@ -1178,6 +1322,16 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
       personaInvolucrada: data.personaInvolucrada.present
           ? data.personaInvolucrada.value
           : this.personaInvolucrada,
+      fotoBytes: data.fotoBytes.present ? data.fotoBytes.value : this.fotoBytes,
+      fotoNombre: data.fotoNombre.present
+          ? data.fotoNombre.value
+          : this.fotoNombre,
+      fotoArchivoId: data.fotoArchivoId.present
+          ? data.fotoArchivoId.value
+          : this.fotoArchivoId,
+      fotoDescartada: data.fotoDescartada.present
+          ? data.fotoDescartada.value
+          : this.fotoDescartada,
       createdAtLocal: data.createdAtLocal.present
           ? data.createdAtLocal.value
           : this.createdAtLocal,
@@ -1200,6 +1354,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
           ..write('tipo: $tipo, ')
           ..write('propertyId: $propertyId, ')
           ..write('personaInvolucrada: $personaInvolucrada, ')
+          ..write('fotoBytes: $fotoBytes, ')
+          ..write('fotoNombre: $fotoNombre, ')
+          ..write('fotoArchivoId: $fotoArchivoId, ')
+          ..write('fotoDescartada: $fotoDescartada, ')
           ..write('createdAtLocal: $createdAtLocal, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('errorMessage: $errorMessage, ')
@@ -1216,6 +1374,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     tipo,
     propertyId,
     personaInvolucrada,
+    $driftBlobEquality.hash(fotoBytes),
+    fotoNombre,
+    fotoArchivoId,
+    fotoDescartada,
     createdAtLocal,
     syncStatus,
     errorMessage,
@@ -1231,6 +1393,10 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
           other.tipo == this.tipo &&
           other.propertyId == this.propertyId &&
           other.personaInvolucrada == this.personaInvolucrada &&
+          $driftBlobEquality.equals(other.fotoBytes, this.fotoBytes) &&
+          other.fotoNombre == this.fotoNombre &&
+          other.fotoArchivoId == this.fotoArchivoId &&
+          other.fotoDescartada == this.fotoDescartada &&
           other.createdAtLocal == this.createdAtLocal &&
           other.syncStatus == this.syncStatus &&
           other.errorMessage == this.errorMessage &&
@@ -1244,6 +1410,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
   final Value<String> tipo;
   final Value<String?> propertyId;
   final Value<String?> personaInvolucrada;
+  final Value<Uint8List?> fotoBytes;
+  final Value<String?> fotoNombre;
+  final Value<String?> fotoArchivoId;
+  final Value<bool> fotoDescartada;
   final Value<DateTime> createdAtLocal;
   final Value<String> syncStatus;
   final Value<String?> errorMessage;
@@ -1256,6 +1426,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     this.tipo = const Value.absent(),
     this.propertyId = const Value.absent(),
     this.personaInvolucrada = const Value.absent(),
+    this.fotoBytes = const Value.absent(),
+    this.fotoNombre = const Value.absent(),
+    this.fotoArchivoId = const Value.absent(),
+    this.fotoDescartada = const Value.absent(),
     this.createdAtLocal = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.errorMessage = const Value.absent(),
@@ -1269,6 +1443,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     this.tipo = const Value.absent(),
     this.propertyId = const Value.absent(),
     this.personaInvolucrada = const Value.absent(),
+    this.fotoBytes = const Value.absent(),
+    this.fotoNombre = const Value.absent(),
+    this.fotoArchivoId = const Value.absent(),
+    this.fotoDescartada = const Value.absent(),
     required DateTime createdAtLocal,
     this.syncStatus = const Value.absent(),
     this.errorMessage = const Value.absent(),
@@ -1284,6 +1462,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     Expression<String>? tipo,
     Expression<String>? propertyId,
     Expression<String>? personaInvolucrada,
+    Expression<Uint8List>? fotoBytes,
+    Expression<String>? fotoNombre,
+    Expression<String>? fotoArchivoId,
+    Expression<bool>? fotoDescartada,
     Expression<DateTime>? createdAtLocal,
     Expression<String>? syncStatus,
     Expression<String>? errorMessage,
@@ -1297,6 +1479,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
       if (tipo != null) 'tipo': tipo,
       if (propertyId != null) 'property_id': propertyId,
       if (personaInvolucrada != null) 'persona_involucrada': personaInvolucrada,
+      if (fotoBytes != null) 'foto_bytes': fotoBytes,
+      if (fotoNombre != null) 'foto_nombre': fotoNombre,
+      if (fotoArchivoId != null) 'foto_archivo_id': fotoArchivoId,
+      if (fotoDescartada != null) 'foto_descartada': fotoDescartada,
       if (createdAtLocal != null) 'created_at_local': createdAtLocal,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (errorMessage != null) 'error_message': errorMessage,
@@ -1312,6 +1498,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     Value<String>? tipo,
     Value<String?>? propertyId,
     Value<String?>? personaInvolucrada,
+    Value<Uint8List?>? fotoBytes,
+    Value<String?>? fotoNombre,
+    Value<String?>? fotoArchivoId,
+    Value<bool>? fotoDescartada,
     Value<DateTime>? createdAtLocal,
     Value<String>? syncStatus,
     Value<String?>? errorMessage,
@@ -1325,6 +1515,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
       tipo: tipo ?? this.tipo,
       propertyId: propertyId ?? this.propertyId,
       personaInvolucrada: personaInvolucrada ?? this.personaInvolucrada,
+      fotoBytes: fotoBytes ?? this.fotoBytes,
+      fotoNombre: fotoNombre ?? this.fotoNombre,
+      fotoArchivoId: fotoArchivoId ?? this.fotoArchivoId,
+      fotoDescartada: fotoDescartada ?? this.fotoDescartada,
       createdAtLocal: createdAtLocal ?? this.createdAtLocal,
       syncStatus: syncStatus ?? this.syncStatus,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -1354,6 +1548,18 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     if (personaInvolucrada.present) {
       map['persona_involucrada'] = Variable<String>(personaInvolucrada.value);
     }
+    if (fotoBytes.present) {
+      map['foto_bytes'] = Variable<Uint8List>(fotoBytes.value);
+    }
+    if (fotoNombre.present) {
+      map['foto_nombre'] = Variable<String>(fotoNombre.value);
+    }
+    if (fotoArchivoId.present) {
+      map['foto_archivo_id'] = Variable<String>(fotoArchivoId.value);
+    }
+    if (fotoDescartada.present) {
+      map['foto_descartada'] = Variable<bool>(fotoDescartada.value);
+    }
     if (createdAtLocal.present) {
       map['created_at_local'] = Variable<DateTime>(createdAtLocal.value);
     }
@@ -1381,6 +1587,10 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
           ..write('tipo: $tipo, ')
           ..write('propertyId: $propertyId, ')
           ..write('personaInvolucrada: $personaInvolucrada, ')
+          ..write('fotoBytes: $fotoBytes, ')
+          ..write('fotoNombre: $fotoNombre, ')
+          ..write('fotoArchivoId: $fotoArchivoId, ')
+          ..write('fotoDescartada: $fotoDescartada, ')
           ..write('createdAtLocal: $createdAtLocal, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('errorMessage: $errorMessage, ')
@@ -2228,6 +2438,10 @@ typedef $$PendingIncidentsTableCreateCompanionBuilder =
       Value<String> tipo,
       Value<String?> propertyId,
       Value<String?> personaInvolucrada,
+      Value<Uint8List?> fotoBytes,
+      Value<String?> fotoNombre,
+      Value<String?> fotoArchivoId,
+      Value<bool> fotoDescartada,
       required DateTime createdAtLocal,
       Value<String> syncStatus,
       Value<String?> errorMessage,
@@ -2242,6 +2456,10 @@ typedef $$PendingIncidentsTableUpdateCompanionBuilder =
       Value<String> tipo,
       Value<String?> propertyId,
       Value<String?> personaInvolucrada,
+      Value<Uint8List?> fotoBytes,
+      Value<String?> fotoNombre,
+      Value<String?> fotoArchivoId,
+      Value<bool> fotoDescartada,
       Value<DateTime> createdAtLocal,
       Value<String> syncStatus,
       Value<String?> errorMessage,
@@ -2285,6 +2503,26 @@ class $$PendingIncidentsTableFilterComposer
 
   ColumnFilters<String> get personaInvolucrada => $composableBuilder(
     column: $table.personaInvolucrada,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<Uint8List> get fotoBytes => $composableBuilder(
+    column: $table.fotoBytes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fotoNombre => $composableBuilder(
+    column: $table.fotoNombre,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get fotoArchivoId => $composableBuilder(
+    column: $table.fotoArchivoId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<bool> get fotoDescartada => $composableBuilder(
+    column: $table.fotoDescartada,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -2348,6 +2586,26 @@ class $$PendingIncidentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<Uint8List> get fotoBytes => $composableBuilder(
+    column: $table.fotoBytes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fotoNombre => $composableBuilder(
+    column: $table.fotoNombre,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get fotoArchivoId => $composableBuilder(
+    column: $table.fotoArchivoId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<bool> get fotoDescartada => $composableBuilder(
+    column: $table.fotoDescartada,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAtLocal => $composableBuilder(
     column: $table.createdAtLocal,
     builder: (column) => ColumnOrderings(column),
@@ -2399,6 +2657,24 @@ class $$PendingIncidentsTableAnnotationComposer
 
   GeneratedColumn<String> get personaInvolucrada => $composableBuilder(
     column: $table.personaInvolucrada,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<Uint8List> get fotoBytes =>
+      $composableBuilder(column: $table.fotoBytes, builder: (column) => column);
+
+  GeneratedColumn<String> get fotoNombre => $composableBuilder(
+    column: $table.fotoNombre,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get fotoArchivoId => $composableBuilder(
+    column: $table.fotoArchivoId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<bool> get fotoDescartada => $composableBuilder(
+    column: $table.fotoDescartada,
     builder: (column) => column,
   );
 
@@ -2464,6 +2740,10 @@ class $$PendingIncidentsTableTableManager
                 Value<String> tipo = const Value.absent(),
                 Value<String?> propertyId = const Value.absent(),
                 Value<String?> personaInvolucrada = const Value.absent(),
+                Value<Uint8List?> fotoBytes = const Value.absent(),
+                Value<String?> fotoNombre = const Value.absent(),
+                Value<String?> fotoArchivoId = const Value.absent(),
+                Value<bool> fotoDescartada = const Value.absent(),
                 Value<DateTime> createdAtLocal = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
@@ -2476,6 +2756,10 @@ class $$PendingIncidentsTableTableManager
                 tipo: tipo,
                 propertyId: propertyId,
                 personaInvolucrada: personaInvolucrada,
+                fotoBytes: fotoBytes,
+                fotoNombre: fotoNombre,
+                fotoArchivoId: fotoArchivoId,
+                fotoDescartada: fotoDescartada,
                 createdAtLocal: createdAtLocal,
                 syncStatus: syncStatus,
                 errorMessage: errorMessage,
@@ -2490,6 +2774,10 @@ class $$PendingIncidentsTableTableManager
                 Value<String> tipo = const Value.absent(),
                 Value<String?> propertyId = const Value.absent(),
                 Value<String?> personaInvolucrada = const Value.absent(),
+                Value<Uint8List?> fotoBytes = const Value.absent(),
+                Value<String?> fotoNombre = const Value.absent(),
+                Value<String?> fotoArchivoId = const Value.absent(),
+                Value<bool> fotoDescartada = const Value.absent(),
                 required DateTime createdAtLocal,
                 Value<String> syncStatus = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
@@ -2502,6 +2790,10 @@ class $$PendingIncidentsTableTableManager
                 tipo: tipo,
                 propertyId: propertyId,
                 personaInvolucrada: personaInvolucrada,
+                fotoBytes: fotoBytes,
+                fotoNombre: fotoNombre,
+                fotoArchivoId: fotoArchivoId,
+                fotoDescartada: fotoDescartada,
                 createdAtLocal: createdAtLocal,
                 syncStatus: syncStatus,
                 errorMessage: errorMessage,

@@ -144,6 +144,7 @@ export function SecurityDashboardPage() {
                   <th>Tipo</th>
                   <th>Casa</th>
                   <th>Persona</th>
+                  <th>Foto</th>
                   <th>Estado</th>
                   <th>Reportada</th>
                 </tr>
@@ -155,6 +156,15 @@ export function SecurityDashboardPage() {
                     <td>{ETIQUETA_TIPO_INCIDENCIA[i.tipo] ?? i.tipo}</td>
                     <td>{casaDe(i.property_id)}</td>
                     <td>{i.persona_involucrada ?? '—'}</td>
+                    <td>
+                      {i.foto_url ? (
+                        <a href={i.foto_url} target="_blank" rel="noreferrer">
+                          Ver foto
+                        </a>
+                      ) : (
+                        '—'
+                      )}
+                    </td>
                     <td style={{ color: i.estado === 'abierta' ? 'var(--brick)' : 'var(--amber)' }}>
                       {i.estado === 'abierta' ? 'Abierta' : 'En proceso'}
                     </td>

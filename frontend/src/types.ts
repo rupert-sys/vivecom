@@ -231,6 +231,8 @@ export interface Incident {
   descripcion: string
   created_at: string
   resolved_at: string | null
+  // Foto de la incidencia: un enlace firmado de vida corta si se subió como archivo desde la caseta.
+  foto_url: string | null
   tipo: TipoIncidencia
   property_id: string | null
   persona_involucrada: string | null

@@ -43,6 +43,14 @@ class PendingIncidents extends Table {
   TextColumn get tipo => text().withDefault(const Constant('seguridad'))();
   TextColumn get propertyId => text().nullable()(); // casa involucrada
   TextColumn get personaInvolucrada => text().nullable()();
+  // Foto de la incidencia, guardada AQUÍ mientras no hay conexión: al sincronizar se sube primero
+  // el archivo (POST /files, kind=incidencia) y la incidencia lleva su id. Ya subida, fotoArchivoId
+  // evita subirla de nuevo en un reintento, y los bytes se borran para no llenar el teléfono.
+  BlobColumn get fotoBytes => blob().nullable()();
+  TextColumn get fotoNombre => text().nullable()();
+  TextColumn get fotoArchivoId => text().nullable()();
+  // El servidor no aceptó la foto (tipo o peso inválidos): la incidencia se manda igual, sin ella.
+  BoolColumn get fotoDescartada => boolean().withDefault(const Constant(false))();
   DateTimeColumn get createdAtLocal => dateTime()();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
   TextColumn get errorMessage => text().nullable()();
@@ -73,9 +81,9 @@ class AppDatabase extends _$AppDatabase {
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 2;
+  int get schemaVersion => 3;
 
-  // v2 (reglamento): datos extra de la bitácora de acceso, tipo/casa/persona de
+  // v2 (reglamento) y v3 (foto de incidencias): datos extra de la bitácora de acceso, tipo/casa/persona de
   // las incidencias y la cola de paquetes. Un dispositivo que ya tenía la app
   // instalada conserva su cola pendiente al actualizar.
   @override
@@ -91,6 +99,13 @@ class AppDatabase extends _$AppDatabase {
         await m.addColumn(pendingIncidents, pendingIncidents.propertyId);
         await m.addColumn(pendingIncidents, pendingIncidents.personaInvolucrada);
         await m.createTable(pendingPackages);
+      }
+      // v3: foto de la incidencia.
+      if (from < 3) {
+        await m.addColumn(pendingIncidents, pendingIncidents.fotoBytes);
+        await m.addColumn(pendingIncidents, pendingIncidents.fotoNombre);
+        await m.addColumn(pendingIncidents, pendingIncidents.fotoArchivoId);
+        await m.addColumn(pendingIncidents, pendingIncidents.fotoDescartada);
       }
     },
   );
@@ -130,8 +145,23 @@ class AppDatabase extends _$AppDatabase {
           .write(PendingPackagesCompanion(syncStatus: const Value('failed'), errorMessage: Value(error)));
 
   Future<void> marcarIncidenciaSincronizada(String clientId, String remoteId) =>
+      (update(pendingIncidents)..where((t) => t.clientId.equals(clientId))).write(
+        PendingIncidentsCompanion(
+          syncStatus: const Value('synced'),
+          remoteId: Value(remoteId),
+          errorMessage: const Value(null),
+          fotoBytes: const Value(null), // ya está en el servidor: no se guarda dos veces en el teléfono
+        ),
+      );
+
+  // La foto ya se subió: se recuerda su id para que un reintento no la suba otra vez.
+  Future<void> guardarFotoSubida(String clientId, String archivoId) =>
       (update(pendingIncidents)..where((t) => t.clientId.equals(clientId)))
-          .write(PendingIncidentsCompanion(syncStatus: const Value('synced'), remoteId: Value(remoteId), errorMessage: const Value(null)));
+          .write(PendingIncidentsCompanion(fotoArchivoId: Value(archivoId)));
+
+  Future<void> descartarFoto(String clientId) =>
+      (update(pendingIncidents)..where((t) => t.clientId.equals(clientId)))
+          .write(const PendingIncidentsCompanion(fotoBytes: Value(null), fotoDescartada: Value(true)));
 
   Future<void> marcarIncidenciaFallida(String clientId, String error) =>
       (update(pendingIncidents)..where((t) => t.clientId.equals(clientId)))

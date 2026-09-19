@@ -27,7 +27,9 @@
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>La app caseta usa la cámara para escanear el código QR de un visitante (F2-10).</string>
+	<string>La cámara se usa para escanear los códigos QR de visitantes y proveedores, y para fotografiar las incidencias.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Para adjuntar a una incidencia una foto que ya tienes en la galería.</string>
 	<key>UIApplicationSceneManifest</key>
 	<dict>
 		<key>UIApplicationSupportsMultipleScenes</key>

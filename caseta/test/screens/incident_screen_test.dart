@@ -1,3 +1,6 @@
+import 'dart:convert';
+import 'dart:typed_data';
+
 import 'package:app_caseta/db/app_database.dart';
 import 'package:app_caseta/screens/incident_screen.dart';
 import 'package:app_caseta/services/api_client.dart';
@@ -16,7 +19,7 @@ void main() {
     db = AppDatabase.forTesting(NativeDatabase.memory());
   });
 
-  Future<void> pumpPantalla(WidgetTester tester, http.Client client) async {
+  Future<void> pumpPantalla(WidgetTester tester, http.Client client, {CapturarFoto? capturarFoto}) async {
     final api = ApiClient(client: client);
     tester.view.physicalSize = const Size(800, 2000);
     tester.view.devicePixelRatio = 1.0;
@@ -29,6 +32,7 @@ void main() {
             db: db,
             propertyService: PropertyService(api: api),
             syncService: SyncService(db: db, obtenerToken: () => 'un-token', api: api),
+            capturarFoto: capturarFoto ?? (_) async => null,
           ),
         ),
       ),
@@ -145,5 +149,112 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(await db.select(db.pendingIncidents).get(), hasLength(1));
+  });
+
+  // Un PNG real de 1x1: Image.memory lo decodifica en la vista previa.
+  final pngMinimo = Uint8List.fromList(
+    base64Decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR4nGNgYGD4DwABBAEAX+XDSwAAAABJRU5ErkJggg=='),
+  );
+
+  testConIncidencia('tomar una foto muestra su vista previa y se puede quitar', (tester) async {
+    await pumpPantalla(
+      tester,
+      servidorConCasas(),
+      capturarFoto: (_) async => FotoCapturada(nombre: 'portón.jpg', bytes: pngMinimo),
+    );
+
+    await tester.tap(find.byKey(const Key('tomar_foto_button')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('foto_previa')), findsOneWidget);
+    expect(find.text('portón.jpg'), findsOneWidget);
+    expect(find.byKey(const Key('tomar_foto_button')), findsNothing);
+
+    await tester.tap(find.byKey(const Key('quitar_foto')));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('foto_previa')), findsNothing);
+    expect(find.byKey(const Key('tomar_foto_button')), findsOneWidget);
+  });
+
+  testConIncidencia('el selector recibe el origen: cámara o galería', (tester) async {
+    final origenes = <OrigenDeLaFoto>[];
+    await pumpPantalla(
+      tester,
+      servidorConCasas(),
+      capturarFoto: (origen) async {
+        origenes.add(origen);
+        return null; // el usuario cancela
+      },
+    );
+
+    await tester.tap(find.byKey(const Key('tomar_foto_button')));
+    await tester.tap(find.byKey(const Key('foto_galeria_button')));
+    await tester.pumpAndSettle();
+
+    expect(origenes, [OrigenDeLaFoto.camara, OrigenDeLaFoto.galeria]);
+    expect(find.byKey(const Key('foto_previa')), findsNothing);
+  });
+
+  testConIncidencia('reportar con foto la guarda en la cola local y la cola dice que lleva foto', (tester) async {
+    await pumpPantalla(
+      tester,
+      servidorConCasas(),
+      capturarFoto: (_) async => FotoCapturada(nombre: 'portón.jpg', bytes: pngMinimo),
+    );
+
+    await tester.enterText(find.byKey(const Key('descripcion_field')), 'Portón atorado');
+    await tester.tap(find.byKey(const Key('tomar_foto_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reportar'));
+    await tester.pumpAndSettle();
+
+    final fila = (await db.select(db.pendingIncidents).get()).single;
+    expect(fila.fotoBytes, pngMinimo);
+    expect(fila.fotoNombre, 'portón.jpg');
+    expect(find.textContaining('con foto'), findsOneWidget);
+    // el formulario queda listo para la siguiente
+    expect(find.byKey(const Key('foto_previa')), findsNothing);
+  });
+
+  testConIncidencia('una incidencia sin foto sigue reportándose igual', (tester) async {
+    await pumpPantalla(tester, servidorConCasas());
+
+    await tester.enterText(find.byKey(const Key('descripcion_field')), 'Ruido');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reportar'));
+    await tester.pumpAndSettle();
+
+    final fila = (await db.select(db.pendingIncidents).get()).single;
+    expect((fila.fotoBytes, fila.fotoNombre), (null, null));
+    expect(find.textContaining('con foto'), findsNothing);
+  });
+
+  testConIncidencia('una foto de más de 10 MB se rechaza sin adjuntarla', (tester) async {
+    await pumpPantalla(
+      tester,
+      servidorConCasas(),
+      capturarFoto: (_) async => FotoCapturada(nombre: 'enorme.jpg', bytes: Uint8List(pesoMaximoDeLaFoto + 1)),
+    );
+
+    await tester.tap(find.byKey(const Key('tomar_foto_button')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('error_foto')), findsOneWidget);
+    expect(find.byKey(const Key('foto_previa')), findsNothing);
+  });
+
+  testConIncidencia('sin conexión la foto se guarda en el teléfono y la incidencia queda pendiente', (tester) async {
+    await pumpPantalla(
+      tester,
+      MockClient((request) async => throw http.ClientException('sin red')),
+      capturarFoto: (_) async => FotoCapturada(nombre: 'p.jpg', bytes: pngMinimo),
+    );
+
+    await tester.enterText(find.byKey(const Key('descripcion_field')), 'Portón atorado');
+    await tester.tap(find.byKey(const Key('tomar_foto_button')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reportar'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pendiente'), findsOneWidget);
+    expect((await db.pendientesDeIncidencia()).single.fotoBytes, pngMinimo);
   });
 }

@@ -123,17 +123,52 @@ class SyncService {
     }
   }
 
+  // La foto se sube ANTES que la incidencia y su id viaja con ella. Si el reintento llega después de
+  // que la foto ya subió (falló el POST de la incidencia), se reusa el id en vez de subirla otra vez.
+  // Si el servidor no acepta la foto (tipo o peso inválidos), no tiene caso reintentarla: se
+  // descarta y la incidencia se manda sin ella — la información de la incidencia importa más.
+  // Cualquier otro error (sin red, 5xx) se propaga: la incidencia se queda pendiente.
+  Future<String?> _subirFotoDeLaIncidencia(PendingIncident incidencia, String token) async {
+    final yaSubida = incidencia.fotoArchivoId;
+    if (yaSubida != null) return yaSubida;
+    final bytes = incidencia.fotoBytes;
+    if (bytes == null) return null;
+    try {
+      final data = await _api.postMultipart(
+        '/files',
+        fields: {'kind': 'incidencia'},
+        fileField: 'file',
+        bytes: bytes,
+        filename: incidencia.fotoNombre ?? 'foto.jpg',
+        token: token,
+      );
+      final archivoId = (data as Map<String, dynamic>)['id'] as String;
+      await _db.guardarFotoSubida(incidencia.clientId, archivoId);
+      return archivoId;
+    } on ApiException catch (err) {
+      if (const {413, 415, 422}.contains(err.statusCode)) {
+        await _db.descartarFoto(incidencia.clientId);
+        return null;
+      }
+      rethrow;
+    }
+  }
+
   Future<void> _sincronizarIncidencias(String token) async {
     final pendientes = await _db.pendientesDeIncidencia();
     for (final incidencia in pendientes.where((i) => i.syncStatus == 'pending')) {
       try {
+        final fotoArchivoId = await _subirFotoDeLaIncidencia(incidencia, token);
         final data = await _api.post('/incidents', {
           'client_id': incidencia.clientId,
           'descripcion': incidencia.descripcion,
           'tipo': incidencia.tipo,
           if (incidencia.propertyId != null) 'property_id': incidencia.propertyId,
           if (incidencia.personaInvolucrada != null) 'persona_involucrada': incidencia.personaInvolucrada,
-          if (incidencia.fotoUrl != null) 'foto_url': incidencia.fotoUrl,
+          if (fotoArchivoId != null)
+            'foto_archivo_id': fotoArchivoId
+          else if (incidencia.fotoUrl != null)
+            'foto_url': incidencia.fotoUrl,
         }, token: token);
         await _db.marcarIncidenciaSincronizada(incidencia.clientId, data['id'] as String);
       } on ApiException catch (err) {

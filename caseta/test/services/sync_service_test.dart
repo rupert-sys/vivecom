@@ -36,9 +36,16 @@ void main() {
       final body = jsonDecode(request.body) as Map<String, dynamic>;
       expect(body['client_id'], 'c1');
       expect(body['placas'], ['ABC-123']);
-      return http.Response('{"id": "remote-1", "property_id": "p1", "tipo": "visitante", "hora_entrada": "2026-10-01T10:00:00", "hora_salida": null, "placas": ["ABC-123"]}', 201);
+      return http.Response(
+        '{"id": "remote-1", "property_id": "p1", "tipo": "visitante", "hora_entrada": "2026-10-01T10:00:00", "hora_salida": null, "placas": ["ABC-123"]}',
+        201,
+      );
     });
-    final sync = SyncService(db: db, obtenerToken: () => 'un-token', api: ApiClient(client: mockClient));
+    final sync = SyncService(
+      db: db,
+      obtenerToken: () => 'un-token',
+      api: ApiClient(client: mockClient),
+    );
 
     await sync.sincronizarPendientes();
 
@@ -52,12 +59,14 @@ void main() {
   test('un conflicto (409) marca el registro como failed con el mensaje del backend', () async {
     await db
         .into(db.pendingAccessLogs)
-        .insert(
-          PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()),
-        );
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()));
 
     final mockClient = MockClient((request) async => http.Response('{"detail": "Conflicto de sincronización"}', 409));
-    final sync = SyncService(db: db, obtenerToken: () => 'un-token', api: ApiClient(client: mockClient));
+    final sync = SyncService(
+      db: db,
+      obtenerToken: () => 'un-token',
+      api: ApiClient(client: mockClient),
+    );
 
     await sync.sincronizarPendientes();
 
@@ -69,12 +78,14 @@ void main() {
   test('un error de red deja el registro pending para reintentar después', () async {
     await db
         .into(db.pendingAccessLogs)
-        .insert(
-          PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()),
-        );
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()));
 
     final mockClient = MockClient((request) async => throw Exception('Failed host lookup'));
-    final sync = SyncService(db: db, obtenerToken: () => 'un-token', api: ApiClient(client: mockClient));
+    final sync = SyncService(
+      db: db,
+      obtenerToken: () => 'un-token',
+      api: ApiClient(client: mockClient),
+    );
 
     await sync.sincronizarPendientes();
 
@@ -85,16 +96,18 @@ void main() {
   test('sin token no intenta sincronizar nada', () async {
     await db
         .into(db.pendingAccessLogs)
-        .insert(
-          PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()),
-        );
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()));
 
     var llamadas = 0;
     final mockClient = MockClient((request) async {
       llamadas++;
       return http.Response('{}', 201);
     });
-    final sync = SyncService(db: db, obtenerToken: () => '', api: ApiClient(client: mockClient));
+    final sync = SyncService(
+      db: db,
+      obtenerToken: () => '',
+      api: ApiClient(client: mockClient),
+    );
 
     await sync.sincronizarPendientes();
 
@@ -110,9 +123,16 @@ void main() {
 
     final mockClient = MockClient((request) async {
       expect(request.url.path, '/incidents');
-      return http.Response('{"id": "remote-i1", "reportado_por": "u1", "estado": "abierta", "descripcion": "Fuga de agua", "foto_url": null, "created_at": "2026-10-01T10:00:00", "resolved_at": null}', 201);
+      return http.Response(
+        '{"id": "remote-i1", "reportado_por": "u1", "estado": "abierta", "descripcion": "Fuga de agua", "foto_url": null, "created_at": "2026-10-01T10:00:00", "resolved_at": null}',
+        201,
+      );
     });
-    final sync = SyncService(db: db, obtenerToken: () => 'un-token', api: ApiClient(client: mockClient));
+    final sync = SyncService(
+      db: db,
+      obtenerToken: () => 'un-token',
+      api: ApiClient(client: mockClient),
+    );
 
     await sync.sincronizarPendientes();
 
@@ -141,7 +161,11 @@ void main() {
       return http.Response('{"id": "r1"}', 201);
     });
 
-    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
 
     expect(cuerpo!['nombre_visitante'], 'Ana López');
     expect(cuerpo!['acompanantes'], 2);
@@ -159,7 +183,11 @@ void main() {
       return http.Response('{"id": "r1"}', 201);
     });
 
-    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
 
     expect(cuerpo!.containsKey('nombre_visitante'), isFalse);
     expect(cuerpo!.containsKey('identificacion'), isFalse);
@@ -185,7 +213,11 @@ void main() {
       return http.Response('{"id": "ri1"}', 201);
     });
 
-    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
 
     expect(cuerpo!['tipo'], 'mantenimiento');
     expect(cuerpo!['property_id'], 'p2');
@@ -207,7 +239,11 @@ void main() {
       return http.Response('{"enviadas": 1}', 200);
     });
 
-    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
 
     expect(cuerpo, {'client_id': 'k1', 'property_id': 'p1'});
     expect(rutas, ['/packages', '/packages/send-notifications']);
@@ -224,7 +260,11 @@ void main() {
       return http.Response('{"detail": "Twilio caído"}', 500);
     });
 
-    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
 
     expect((await db.pendientesDePaquete()), isEmpty);
   });
@@ -239,7 +279,11 @@ void main() {
       return http.Response('{"detail": "sin red"}', 503);
     });
 
-    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
 
     expect(rutas, ['/packages']); // el paquete sigue pendiente: no hay nada que avisar todavía
     expect((await db.pendientesDePaquete()).single.syncStatus, 'pending');
@@ -251,9 +295,162 @@ void main() {
         .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
     final mockClient = MockClient((request) async => http.Response('{"detail": "Conflicto de sincronización"}', 409));
 
-    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
 
     final fila = await db.select(db.pendingPackages).getSingle();
     expect((fila.syncStatus, fila.errorMessage), ('failed', 'Conflicto de sincronización'));
+  });
+
+  Future<void> encolarIncidenciaConFoto({String clientId = 'i1', String? archivoId}) => db
+      .into(db.pendingIncidents)
+      .insert(
+        PendingIncidentsCompanion.insert(
+          clientId: clientId,
+          descripcion: 'Portón atorado',
+          fotoBytes: Value(Uint8List.fromList([1, 2, 3, 4])),
+          fotoNombre: const Value('foto.jpg'),
+          fotoArchivoId: Value(archivoId),
+          createdAtLocal: DateTime.now(),
+        ),
+      );
+
+  test('sube la foto de la incidencia primero y la incidencia lleva su id', () async {
+    await encolarIncidenciaConFoto();
+    final rutas = <String>[];
+    Map<String, dynamic>? cuerpo;
+    late http.BaseRequest subida;
+    final mockClient = MockClient((request) async {
+      rutas.add(request.url.path);
+      if (request.url.path == '/files') {
+        subida = request;
+        return http.Response(
+          '{"id": "arch-1", "nombre_original": "foto.jpg", "content_type": "image/jpeg", "size": 4, "ref": "/files/arch-1"}',
+          201,
+        );
+      }
+      cuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response('{"id": "remote-i1"}', 201);
+    });
+
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
+
+    expect(rutas, ['/files', '/incidents']);
+    expect(subida.headers['Authorization'], 'Bearer t');
+    final cuerpoSubida = latin1.decode((subida as http.Request).bodyBytes);
+    expect(cuerpoSubida, contains('incidencia'));
+    expect(cuerpoSubida, contains('filename="foto.jpg"'));
+    expect(cuerpo!['foto_archivo_id'], 'arch-1');
+    expect(cuerpo!.containsKey('foto_url'), isFalse);
+    final fila = await db.select(db.pendingIncidents).getSingle();
+    expect((fila.syncStatus, fila.fotoBytes), ('synced', null)); // los bytes ya no ocupan espacio
+  });
+
+  test('si falla el POST de la incidencia, el reintento reusa la foto ya subida', () async {
+    await encolarIncidenciaConFoto();
+    var subidas = 0;
+    var incidenciaOk = false;
+    Map<String, dynamic>? ultimoCuerpo;
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/files') {
+        subidas++;
+        return http.Response('{"id": "arch-1"}', 201);
+      }
+      ultimoCuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+      return incidenciaOk ? http.Response('{"id": "r1"}', 201) : http.Response('{"detail": "caído"}', 503);
+    });
+    final sync = SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    );
+
+    await sync.sincronizarPendientes();
+    expect((await db.pendientesDeIncidencia()).single.fotoArchivoId, 'arch-1'); // recordada, sigue pendiente
+
+    incidenciaOk = true;
+    await sync.sincronizarPendientes();
+
+    expect(subidas, 1); // no se subió dos veces
+    expect(ultimoCuerpo!['foto_archivo_id'], 'arch-1');
+    expect(await db.pendientesDeIncidencia(), isEmpty);
+  });
+
+  test('si el servidor rechaza la foto (tipo o peso), se descarta y la incidencia se manda sin ella', () async {
+    await encolarIncidenciaConFoto();
+    Map<String, dynamic>? cuerpo;
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/files') {
+        return http.Response('{"detail": "Solo se aceptan fotos (JPG, PNG, WEBP, HEIC) o PDF."}', 415);
+      }
+      cuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response('{"id": "r1"}', 201);
+    });
+
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
+
+    expect(cuerpo!['descripcion'], 'Portón atorado');
+    expect(cuerpo!.containsKey('foto_archivo_id'), isFalse);
+    final fila = await db.select(db.pendingIncidents).getSingle();
+    expect((fila.syncStatus, fila.fotoDescartada, fila.fotoBytes), ('synced', true, null));
+  });
+
+  test('sin red o con error del servidor la incidencia se queda pendiente CON su foto', () async {
+    await encolarIncidenciaConFoto(clientId: 'sin-red');
+    await encolarIncidenciaConFoto(clientId: 'error-5xx');
+    final rutas = <String>[];
+    final mockClient = MockClient((request) async {
+      rutas.add(request.url.path);
+      throw http.ClientException('sin red');
+    });
+
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
+
+    expect(rutas.where((r) => r == '/incidents'), isEmpty); // sin foto subida no se manda la incidencia
+    final filas = await db.pendientesDeIncidencia();
+    expect(filas, hasLength(2));
+    expect(filas.every((f) => f.syncStatus == 'pending' && f.fotoBytes != null && !f.fotoDescartada), isTrue);
+
+    final mock5xx = MockClient((request) async => http.Response('{"detail": "x"}', 503));
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mock5xx),
+    ).sincronizarPendientes();
+    expect((await db.pendientesDeIncidencia()).every((f) => f.fotoBytes != null), isTrue);
+  });
+
+  test('una incidencia sin foto no toca /files', () async {
+    await db
+        .into(db.pendingIncidents)
+        .insert(PendingIncidentsCompanion.insert(clientId: 'i1', descripcion: 'Ruido', createdAtLocal: DateTime.now()));
+    final rutas = <String>[];
+    final mockClient = MockClient((request) async {
+      rutas.add(request.url.path);
+      return http.Response('{"id": "r1"}', 201);
+    });
+
+    await SyncService(
+      db: db,
+      obtenerToken: () => 't',
+      api: ApiClient(client: mockClient),
+    ).sincronizarPendientes();
+
+    expect(rutas, ['/incidents']);
   });
 }

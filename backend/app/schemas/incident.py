@@ -20,6 +20,9 @@ class IncidentCreate(BaseModel):
     property_id: uuid.UUID | None = None
     persona_involucrada: str | None = None
     foto_url: str | None = None
+    # Alternativa a `foto_url`: una foto ya subida (POST /files con kind=incidencia, por el mismo
+    # usuario). Si vienen las dos, gana el archivo.
+    foto_archivo_id: uuid.UUID | None = None
     # F2-07: UUID generado por la app caseta — ver client_id en el modelo.
     client_id: uuid.UUID | None = None
 

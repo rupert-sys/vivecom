@@ -11,8 +11,8 @@ import type { AccessLogEntry, Incident, Property, VisitorParking } from '../type
 vi.mock('../auth/AuthContext', () => ({ useAuth: vi.fn() }))
 
 const incidentes: Incident[] = [
-  { id: 'i1', reportado_por: 'u1', estado: 'abierta', descripcion: 'Fuga de agua', created_at: '2026-09-01T10:00:00', resolved_at: null, tipo: 'seguridad', property_id: null, persona_involucrada: null },
-  { id: 'i2', reportado_por: 'u1', estado: 'en_proceso', descripcion: 'Portón dañado', created_at: '2026-09-02T10:00:00', resolved_at: null, tipo: 'mantenimiento', property_id: 'p1', persona_involucrada: 'Vecino' },
+  { id: 'i1', reportado_por: 'u1', estado: 'abierta', descripcion: 'Fuga de agua', created_at: '2026-09-01T10:00:00', resolved_at: null, foto_url: null, tipo: 'seguridad', property_id: null, persona_involucrada: null },
+  { id: 'i2', reportado_por: 'u1', estado: 'en_proceso', descripcion: 'Portón dañado', created_at: '2026-09-02T10:00:00', resolved_at: null, foto_url: null, tipo: 'mantenimiento', property_id: 'p1', persona_involucrada: 'Vecino' },
   {
     id: 'i3',
     reportado_por: 'u1',
@@ -20,6 +20,7 @@ const incidentes: Incident[] = [
     descripcion: 'Elevador atorado',
     created_at: '2026-09-01T10:00:00',
     resolved_at: '2026-09-01T12:00:00', // 2 horas después
+    foto_url: null,
     tipo: 'seguridad',
     property_id: null,
     persona_involucrada: null,
@@ -182,5 +183,25 @@ describe('SecurityDashboardPage', () => {
     expect(await screen.findByText(/Ana López/)).toBeInTheDocument()
     expect(screen.queryByText(/cajones de visitas/i)).not.toBeInTheDocument()
     expect(screen.queryByText(/no se pudo cargar/i)).not.toBeInTheDocument()
+  })
+
+  it('una incidencia con foto ofrece el enlace para verla y una sin foto no', async () => {
+    mockUser('admin')
+    vi.spyOn(incidentsApi, 'listIncidents').mockResolvedValue([
+      { ...incidentes[0], foto_url: 'http://localhost:8000/files/f1/content?t=abc' },
+      incidentes[1],
+    ])
+    vi.spyOn(accessLogApi, 'listAccessLogs').mockResolvedValue([])
+    vi.spyOn(propertiesApi, 'listProperties').mockResolvedValue(propiedades)
+
+    render(<SecurityDashboardPage />)
+
+    const conFoto = (await screen.findByText('Fuga de agua')).closest('tr')!
+    expect(within(conFoto).getByRole('link', { name: /ver foto/i })).toHaveAttribute(
+      'href',
+      'http://localhost:8000/files/f1/content?t=abc',
+    )
+    const sinFoto = screen.getByText('Portón dañado').closest('tr')!
+    expect(within(sinFoto).queryByRole('link', { name: /ver foto/i })).not.toBeInTheDocument()
   })
 })

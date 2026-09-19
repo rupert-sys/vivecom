@@ -1,4 +1,7 @@
+import 'dart:typed_data';
+
 import 'package:app_caseta/db/app_database.dart';
+import 'package:drift/drift.dart' show Value;
 import 'package:drift/native.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -14,9 +17,7 @@ void main() {
   test('un acceso encolado queda pending por default', () async {
     await db
         .into(db.pendingAccessLogs)
-        .insert(
-          PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()),
-        );
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()));
 
     final pendientes = await db.pendientesDeAcceso();
     expect(pendientes, hasLength(1));
@@ -26,9 +27,7 @@ void main() {
   test('marcarAccesoSincronizado actualiza el estado y guarda el remoteId', () async {
     await db
         .into(db.pendingAccessLogs)
-        .insert(
-          PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()),
-        );
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()));
 
     await db.marcarAccesoSincronizado('c1', 'remote-1');
 
@@ -43,9 +42,7 @@ void main() {
   test('marcarAccesoFallido guarda el mensaje de error y no lo cuenta como sincronizado', () async {
     await db
         .into(db.pendingAccessLogs)
-        .insert(
-          PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()),
-        );
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'visitante', createdAtLocal: DateTime.now()));
 
     await db.marcarAccesoFallido('c1', 'Conflicto de sincronización');
 
@@ -137,8 +134,12 @@ void main() {
             'CREATE TABLE pending_incidents (client_id TEXT NOT NULL PRIMARY KEY, descripcion TEXT NOT NULL, foto_url TEXT, '
             "created_at_local INTEGER NOT NULL, sync_status TEXT NOT NULL DEFAULT 'pending', error_message TEXT, remote_id TEXT)",
           );
-          raw.execute("INSERT INTO pending_access_logs (client_id, tipo, created_at_local) VALUES ('viejo', 'visitante', 1700000000)");
-          raw.execute("INSERT INTO pending_incidents (client_id, descripcion, created_at_local) VALUES ('i-viejo', 'Fuga', 1700000000)");
+          raw.execute(
+            "INSERT INTO pending_access_logs (client_id, tipo, created_at_local) VALUES ('viejo', 'visitante', 1700000000)",
+          );
+          raw.execute(
+            "INSERT INTO pending_incidents (client_id, descripcion, created_at_local) VALUES ('i-viejo', 'Fuga', 1700000000)",
+          );
           raw.execute('PRAGMA user_version = 1');
         },
       ),
@@ -152,10 +153,77 @@ void main() {
     final incidencia = (await v1.pendientesDeIncidencia()).single;
     expect(incidencia.tipo, 'seguridad');
     expect(incidencia.propertyId, isNull);
+    expect(incidencia.fotoBytes, isNull);
+    expect(incidencia.fotoDescartada, isFalse);
     // la tabla de paquetes existe y funciona
     await v1
         .into(v1.pendingPackages)
         .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
     expect(await v1.pendientesDePaquete(), hasLength(1));
+  });
+
+  test('actualizar desde la v2 conserva las incidencias pendientes y agrega las columnas de la foto', () async {
+    final v2 = AppDatabase.forTesting(
+      NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute(
+            'CREATE TABLE pending_incidents (client_id TEXT NOT NULL PRIMARY KEY, descripcion TEXT NOT NULL, foto_url TEXT, '
+            "tipo TEXT NOT NULL DEFAULT 'seguridad', property_id TEXT, persona_involucrada TEXT, "
+            "created_at_local INTEGER NOT NULL, sync_status TEXT NOT NULL DEFAULT 'pending', error_message TEXT, remote_id TEXT)",
+          );
+          raw.execute(
+            "INSERT INTO pending_incidents (client_id, descripcion, tipo, created_at_local) VALUES ('i2', 'Luminaria', 'mantenimiento', 1700000000)",
+          );
+          raw.execute('PRAGMA user_version = 2');
+        },
+      ),
+    );
+    addTearDown(v2.close);
+
+    final incidencia = (await v2.pendientesDeIncidencia()).single;
+    expect((incidencia.descripcion, incidencia.tipo), ('Luminaria', 'mantenimiento'));
+    expect((incidencia.fotoBytes, incidencia.fotoNombre, incidencia.fotoArchivoId), (null, null, null));
+    expect(incidencia.fotoDescartada, isFalse);
+  });
+
+  test('una incidencia con foto la guarda en la cola y sincronizarla borra los bytes del teléfono', () async {
+    await db
+        .into(db.pendingIncidents)
+        .insert(
+          PendingIncidentsCompanion.insert(
+            clientId: 'i1',
+            descripcion: 'Fuga',
+            fotoBytes: Value(Uint8List.fromList([1, 2, 3])),
+            fotoNombre: const Value('foto.jpg'),
+            createdAtLocal: DateTime.now(),
+          ),
+        );
+    expect((await db.pendientesDeIncidencia()).single.fotoBytes, [1, 2, 3]);
+
+    await db.guardarFotoSubida('i1', 'arch-1');
+    expect((await db.pendientesDeIncidencia()).single.fotoArchivoId, 'arch-1');
+
+    await db.marcarIncidenciaSincronizada('i1', 'remote-1');
+    final fila = await db.select(db.pendingIncidents).getSingle();
+    expect(fila.fotoBytes, isNull); // ya está en el servidor
+    expect(fila.fotoArchivoId, 'arch-1');
+  });
+
+  test('descartarFoto borra los bytes y lo deja anotado, sin tocar la incidencia', () async {
+    await db
+        .into(db.pendingIncidents)
+        .insert(
+          PendingIncidentsCompanion.insert(
+            clientId: 'i1',
+            descripcion: 'Fuga',
+            fotoBytes: Value(Uint8List.fromList([9])),
+            createdAtLocal: DateTime.now(),
+          ),
+        );
+
+    await db.descartarFoto('i1');
+
+    final fila = await db.select(db.pendingIncidents).getSingle();
+    expect((fila.fotoBytes, fila.fotoDescartada, fila.syncStatus), (null, true, 'pending'));
   });
 }
