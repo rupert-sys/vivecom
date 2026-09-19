@@ -22,16 +22,19 @@ export function Layout() {
               Vivecom — Panel Admin
             </Link>
           </h1>
-          <nav style={{ display: 'flex', gap: 'var(--space-3)' }}>
+          <nav style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
             <Link to="/properties">Viviendas</Link>
             <Link to="/fees">Cuotas</Link>
+            <Link to="/collection">Cobranza</Link>
             <Link to="/clabe">CLABE</Link>
             <Link to="/dashboard">Dashboard</Link>
             <Link to="/expenses">Gastos</Link>
             <Link to="/reports/export">Exportar</Link>
             <Link to="/amenities">Amenidades</Link>
+            <Link to="/reservations">Reservaciones</Link>
             <Link to="/security">Seguridad</Link>
             <Link to="/announcements">Avisos</Link>
+            <Link to="/reglamento">Reglamento</Link>
           </nav>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>

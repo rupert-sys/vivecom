@@ -1,16 +1,30 @@
 import { render, screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { FeesPage } from './FeesPage'
 import * as feesApi from '../api/fees'
+import * as reglamentoApi from '../api/reglamento'
 import { useAuth } from '../auth/AuthContext'
-import type { Fee, GlobalRules } from '../types'
+import type { Fee, Reglamento } from '../types'
 
 vi.mock('../auth/AuthContext', () => ({ useAuth: vi.fn() }))
 
 const fee: Fee = { id: 'fee-1', monto: 1500, periodicidad: 'mensual', activa_desde: '2026-09-01' }
 // El backend regresa recargo_porcentaje como fracción (0.10 = 10%), no como entero.
-const rules: GlobalRules = { recargo_porcentaje: 0.1, recargo_dia_del_mes: 6 }
+const rules: Reglamento = {
+  dia_limite_pago: 5,
+  dia_recargo: 6,
+  recargo_porcentaje: 0.1,
+  recargo_modalidad: 'unico',
+  acepta_pago_efectivo: false,
+  morosos_sin_voto: false,
+  morosos_sin_areas_comunes: false,
+  gasto_umbral_asamblea: null,
+  cotizaciones_minimas: 3,
+  cajones_visitas: 0,
+  horas_max_estacionamiento_visitas: 24,
+}
 
 function mockUser(rol: string) {
   vi.mocked(useAuth).mockReturnValue({
@@ -28,9 +42,13 @@ describe('FeesPage', () => {
   it('lista las cuotas configuradas y la regla global de recargo', async () => {
     mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
-    vi.spyOn(feesApi, 'getGlobalRules').mockResolvedValue(rules)
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
 
-    render(<FeesPage />)
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
 
     expect(await screen.findByText('$1500.00')).toBeInTheDocument()
     expect(screen.getByText('Mensual')).toBeInTheDocument()
@@ -41,9 +59,13 @@ describe('FeesPage', () => {
   it('no muestra el formulario de alta ni el botón de editar si el rol no es admin', async () => {
     mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
-    vi.spyOn(feesApi, 'getGlobalRules').mockResolvedValue(rules)
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
 
-    render(<FeesPage />)
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
 
     await screen.findByText('$1500.00')
     expect(screen.queryByPlaceholderText('Monto')).not.toBeInTheDocument()
@@ -53,11 +75,15 @@ describe('FeesPage', () => {
   it('un admin puede crear una cuota nueva', async () => {
     mockUser('admin')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([])
-    vi.spyOn(feesApi, 'getGlobalRules').mockResolvedValue(rules)
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const createSpy = vi.spyOn(feesApi, 'createFee').mockResolvedValue(fee)
     const user = userEvent.setup()
 
-    render(<FeesPage />)
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
     await screen.findByText(/todavía no hay ninguna cuota/i)
 
     await user.type(screen.getByPlaceholderText('Monto'), '1500')
@@ -72,11 +98,15 @@ describe('FeesPage', () => {
   it('un admin puede editar una cuota existente', async () => {
     mockUser('admin')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
-    vi.spyOn(feesApi, 'getGlobalRules').mockResolvedValue(rules)
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const updateSpy = vi.spyOn(feesApi, 'updateFee').mockResolvedValue(fee)
     const user = userEvent.setup()
 
-    render(<FeesPage />)
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
     await screen.findByText('$1500.00')
 
     await user.click(screen.getByRole('button', { name: /editar/i }))
@@ -93,10 +123,49 @@ describe('FeesPage', () => {
   it('muestra el error del backend si falla la carga', async () => {
     mockUser('admin')
     vi.spyOn(feesApi, 'listFees').mockRejectedValue(new Error('caída'))
-    vi.spyOn(feesApi, 'getGlobalRules').mockResolvedValue(rules)
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
 
-    render(<FeesPage />)
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
 
     expect(await screen.findByText(/no se pudo cargar la configuración de cuotas/i)).toBeInTheDocument()
+  })
+
+  it('muestra el recargo del reglamento del condominio, no un valor global', async () => {
+    mockUser('admin')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue({
+      ...rules,
+      recargo_porcentaje: 0.05,
+      recargo_modalidad: 'mensual_sobre_saldo',
+    })
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('5%')).toBeInTheDocument()
+    expect(screen.getByText(/mensual sobre el saldo vencido/i)).toBeInTheDocument()
+    expect(screen.getByRole('link', { name: /cambiar en reglamento/i })).toBeInTheDocument()
+  })
+
+  it('a quien no es admin no se le ofrece cambiar el reglamento desde aquí', async () => {
+    mockUser('tesorero')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+
+    await screen.findByText('10%')
+    expect(screen.queryByRole('link', { name: /cambiar en reglamento/i })).not.toBeInTheDocument()
   })
 })

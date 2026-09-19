@@ -1,5 +1,13 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { addAmenityApprover, createAmenity, listAmenities, listAmenityApprovers } from '../api/amenities'
+import {
+  addAmenityApprover,
+  createAmenity,
+  listAmenities,
+  listAmenityApprovers,
+  updateAmenity,
+  type AmenityRulesInput,
+} from '../api/amenities'
+import { AmenityForm } from '../components/AmenityForm'
 import { createPoll, listPolls } from '../api/polls'
 import { createUser, listUsers } from '../api/users'
 import { ApiError } from '../api/client'
@@ -19,9 +27,8 @@ export function AmenitiesPollsPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [nombreAmenidad, setNombreAmenidad] = useState('')
-  const [periodoLimite, setPeriodoLimite] = useState('')
   const [creandoAmenidad, setCreandoAmenidad] = useState(false)
+  const [amenidadEnEdicion, setAmenidadEnEdicion] = useState<string | null>(null)
 
   const [emailUsuario, setEmailUsuario] = useState('')
   const [passwordUsuario, setPasswordUsuario] = useState('')
@@ -69,16 +76,28 @@ export function AmenitiesPollsPage() {
       .catch((err) => setError(err instanceof ApiError ? err.message : 'No se pudieron cargar los aprobadores.'))
   }, [amenidadParaAprobador])
 
-  async function handleCreateAmenity(event: FormEvent) {
-    event.preventDefault()
+  async function handleCreateAmenity(nombre: string, periodoLimiteHoras: number, reglas: AmenityRulesInput) {
     setCreandoAmenidad(true)
     try {
-      await createAmenity(nombreAmenidad, Number(periodoLimite))
-      setNombreAmenidad('')
-      setPeriodoLimite('')
+      await createAmenity(nombre, periodoLimiteHoras, reglas)
+      setError(null)
       await reload()
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo crear la amenidad.')
+    } finally {
+      setCreandoAmenidad(false)
+    }
+  }
+
+  async function handleUpdateAmenity(id: string, nombre: string, periodoLimiteHoras: number, reglas: AmenityRulesInput) {
+    setCreandoAmenidad(true)
+    try {
+      await updateAmenity(id, { nombre, periodo_limite_horas: periodoLimiteHoras, ...reglas })
+      setAmenidadEnEdicion(null)
+      setError(null)
+      await reload()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo actualizar la amenidad.')
     } finally {
       setCreandoAmenidad(false)
     }
@@ -144,27 +163,37 @@ export function AmenitiesPollsPage() {
 
       <h3>Amenidades</h3>
       {isAdmin && (
-        <form onSubmit={handleCreateAmenity} style={{ display: 'flex', gap: 'var(--space-2)', margin: 'var(--space-3) 0' }}>
-          <input placeholder="Nombre de la amenidad" value={nombreAmenidad} onChange={(e) => setNombreAmenidad(e.target.value)} required />
-          <input
-            type="number"
-            placeholder="Periodo límite de respuesta (horas)"
-            value={periodoLimite}
-            onChange={(e) => setPeriodoLimite(e.target.value)}
-            required
-          />
-          <button type="submit" disabled={creandoAmenidad}>
-            {creandoAmenidad ? 'Creando…' : 'Agregar amenidad'}
-          </button>
-        </form>
+        <AmenityForm submitLabel="Agregar amenidad" busy={creandoAmenidad} onSubmit={handleCreateAmenity} />
       )}
       {amenities.length === 0 ? (
         <p>Todavía no hay amenidades configuradas.</p>
       ) : (
         <ul>
           {amenities.map((a) => (
-            <li key={a.id}>
+            <li key={a.id} style={{ marginBottom: 'var(--space-2)' }}>
               {a.nombre} — límite de respuesta: <span className="mono">{a.periodo_limite_horas}h</span>
+              {isAdmin && amenidadEnEdicion !== a.id && (
+                <button onClick={() => setAmenidadEnEdicion(a.id)} style={{ marginLeft: 8 }}>
+                  Editar reglas
+                </button>
+              )}
+              {amenidadEnEdicion === a.id ? (
+                <AmenityForm
+                  inicial={a}
+                  submitLabel="Guardar reglas"
+                  busy={creandoAmenidad}
+                  onSubmit={(nombre, horas, reglas) => handleUpdateAmenity(a.id, nombre, horas, reglas)}
+                  onCancel={() => setAmenidadEnEdicion(null)}
+                />
+              ) : (
+                a.reglas.length > 0 && (
+                  <ul style={{ color: 'var(--ink-soft)' }}>
+                    {a.reglas.map((regla) => (
+                      <li key={regla}>{regla}</li>
+                    ))}
+                  </ul>
+                )
+              )}
             </li>
           ))}
         </ul>

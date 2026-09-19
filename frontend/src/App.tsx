@@ -12,6 +12,9 @@ import { ReportsExportPage } from './pages/ReportsExportPage'
 import { AmenitiesPollsPage } from './pages/AmenitiesPollsPage'
 import { SecurityDashboardPage } from './pages/SecurityDashboardPage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
+import { CollectionStatusPage } from './pages/CollectionStatusPage'
+import { ReservationsPage } from './pages/ReservationsPage'
+import { ReglamentoPage } from './pages/ReglamentoPage'
 import { RequireAuth } from './auth/RequireAuth'
 
 export default function App() {
@@ -36,6 +39,9 @@ export default function App() {
         <Route path="/amenities" element={<AmenitiesPollsPage />} />
         <Route path="/security" element={<SecurityDashboardPage />} />
         <Route path="/announcements" element={<AnnouncementsPage />} />
+        <Route path="/collection" element={<CollectionStatusPage />} />
+        <Route path="/reservations" element={<ReservationsPage />} />
+        <Route path="/reglamento" element={<ReglamentoPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/properties" replace />} />
     </Routes>

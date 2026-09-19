@@ -117,7 +117,9 @@ Los administradores entregaron el reglamento interior real de un condominio (Are
 
 **App caseta (implementado):** bitácora con nombre, acompañantes, identificación y autorización; cajones de visitas libres; incidencias de seguridad o mantenimiento con casa y persona; paquetería (llegada offline, aviso al residente, entrega); y códigos QR de un solo uso que el guardia emite a proveedores, con la validación mostrando a quién se deja pasar y a dónde. La caseta no bloquea accesos por adeudo (sección 13, «No construir»).
 
-**Pendiente de producto (retroalimentación de administradores, sin implementar):** adjuntar comprobante bancario (foto/PDF) al pago y a los gastos — hoy `comprobante_url` es solo texto y no existe almacenamiento de archivos (depende de F0-15); retroalimentación/preguntas en avisos (el alcance excluye chat: falta decidir un formato acotado); panel admin (configuración del reglamento, resumen de morosos y de gastos, resumen de accesos y paquetes).
+**Panel admin (implementado):** página Reglamento (configuración de las reglas del condominio), Cobranza (quién pagó, quién falta, quién es moroso, con constancia de no adeudo), Gastos con resumen financiero y sustento (asamblea y cotizaciones), Amenidades con sus reglas, Reservaciones con las cuotas de uso que tesorería recibe, Seguridad con tipo de incidencia, datos de la bitácora y cajones de visitas, y en el detalle de cada vivienda su estado de cuenta con el aviso de mora y el registro de pagos en efectivo.
+
+**Pendiente de producto (retroalimentación de administradores, sin implementar):** adjuntar comprobante bancario (foto/PDF) al pago y a los gastos — hoy `comprobante_url` es solo texto y no existe almacenamiento de archivos (depende de F0-15); retroalimentación/preguntas en avisos (el alcance excluye chat: falta decidir un formato acotado); resumen de paquetes en el panel admin.
 
 ---
 

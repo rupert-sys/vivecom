@@ -23,9 +23,52 @@ export interface Fee {
   activa_desde: string
 }
 
-export interface GlobalRules {
+export type RecargoModalidad = 'unico' | 'mensual_sobre_saldo'
+
+// Reglas del reglamento interior de ESTE condominio (GET /tenant/reglamento).
+// recargo_porcentaje llega como fracción (0.05 = 5%), no como entero.
+export interface Reglamento {
+  dia_limite_pago: number
+  dia_recargo: number
   recargo_porcentaje: number
-  recargo_dia_del_mes: number
+  recargo_modalidad: RecargoModalidad
+  acepta_pago_efectivo: boolean
+  morosos_sin_voto: boolean
+  morosos_sin_areas_comunes: boolean
+  gasto_umbral_asamblea: number | null
+  cotizaciones_minimas: number
+  cajones_visitas: number
+  horas_max_estacionamiento_visitas: number
+}
+
+export type EstatusCobranza = 'al_corriente' | 'pendiente' | 'moroso'
+
+export interface EstatusVivienda {
+  property_id: string
+  identificador: string
+  estatus: EstatusCobranza
+  adeudo_total: number
+  cargos_vencidos: number
+  periodo_pagado: boolean | null
+}
+
+export interface CollectionStatus {
+  periodo: string
+  total_viviendas: number
+  al_corriente: number
+  pendientes: number
+  morosas: number
+  adeudo_total: number
+  viviendas: EstatusVivienda[]
+}
+
+export interface AccountStatement {
+  property_id: string
+  identificador: string
+  saldo_a_favor: number
+  deuda_total: number
+  en_mora: boolean
+  restricciones_por_mora: string[]
 }
 
 export interface TenantClabe {
@@ -56,12 +99,44 @@ export interface CollectionsSummary {
   por_vivienda: PropertyCollectionsSummary[]
 }
 
+export type TipoGasto = 'operativo' | 'programado' | 'extraordinario'
+export type TipoComprobante = 'remision' | 'factura'
+
+export interface Cotizacion {
+  proveedor: string
+  monto: number
+  url?: string | null
+}
+
 export interface Expense {
   id: string
   categoria: string
   monto: number
   comprobante_url: string
   fecha: string
+  tipo: TipoGasto
+  aprobado_en_asamblea: boolean
+  acta_referencia: string | null
+  cotizaciones: Cotizacion[] | null
+  tipo_comprobante: TipoComprobante | null
+}
+
+export interface TotalPorConcepto {
+  concepto: string
+  total: number
+  cantidad: number
+}
+
+// Estado financiero del condominio: saldo > 0 es a favor, < 0 en contra.
+export interface FinancialSummary {
+  desde: string | null
+  hasta: string | null
+  ingresos: number
+  gastos: number
+  saldo: number
+  por_cobrar: number
+  gastos_por_tipo: TotalPorConcepto[]
+  gastos_por_categoria: TotalPorConcepto[]
 }
 
 export type PeriodicidadPresupuesto = 'mensual' | 'anual'
@@ -93,6 +168,29 @@ export interface Amenity {
   id: string
   nombre: string
   periodo_limite_horas: number
+  // Reglas propias del condominio (reglamento). dias_semana: 0=lunes … 6=domingo.
+  dias_anticipacion_minimos: number
+  hora_inicio_permitida: string | null
+  hora_fin_maxima: string | null
+  dias_semana_permitidos: number[] | null
+  capacidad: number
+  cuota: number
+  max_duracion_horas: number | null
+  notas_reglamento: string | null
+  reglas: string[]
+}
+
+export type EstadoReserva = 'pendiente' | 'aprobada' | 'rechazada' | 'expirada'
+
+export interface Reservation {
+  id: string
+  amenity_id: string
+  property_id: string
+  fecha_inicio: string
+  fecha_fin: string
+  estado: EstadoReserva
+  cuota: number
+  cuota_pagada: boolean
 }
 
 export interface Poll {
@@ -107,6 +205,8 @@ export interface Poll {
 
 export type EstadoIncidencia = 'abierta' | 'en_proceso' | 'resuelta'
 
+export type TipoIncidencia = 'seguridad' | 'mantenimiento' | 'otro'
+
 export interface Incident {
   id: string
   reportado_por: string
@@ -114,6 +214,9 @@ export interface Incident {
   descripcion: string
   created_at: string
   resolved_at: string | null
+  tipo: TipoIncidencia
+  property_id: string | null
+  persona_involucrada: string | null
 }
 
 export type TipoAcceso = 'residente' | 'visitante' | 'proveedor'
@@ -125,6 +228,19 @@ export interface AccessLogEntry {
   hora_entrada: string
   hora_salida: string | null
   placas: string[]
+  nombre_visitante: string | null
+  acompanantes: number
+  identificacion: string | null
+  autorizado_por: 'residente_previo' | 'telefono' | 'otro' | null
+}
+
+// Cajones de visitas libres ahora mismo (reglamento Art. 2 IX-XI).
+export interface VisitorParking {
+  total_cajones: number
+  ocupados: number
+  libres: number
+  horas_maximas: number
+  excedidos: string[]
 }
 
 export interface Announcement {

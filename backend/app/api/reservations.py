@@ -157,9 +157,12 @@ async def request_reservation(
 
 @router.get("", response_model=list[ReservationRead])
 async def list_reservations(current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_tenant_db)):
-    """Admin/comité aprobador ven todas; un residente solo ve las de su propia vivienda."""
+    """
+    Admin/comité aprobador ven todas, y el tesorero también: es quien recibe la
+    cuota de uso y la marca como recibida. Un residente solo ve las de su vivienda.
+    """
     query = select(Reservation).order_by(Reservation.fecha_inicio.desc())
-    if current_user.rol not in {Rol.admin.value, Rol.comite_aprobador.value}:
+    if current_user.rol not in {Rol.admin.value, Rol.comite_aprobador.value, Rol.tesorero.value}:
         if current_user.property_id is None:
             return []
         query = query.where(Reservation.property_id == uuid.UUID(current_user.property_id))

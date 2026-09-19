@@ -1,5 +1,5 @@
 import { apiFetch } from './client'
-import type { Fee, GlobalRules, Periodicidad } from '../types'
+import type { Fee, Periodicidad } from '../types'
 
 export interface FeeInput {
   monto: number
@@ -17,8 +17,4 @@ export function createFee(payload: FeeInput): Promise<Fee> {
 
 export function updateFee(id: string, payload: Partial<FeeInput>): Promise<Fee> {
   return apiFetch<Fee>(`/fees/${id}`, { method: 'PATCH', body: payload })
-}
-
-export function getGlobalRules(): Promise<GlobalRules> {
-  return apiFetch<GlobalRules>('/fees/global-rules', { auth: false })
 }

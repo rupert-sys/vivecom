@@ -234,3 +234,14 @@ def test_rechaza_dias_de_la_semana_invalidos(client):
         "/amenities", json={"nombre": "X", "periodo_limite_horas": 1, "dias_semana_permitidos": [9]}
     )
     assert respuesta.status_code == 422
+
+
+def test_el_tesorero_ve_todas_las_reservaciones_para_marcar_las_cuotas(client):
+    area, prop = _area_adoquinada(client), _vivienda(client)
+    _reservar(client, area, prop, _local(9, 15), _local(9, 23))
+
+    _como("tesorero")
+    assert len(client.get("/reservations").json()) == 1
+
+    _como("guardia")  # otros roles de staff sin vivienda no ven nada
+    assert client.get("/reservations").json() == []

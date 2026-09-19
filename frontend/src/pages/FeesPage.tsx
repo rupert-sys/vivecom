@@ -1,15 +1,18 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { createFee, getGlobalRules, listFees, updateFee } from '../api/fees'
+import { createFee, listFees, updateFee } from '../api/fees'
+import { getReglamento } from '../api/reglamento'
+import { Link } from 'react-router-dom'
+import { formatoPorcentaje } from '../utils/reglamento'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
-import type { Fee, GlobalRules, Periodicidad } from '../types'
+import type { Fee, Periodicidad, Reglamento } from '../types'
 
 export function FeesPage() {
   const { user } = useAuth()
   const isAdmin = user?.rol === 'admin'
 
   const [fees, setFees] = useState<Fee[]>([])
-  const [globalRules, setGlobalRules] = useState<GlobalRules | null>(null)
+  const [reglamento, setReglamento] = useState<Reglamento | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,9 +29,9 @@ export function FeesPage() {
   async function reload() {
     setLoading(true)
     try {
-      const [feesResult, rulesResult] = await Promise.all([listFees(), getGlobalRules()])
+      const [feesResult, rulesResult] = await Promise.all([listFees(), getReglamento()])
       setFees(feesResult)
-      setGlobalRules(rulesResult)
+      setReglamento(rulesResult)
       setError(null)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo cargar la configuración de cuotas.')
@@ -83,12 +86,13 @@ export function FeesPage() {
       <h2>Configuración de cuotas</h2>
       {error && <p style={{ color: 'var(--brick)' }}>{error}</p>}
 
-      {globalRules && (
+      {reglamento && (
         <p style={{ background: 'var(--surface)', border: '1px solid var(--border)', borderRadius: 'var(--radius)', padding: 'var(--space-3)' }}>
-          {/* recargo_porcentaje llega como fracción (0.10), no como porcentaje entero */}
-          Recargo por mora: <span className="mono">{(globalRules.recargo_porcentaje * 100).toFixed(0)}%</span> a
-          partir del día <span className="mono">{globalRules.recargo_dia_del_mes}</span> de cada mes — regla
-          global de la plataforma, no editable aquí.
+          {/* recargo_porcentaje llega como fracción (0.05), no como porcentaje entero */}
+          Recargo por mora: <span className="mono">{formatoPorcentaje(reglamento.recargo_porcentaje)}</span>{' '}
+          ({reglamento.recargo_modalidad === 'mensual_sobre_saldo' ? 'mensual sobre el saldo vencido' : 'por única vez'}) a
+          partir del día <span className="mono">{reglamento.dia_recargo}</span> de cada mes — según el reglamento de tu
+          condominio{isAdmin ? <> (<Link to="/reglamento">cambiar en Reglamento</Link>)</> : ''}.
         </p>
       )}
 
