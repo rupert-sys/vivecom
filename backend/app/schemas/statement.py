@@ -34,3 +34,7 @@ class AccountStatement(BaseModel):
     deuda_total: float
     cargos: list[FeeChargeSummary]
     pagos: list[PaymentSummary]
+    # Reglamento: la vivienda con cuotas vencidas pierde ciertos derechos. La app
+    # los muestra en un aviso en vez de que el residente los descubra al fallar.
+    en_mora: bool = False
+    restricciones_por_mora: list[str] = []

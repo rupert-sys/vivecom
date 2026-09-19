@@ -14,6 +14,7 @@ import 'services/property_service.dart';
 import 'services/receipt_service.dart';
 import 'services/reservation_service.dart';
 import 'services/statement_service.dart';
+import 'services/visit_service.dart';
 
 void main() {
   runApp(const VivecomApp());
@@ -39,6 +40,7 @@ class _VivecomAppState extends State<VivecomApp> {
   final LostFoundService _lostFoundService = LostFoundService();
   final AmenityService _amenityService = AmenityService();
   final ReservationService _reservationService = ReservationService();
+  final VisitService _visitService = VisitService();
 
   String? _token;
   TokenPayload? _usuario;
@@ -124,6 +126,7 @@ class _VivecomAppState extends State<VivecomApp> {
       lostFoundService: _lostFoundService,
       amenityService: _amenityService,
       reservationService: _reservationService,
+      visitService: _visitService,
       onLogout: _onLogout,
     );
   }

@@ -11,6 +11,7 @@ import '../services/property_service.dart';
 import '../services/receipt_service.dart';
 import '../services/reservation_service.dart';
 import '../services/statement_service.dart';
+import '../services/visit_service.dart';
 import 'clabe_screen.dart';
 import 'community_screen.dart';
 import 'expenses_screen.dart';
@@ -37,6 +38,7 @@ class ResidenteHomeScreen extends StatefulWidget {
   final LostFoundService lostFoundService;
   final AmenityService amenityService;
   final ReservationService reservationService;
+  final VisitService visitService;
   final VoidCallback onLogout;
 
   const ResidenteHomeScreen({
@@ -54,6 +56,7 @@ class ResidenteHomeScreen extends StatefulWidget {
     required this.lostFoundService,
     required this.amenityService,
     required this.reservationService,
+    required this.visitService,
     required this.onLogout,
   });
 
@@ -63,6 +66,24 @@ class ResidenteHomeScreen extends StatefulWidget {
 
 class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
   int _indiceSeleccionado = 0;
+  // Votaciones abiertas por votar: se muestra como insignia en "Comunidad" para
+  // que el residente sepa que hay una votación esperándolo sin buscarla.
+  int _votacionesPendientes = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarVotacionesPendientes();
+  }
+
+  Future<void> _cargarVotacionesPendientes() async {
+    try {
+      final votaciones = await widget.pollService.listarVotaciones(widget.token);
+      if (mounted) setState(() => _votacionesPendientes = votaciones.where((v) => v.pendienteDeVotar).length);
+    } catch (_) {
+      // Es solo un indicador; la pestaña de Votaciones muestra su propio error.
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -95,6 +116,11 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         lostFoundService: widget.lostFoundService,
         amenityService: widget.amenityService,
         reservationService: widget.reservationService,
+        visitService: widget.visitService,
+        votacionesPendientes: _votacionesPendientes,
+        onVotacionesPendientes: (n) {
+          if (n != _votacionesPendientes) setState(() => _votacionesPendientes = n);
+        },
       ),
       ClabeScreen(token: widget.token, clabeService: widget.clabeService),
     ];
@@ -104,12 +130,19 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _indiceSeleccionado,
         onDestinationSelected: (indice) => setState(() => _indiceSeleccionado = indice),
-        destinations: const [
+        destinations: [
           NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: 'Estado de cuenta'),
           NavigationDestination(icon: Icon(Icons.payments), label: 'Pago'),
           NavigationDestination(icon: Icon(Icons.history), label: 'Historial'),
           NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Gastos'),
-          NavigationDestination(icon: Icon(Icons.groups), label: 'Comunidad'),
+          NavigationDestination(
+            icon: Badge(
+              isLabelVisible: _votacionesPendientes > 0,
+              label: Text('$_votacionesPendientes'),
+              child: const Icon(Icons.groups),
+            ),
+            label: 'Comunidad',
+          ),
           NavigationDestination(icon: Icon(Icons.account_balance), label: 'CLABE'),
         ],
       ),

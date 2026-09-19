@@ -317,3 +317,53 @@ def test_constancia_de_no_adeudo_solo_si_la_vivienda_esta_al_corriente(client):
 
 def test_constancia_de_una_vivienda_inexistente_es_404(client):
     assert client.get(f"/reports/no-debt-certificate/{uuid.uuid4()}").status_code == 404
+
+
+# ---------- Lo que necesita la app residente ----------
+
+
+def test_el_residente_lista_solo_sus_propios_codigos_qr(client):
+    propia, otra = _vivienda(client, "Casa 1"), _vivienda(client, "Casa 2")
+    _como("residente", property_id=propia)
+    codigo = client.post("/visitor-qr").json()["codigo"]
+    _como("residente", property_id=otra)
+    client.post("/visitor-qr")
+
+    _como("residente", property_id=propia)
+    mios = client.get("/visitor-qr").json()
+    assert [q["codigo"] for q in mios] == [codigo]
+
+
+def test_listar_codigos_qr_exige_una_vivienda(client):
+    assert client.get("/visitor-qr").status_code == 400  # el admin de pruebas no está ligado a una vivienda
+
+
+def test_el_residente_ve_sus_paquetes_con_los_pendientes_primero(client):
+    propia, otra = _vivienda(client, "Casa 1"), _vivienda(client, "Casa 2")
+    _como("guardia")
+    viejo = client.post("/packages", json={"property_id": propia}).json()
+    client.post(f"/packages/{viejo['id']}/pickup")
+    nuevo = client.post("/packages", json={"property_id": propia}).json()
+    client.post("/packages", json={"property_id": otra})
+
+    _como("residente", property_id=propia)
+    paquetes = client.get("/packages/mine").json()
+    assert [p["id"] for p in paquetes] == [nuevo["id"], viejo["id"]]
+    assert paquetes[0]["fecha_recogido"] is None and paquetes[1]["fecha_recogido"] is not None
+
+
+def test_el_estado_de_cuenta_avisa_de_la_mora_y_sus_restricciones(client):
+    client.patch("/tenant/reglamento", json={"morosos_sin_voto": True, "morosos_sin_areas_comunes": True})
+    (prop,) = _con_cuota_vencida(client, "Casa 1")
+
+    estado = client.get(f"/properties/{prop}/statement").json()
+    assert estado["en_mora"] is True
+    assert len(estado["restricciones_por_mora"]) == 2
+    assert "votar" in estado["restricciones_por_mora"][0]
+
+
+def test_el_estado_de_cuenta_al_corriente_no_muestra_restricciones(client):
+    client.patch("/tenant/reglamento", json={"morosos_sin_voto": True})
+    prop = _vivienda(client)
+    estado = client.get(f"/properties/{prop}/statement").json()
+    assert estado["en_mora"] is False and estado["restricciones_por_mora"] == []

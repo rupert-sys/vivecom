@@ -10,6 +10,7 @@ from app.models.user import Rol
 from app.schemas.property import PropertyCreate, PropertyRead, PropertyUpdate
 from app.schemas.statement import AccountStatement
 from app.services.payment_reference import generate_payment_reference
+from app.services.reglamento_service import get_reglamento, hoy_local, vivienda_en_mora
 from app.services.statement_service import get_account_statement
 
 router = APIRouter(prefix="/properties", tags=["properties"])
@@ -77,7 +78,17 @@ async def get_property_statement(
     if estado is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
 
+    reglamento = await get_reglamento(db)
+    en_mora = await vivienda_en_mora(db, property_id, hoy_local(), reglamento)
+    restricciones = []
+    if en_mora and reglamento.morosos_sin_voto:
+        restricciones.append("No puedes votar en las votaciones (conservas voz, pero no voto).")
+    if en_mora and reglamento.morosos_sin_areas_comunes:
+        restricciones.append("No puedes reservar áreas comunes.")
+
     return AccountStatement(
+        en_mora=en_mora,
+        restricciones_por_mora=restricciones,
         property_id=estado.propiedad.id,
         identificador=estado.propiedad.identificador,
         saldo_a_favor=float(estado.propiedad.saldo_a_favor),

@@ -84,6 +84,26 @@ class _StatementScreenState extends State<StatementScreen> {
     return _buildContenido(_estado!);
   }
 
+  // Cuotas vencidas: se dice de frente qué implica según el reglamento del condominio.
+  Widget _buildAvisoDeMora(AccountStatement estado) {
+    return Card(
+      key: const Key('aviso_mora'),
+      color: Colors.orange.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Tu vivienda tiene cuotas vencidas', style: TextStyle(fontWeight: FontWeight.bold)),
+            ...estado.restriccionesPorMora.map((r) => Padding(padding: const EdgeInsets.only(top: 4), child: Text('• $r'))),
+            const SizedBox(height: 4),
+            const Text('Se levantan en cuanto te pongas al corriente.'),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildContenido(AccountStatement estado) {
     final deudaColor = estado.deudaTotal > 0 ? Colors.red.shade50 : Colors.green.shade50;
     return ListView(
@@ -91,6 +111,7 @@ class _StatementScreenState extends State<StatementScreen> {
       children: [
         Text(estado.identificador, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
+        if (estado.enMora) ...[_buildAvisoDeMora(estado), const SizedBox(height: 16)],
         Card(
           color: deudaColor,
           child: Padding(

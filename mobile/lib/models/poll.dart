@@ -18,6 +18,8 @@ class Poll {
   final bool reactivada;
   final List<PollOption> opciones;
   final bool? yaVoto;
+  // Reglamento: la vivienda en mora conserva voz pero no voto. null si no aplica.
+  final bool? votoRestringidoPorMora;
 
   Poll({
     required this.id,
@@ -28,6 +30,7 @@ class Poll {
     required this.reactivada,
     required this.opciones,
     required this.yaVoto,
+    this.votoRestringidoPorMora,
   });
 
   factory Poll.fromJson(Map<String, dynamic> json) {
@@ -40,10 +43,14 @@ class Poll {
       reactivada: json['reactivada'] as bool,
       opciones: (json['opciones'] as List).map((e) => PollOption.fromJson(e as Map<String, dynamic>)).toList(),
       yaVoto: json['ya_voto'] as bool?,
+      votoRestringidoPorMora: json['voto_restringido_por_mora'] as bool?,
     );
   }
 
   bool get cerrada => quorumAlcanzado || !fechaCierre.isAfter(DateTime.now());
+
+  // Una votación abierta en la que esta vivienda todavía puede y no ha votado.
+  bool get pendienteDeVotar => !cerrada && yaVoto != true && votoRestringidoPorMora != true;
 }
 
 class PollResultOption {

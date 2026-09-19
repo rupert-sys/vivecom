@@ -59,6 +59,9 @@ class AccountStatement {
   final double deudaTotal;
   final List<FeeChargeSummary> cargos;
   final List<PaymentSummary> pagos;
+  // Cuotas vencidas según el reglamento, y lo que eso restringe a la vivienda.
+  final bool enMora;
+  final List<String> restriccionesPorMora;
 
   AccountStatement({
     required this.propertyId,
@@ -67,6 +70,8 @@ class AccountStatement {
     required this.deudaTotal,
     required this.cargos,
     required this.pagos,
+    this.enMora = false,
+    this.restriccionesPorMora = const [],
   });
 
   factory AccountStatement.fromJson(Map<String, dynamic> json) {
@@ -77,6 +82,8 @@ class AccountStatement {
       deudaTotal: (json['deuda_total'] as num).toDouble(),
       cargos: (json['cargos'] as List).map((e) => FeeChargeSummary.fromJson(e as Map<String, dynamic>)).toList(),
       pagos: (json['pagos'] as List).map((e) => PaymentSummary.fromJson(e as Map<String, dynamic>)).toList(),
+      enMora: (json['en_mora'] as bool?) ?? false,
+      restriccionesPorMora: ((json['restricciones_por_mora'] as List?) ?? const []).map((e) => e as String).toList(),
     );
   }
 }

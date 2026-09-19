@@ -5,7 +5,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.api.deps import get_tenant_db, require_roles
+from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.core.config import settings
 from app.models.package import Package
 from app.models.property import Property
@@ -48,6 +48,22 @@ async def list_packages(pendientes: bool | None = None, db: AsyncSession = Depen
         query = query.where(Package.fecha_recogido.is_not(None))
     result = await db.execute(query)
     return result.scalars().all()
+
+
+@router.get("/mine", response_model=list[PackageRead])
+async def list_my_packages(
+    current_user: CurrentUser = Depends(get_current_user), db: AsyncSession = Depends(get_tenant_db)
+):
+    """Los paquetes de la propia vivienda del residente: primero los que aún están en la caseta."""
+    if current_user.property_id is None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Esta acción es solo para residentes ligados a una vivienda")
+    resultado = await db.execute(
+        select(Package)
+        .where(Package.property_id == uuid.UUID(current_user.property_id))
+        .order_by(Package.fecha_recogido.is_not(None), Package.fecha_llegada.desc())
+        .limit(50)
+    )
+    return resultado.scalars().all()
 
 
 @router.post("/{package_id}/pickup", response_model=PackageRead, dependencies=guardia_only)

@@ -29,6 +29,7 @@ void main() {
 
   testWidgets('muestra los gastos con su categoría, monto, fecha y el total', (tester) async {
     final mockClient = MockClient((request) async {
+      if (request.url.path == '/expenses/summary') return http.Response(_fixtureResumen(saldo: 4000), 200);
       expect(request.url.path, '/expenses');
       return http.Response(_fixtureGastos, 200);
     });
@@ -53,8 +54,8 @@ void main() {
   testWidgets('escribir una categoría y tocar Filtrar manda el filtro al backend', (tester) async {
     String? categoriaRecibida;
     final mockClient = MockClient((request) async {
-      categoriaRecibida = request.url.queryParameters['categoria'];
-      return http.Response(_fixtureGastos, 200);
+      if (request.url.path == '/expenses') categoriaRecibida = request.url.queryParameters['categoria'];
+      return http.Response(request.url.path == '/expenses/summary' ? _fixtureResumen() : _fixtureGastos, 200);
     });
 
     await pumpGastos(tester, mockClient);
@@ -68,8 +69,8 @@ void main() {
   testWidgets('tocar "Limpiar filtros" vuelve a cargar sin categoría', (tester) async {
     final categoriasRecibidas = <String?>[];
     final mockClient = MockClient((request) async {
-      categoriasRecibidas.add(request.url.queryParameters['categoria']);
-      return http.Response(_fixtureGastos, 200);
+      if (request.url.path == '/expenses') categoriasRecibidas.add(request.url.queryParameters['categoria']);
+      return http.Response(request.url.path == '/expenses/summary' ? _fixtureResumen() : _fixtureGastos, 200);
     });
 
     await pumpGastos(tester, mockClient);
@@ -104,4 +105,47 @@ void main() {
 
     expect(find.text('Error interno'), findsOneWidget);
   });
+
+  testWidgets('muestra el resumen con saldo a favor, ingresos, gastos y gastos por categoría', (tester) async {
+    final mockClient = MockClient((request) async {
+      return http.Response(request.url.path == '/expenses/summary' ? _fixtureResumen(saldo: 4000) : _fixtureGastos, 200);
+    });
+
+    await pumpGastos(tester, mockClient);
+
+    final resumen = find.byKey(const Key('resumen_financiero'));
+    expect(resumen, findsOneWidget);
+    expect(find.descendant(of: resumen, matching: find.text('Saldo a favor')), findsOneWidget);
+    expect(find.descendant(of: resumen, matching: find.text('\$4000.00')), findsOneWidget);
+    expect(find.descendant(of: resumen, matching: find.text('Jardinería (1)')), findsOneWidget);
+  });
+
+  testWidgets('con más gastos que ingresos el resumen dice saldo en contra', (tester) async {
+    final mockClient = MockClient((request) async {
+      return http.Response(request.url.path == '/expenses/summary' ? _fixtureResumen(saldo: -500) : _fixtureGastos, 200);
+    });
+
+    await pumpGastos(tester, mockClient);
+
+    expect(find.text('Saldo en contra'), findsOneWidget);
+    expect(find.text('\$500.00'), findsWidgets);
+  });
+
+  testWidgets('si el resumen falla, la lista de gastos se sigue mostrando', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/expenses/summary') return http.Response('{"detail": "error"}', 500);
+      return http.Response(_fixtureGastos, 200);
+    });
+
+    await pumpGastos(tester, mockClient);
+
+    expect(find.byKey(const Key('resumen_financiero')), findsNothing);
+    expect(find.text('Jardinería'), findsOneWidget);
+  });
 }
+
+String _fixtureResumen({double saldo = 0}) => '''
+{"desde": null, "hasta": null, "ingresos": 9000.0, "gastos": 5000.0, "saldo": $saldo, "por_cobrar": 1500.0,
+ "gastos_por_tipo": [{"concepto": "operativo", "total": 5000.0, "cantidad": 2}],
+ "gastos_por_categoria": [{"concepto": "Jardinería", "total": 1200.0, "cantidad": 1}]}
+''';

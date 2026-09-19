@@ -32,6 +32,7 @@ class ExpensesScreen extends StatefulWidget {
 
 class _ExpensesScreenState extends State<ExpensesScreen> {
   List<Expense>? _gastos;
+  ExpenseSummary? _resumen;
   String? _error;
   bool _cargando = true;
 
@@ -65,6 +66,13 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       );
       if (!mounted) return;
       setState(() => _gastos = gastos);
+      // El resumen es un complemento: si falla, la lista de gastos sigue siendo útil.
+      try {
+        final resumen = await widget.expenseService.obtenerResumen(widget.token, desde: _desde, hasta: _hasta);
+        if (mounted) setState(() => _resumen = resumen);
+      } catch (_) {
+        if (mounted) setState(() => _resumen = null);
+      }
     } catch (err) {
       if (!mounted) return;
       setState(() => _error = err is ApiException ? err.message : 'No se pudieron cargar los gastos.');
@@ -117,6 +125,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
       children: [
         _buildFiltros(),
         const SizedBox(height: 16),
+        if (_resumen != null) ...[_buildResumen(_resumen!), const SizedBox(height: 16)],
         if (_cargando && _gastos == null)
           const Center(child: CircularProgressIndicator())
         else if (_error != null)
@@ -170,6 +179,46 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  // Cuánto entró, cuánto se gastó y cómo queda el condominio (a favor o en contra).
+  Widget _buildResumen(ExpenseSummary resumen) {
+    final aFavor = resumen.saldo >= 0;
+    return Card(
+      key: const Key('resumen_financiero'),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text('Resumen del condominio', style: Theme.of(context).textTheme.titleMedium),
+            const SizedBox(height: 8),
+            _filaResumen('Ingresos (cuotas cobradas)', resumen.ingresos),
+            _filaResumen('Gastos', resumen.gastos),
+            const Divider(),
+            _filaResumen(aFavor ? 'Saldo a favor' : 'Saldo en contra', resumen.saldo.abs(),
+                color: aFavor ? Colors.green.shade800 : Colors.red, negrita: true),
+            _filaResumen('Cuotas por cobrar', resumen.porCobrar),
+            if (resumen.gastosPorCategoria.isNotEmpty) ...[
+              const SizedBox(height: 8),
+              const Text('Gastos por categoría'),
+              ...resumen.gastosPorCategoria.map((c) => _filaResumen('${c.concepto} (${c.cantidad})', c.total)),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _filaResumen(String etiqueta, double valor, {Color? color, bool negrita = false}) {
+    final estilo = TextStyle(color: color, fontWeight: negrita ? FontWeight.bold : null);
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [Text(etiqueta, style: estilo), Text(_formatoMoneda(valor), style: estilo)],
       ),
     );
   }

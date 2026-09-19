@@ -8,8 +8,11 @@ import '../utils/dates.dart';
 class PollsScreen extends StatefulWidget {
   final String token;
   final PollService pollService;
+  // Avisa cuántas votaciones abiertas le faltan por votar a esta vivienda, para
+  // que la barra de navegación lo señale (el residente no sabía dónde votar).
+  final ValueChanged<int>? onPendientesCambiaron;
 
-  const PollsScreen({super.key, required this.token, required this.pollService});
+  const PollsScreen({super.key, required this.token, required this.pollService, this.onPendientesCambiaron});
 
   @override
   State<PollsScreen> createState() => _PollsScreenState();
@@ -41,6 +44,7 @@ class _PollsScreenState extends State<PollsScreen> {
       final votaciones = await widget.pollService.listarVotaciones(widget.token);
       if (!mounted) return;
       setState(() => _votaciones = votaciones);
+      widget.onPendientesCambiaron?.call(votaciones.where((v) => v.pendienteDeVotar).length);
     } catch (err) {
       if (!mounted) return;
       setState(() => _error = err is ApiException ? err.message : 'No se pudieron cargar las votaciones.');
@@ -128,9 +132,28 @@ class _PollsScreenState extends State<PollsScreen> {
             const SizedBox(height: 4),
             Text('Cierra: ${formatoFechaCorta(poll.fechaCierre)} · ${poll.cerrada ? 'Cerrada' : 'Abierta'}'),
             const SizedBox(height: 12),
-            if (poll.yaVoto == true || poll.cerrada) _buildResultadosOControl(poll) else _buildFormularioVoto(poll),
+            if (poll.yaVoto == true || poll.cerrada)
+              _buildResultadosOControl(poll)
+            else if (poll.votoRestringidoPorMora == true)
+              _buildVotoRestringido()
+            else
+              _buildFormularioVoto(poll),
           ],
         ),
+      ),
+    );
+  }
+
+  // Reglamento: la vivienda con cuotas vencidas conserva voz pero no voto.
+  // Se explica aquí en vez de dejar que el residente toque "Votar" y reciba un error.
+  Widget _buildVotoRestringido() {
+    return Container(
+      key: const Key('voto_restringido'),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(color: Colors.orange.shade50, borderRadius: BorderRadius.circular(8)),
+      child: const Text(
+        'Tu vivienda tiene cuotas vencidas, así que por reglamento conservas voz pero no voto. '
+        'Ponte al corriente en Pago para poder votar.',
       ),
     );
   }

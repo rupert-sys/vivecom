@@ -11,6 +11,7 @@ import 'package:app_residente/services/property_service.dart';
 import 'package:app_residente/services/receipt_service.dart';
 import 'package:app_residente/services/reservation_service.dart';
 import 'package:app_residente/services/statement_service.dart';
+import 'package:app_residente/services/visit_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -69,6 +70,7 @@ void main() {
           lostFoundService: LostFoundService(api: ApiClient(client: mockClient)),
           amenityService: AmenityService(api: ApiClient(client: mockClient)),
           reservationService: ReservationService(api: ApiClient(client: mockClient)),
+          visitService: VisitService(api: ApiClient(client: mockClient)),
           onLogout: () {},
         ),
       ),
@@ -107,5 +109,52 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Casa 1'), findsOneWidget);
+  });
+
+  testWidgets('la pestaña Comunidad muestra cuántas votaciones abiertas faltan por votar', (tester) async {
+    final mockClient = MockClient((request) async {
+      final path = request.url.path;
+      if (path == '/polls') {
+        return http.Response(
+          '''[{"id": "v1", "pregunta": "¿Cambiamos el portón?", "fecha_cierre": "2099-01-01", "resultados_en_vivo": false,
+  "quorum_alcanzado": false, "reactivada": false, "opciones": [{"id": "o1", "texto": "Sí"}, {"id": "o2", "texto": "No"}],
+  "ya_voto": false, "voto_restringido_por_mora": false}]''',
+          200,
+        );
+      }
+      if (path.endsWith('/statement')) {
+        return http.Response(
+          '{"property_id": "p1", "identificador": "Casa 1", "saldo_a_favor": 0.0, "deuda_total": 0.0, "cargos": [], "pagos": []}',
+          200,
+        );
+      }
+      return http.Response('[]', 200);
+    });
+    final api = ApiClient(client: mockClient);
+
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ResidenteHomeScreen(
+          propertyId: 'p1',
+          token: 'un-token',
+          statementService: StatementService(api: api),
+          clabeService: ClabeService(api: api),
+          propertyService: PropertyService(api: api),
+          feeService: FeeService(api: api),
+          receiptService: ReceiptService(api: api),
+          expenseService: ExpenseService(api: api),
+          announcementService: AnnouncementService(api: api),
+          pollService: PollService(api: api),
+          lostFoundService: LostFoundService(api: api),
+          amenityService: AmenityService(api: api),
+          reservationService: ReservationService(api: api),
+          visitService: VisitService(api: api),
+          onLogout: () {},
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('1')), findsOneWidget);
   });
 }

@@ -6,13 +6,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-String _fixtureVotaciones({bool yaVoto = false, bool cerrada = false}) => '''
+String _fixtureVotaciones({bool yaVoto = false, bool cerrada = false, bool? restringido}) => '''
 [
   {"id": "p1", "pregunta": "¿Aprobamos el reglamento?",
    "fecha_cierre": "${cerrada ? '2020-01-01' : '2099-01-01'}", "resultados_en_vivo": false,
    "quorum_alcanzado": false, "reactivada": false,
    "opciones": [{"id": "o1", "texto": "Sí"}, {"id": "o2", "texto": "No"}],
-   "ya_voto": $yaVoto}
+   "ya_voto": $yaVoto, "voto_restringido_por_mora": $restringido}
 ]
 ''';
 
@@ -93,5 +93,69 @@ void main() {
     await pumpVotaciones(tester, mockClient);
 
     expect(find.text('Todavía no hay votaciones.'), findsOneWidget);
+  });
+
+  testWidgets('una vivienda en mora ve por qué no puede votar en vez del formulario', (tester) async {
+    final mockClient = MockClient((request) async => http.Response(_fixtureVotaciones(restringido: true), 200));
+
+    await pumpVotaciones(tester, mockClient);
+
+    expect(find.byKey(const Key('voto_restringido')), findsOneWidget);
+    expect(find.textContaining('conservas voz pero no voto'), findsOneWidget);
+    expect(find.text('Votar'), findsNothing);
+    expect(find.byKey(const Key('opcion_o1')), findsNothing);
+  });
+
+  testWidgets('una vivienda al corriente con la regla activa sí ve el formulario', (tester) async {
+    final mockClient = MockClient((request) async => http.Response(_fixtureVotaciones(restringido: false), 200));
+
+    await pumpVotaciones(tester, mockClient);
+
+    expect(find.byKey(const Key('voto_restringido')), findsNothing);
+    expect(find.text('Votar'), findsOneWidget);
+  });
+
+  testWidgets('avisa cuántas votaciones abiertas le faltan por votar', (tester) async {
+    final pendientes = <int>[];
+    final mockClient = MockClient((request) async => http.Response(_fixtureVotaciones(), 200));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: PollsScreen(
+            token: 'un-token',
+            pollService: PollService(api: ApiClient(client: mockClient)),
+            onPendientesCambiaron: pendientes.add,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(pendientes.last, 1);
+  });
+
+  testWidgets('no cuenta como pendiente una votación ya votada, cerrada o restringida por mora', (tester) async {
+    for (final fixture in [
+      _fixtureVotaciones(yaVoto: true),
+      _fixtureVotaciones(cerrada: true),
+      _fixtureVotaciones(restringido: true),
+    ]) {
+      final pendientes = <int>[];
+      final mockClient = MockClient((request) async => http.Response(fixture, 200));
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(
+            body: PollsScreen(
+              key: UniqueKey(), // sin esto Flutter reusa el State del ciclo anterior y no recarga
+              token: 'un-token',
+              pollService: PollService(api: ApiClient(client: mockClient)),
+              onPendientesCambiaron: pendientes.add,
+            ),
+          ),
+        ),
+      );
+      await tester.pumpAndSettle();
+      expect(pendientes.last, 0, reason: fixture);
+    }
   });
 }

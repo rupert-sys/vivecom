@@ -35,6 +35,9 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
   DateTime? _fin;
   bool _solicitando = false;
   String? _errorSolicitar;
+  AmenityDayAvailability? _disponibilidad;
+  DateTime? _diaConsultado;
+  bool _consultandoDisponibilidad = false;
 
   @override
   void initState() {
@@ -85,6 +88,31 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         _fin = elegido;
       }
     });
+    if (esInicio) await _consultarDisponibilidad();
+  }
+
+  // Al elegir el día de inicio (o cambiar de amenidad) se muestra cuántos
+  // lugares quedan y qué horarios ya están tomados, para no pedir a ciegas un
+  // horario que el backend va a rechazar.
+  Future<void> _consultarDisponibilidad() async {
+    final amenidad = _amenidadSeleccionada;
+    final inicio = _inicio;
+    if (amenidad == null || inicio == null) return;
+    setState(() => _consultandoDisponibilidad = true);
+    try {
+      final disponibilidad = await widget.amenityService.obtenerDisponibilidadDelDia(amenidad.id, inicio, widget.token);
+      if (!mounted) return;
+      setState(() {
+        _disponibilidad = disponibilidad;
+        _diaConsultado = inicio;
+      });
+    } catch (_) {
+      // La disponibilidad es informativa: si falla, el backend igual valida al solicitar.
+      if (!mounted) return;
+      setState(() => _disponibilidad = null);
+    } finally {
+      if (mounted) setState(() => _consultandoDisponibilidad = false);
+    }
   }
 
   Future<void> _solicitar() async {
@@ -172,8 +200,15 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
               key: const Key('amenidad_dropdown'),
               value: _amenidadSeleccionada,
               items: amenidades.map((a) => DropdownMenuItem(value: a, child: Text(a.nombre))).toList(),
-              onChanged: (valor) => setState(() => _amenidadSeleccionada = valor),
+              onChanged: (valor) {
+                setState(() {
+                  _amenidadSeleccionada = valor;
+                  _disponibilidad = null;
+                });
+                _consultarDisponibilidad();
+              },
             ),
+            ..._buildReglas(_amenidadSeleccionada),
             const SizedBox(height: 8),
             Row(
               children: [
@@ -192,6 +227,7 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
                 ),
               ],
             ),
+            _buildDisponibilidad(),
             if (_errorSolicitar != null)
               Padding(
                 padding: const EdgeInsets.only(top: 8),
@@ -208,6 +244,79 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
     );
   }
 
+  static String _moneda(double valor) => '\$${valor.toStringAsFixed(2)}';
+
+  // Las reglas del condominio para esta amenidad (anticipación, horario, días,
+  // cuota, capacidad) — las redacta el backend, la app solo las muestra.
+  List<Widget> _buildReglas(Amenity? amenidad) {
+    if (amenidad == null || (amenidad.reglas.isEmpty && amenidad.notasReglamento == null)) return [];
+    return [
+      Container(
+        key: const Key('reglas_amenidad'),
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.surfaceContainerHighest,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text('Reglas de uso', style: TextStyle(fontWeight: FontWeight.bold)),
+            const SizedBox(height: 4),
+            ...amenidad.reglas.map((regla) => Text('• $regla')),
+            if (amenidad.notasReglamento != null) ...[
+              const SizedBox(height: 4),
+              Text(amenidad.notasReglamento!, style: Theme.of(context).textTheme.bodySmall),
+            ],
+          ],
+        ),
+      ),
+    ];
+  }
+
+  Widget _buildDisponibilidad() {
+    if (_consultandoDisponibilidad) {
+      return const Padding(padding: EdgeInsets.only(top: 8), child: LinearProgressIndicator());
+    }
+    final disponibilidad = _disponibilidad;
+    final dia = _diaConsultado;
+    if (disponibilidad == null || dia == null) return const SizedBox.shrink();
+    final lleno = disponibilidad.cuposLibresTodoElDia == 0 && disponibilidad.reservaciones.isNotEmpty;
+    return Padding(
+      key: const Key('disponibilidad_dia'),
+      padding: const EdgeInsets.only(top: 8),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            'Disponibilidad del ${formatoFechaCorta(dia)}: '
+            '${disponibilidad.cuposLibresTodoElDia} de ${disponibilidad.capacidad} '
+            '${disponibilidad.capacidad == 1 ? 'lugar libre' : 'lugares libres'} todo el día',
+            style: TextStyle(color: lleno ? Colors.red : Colors.green.shade800),
+          ),
+          if (disponibilidad.reservaciones.isEmpty)
+            const Text('Nadie la ha reservado ese día.')
+          else ...[
+            const Text('Ya reservado:'),
+            ...disponibilidad.reservaciones.map(
+              (r) => Text('• ${_formatoFechaHora(r.fechaInicio)} → ${_formatoFechaHora(r.fechaFin)}'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+
+  String _subtituloReservacion(Reservation r) {
+    final estado = etiquetasEstadoReserva[r.estado] ?? r.estado;
+    if (r.cuota <= 0) return estado;
+    final cuota = r.cuotaPagada
+        ? 'Cuota ${_moneda(r.cuota)}: recibida por tesorería'
+        : 'Cuota ${_moneda(r.cuota)}: pendiente de entregar a tesorería';
+    return '$estado\n$cuota';
+  }
+
   List<Widget> _buildMisReservaciones() {
     final reservaciones = _misReservaciones ?? [];
     if (reservaciones.isEmpty) {
@@ -217,8 +326,8 @@ class _ReservationsScreenState extends State<ReservationsScreen> {
         .map(
           (r) => ListTile(
             title: Text(_formatoFechaHora(r.fechaInicio)),
-            subtitle: Text(etiquetasEstadoReserva[r.estado] ?? r.estado),
-
+            subtitle: Text(_subtituloReservacion(r)),
+            isThreeLine: r.cuota > 0,
           ),
         )
         .toList();

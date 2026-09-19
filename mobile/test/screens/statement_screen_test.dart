@@ -111,4 +111,32 @@ void main() {
 
     expect(logoutLlamado, isTrue);
   });
+
+  testWidgets('una vivienda en mora ve el aviso con lo que el reglamento le restringe', (tester) async {
+    final enMora = _fixtureEstadoDeCuenta.replaceFirst(
+      '"pagos"',
+      '"en_mora": true, "restricciones_por_mora": ["No puedes votar en las votaciones.", "No puedes reservar áreas comunes."], "pagos"',
+    );
+    final service = StatementService(api: ApiClient(client: MockClient((request) async => http.Response(enMora, 200))));
+
+    await pumpStatement(tester, service);
+    await tester.pumpAndSettle();
+
+    final aviso = find.byKey(const Key('aviso_mora'));
+    expect(aviso, findsOneWidget);
+    expect(find.descendant(of: aviso, matching: find.text('Tu vivienda tiene cuotas vencidas')), findsOneWidget);
+    expect(find.descendant(of: aviso, matching: find.text('• No puedes votar en las votaciones.')), findsOneWidget);
+    expect(find.descendant(of: aviso, matching: find.text('• No puedes reservar áreas comunes.')), findsOneWidget);
+  });
+
+  testWidgets('una vivienda al corriente no ve el aviso de mora', (tester) async {
+    final service = StatementService(
+      api: ApiClient(client: MockClient((request) async => http.Response(_fixtureEstadoDeCuenta, 200))),
+    );
+
+    await pumpStatement(tester, service);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('aviso_mora')), findsNothing);
+  });
 }
