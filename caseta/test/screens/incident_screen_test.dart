@@ -1,6 +1,7 @@
 import 'package:app_caseta/db/app_database.dart';
 import 'package:app_caseta/screens/incident_screen.dart';
 import 'package:app_caseta/services/api_client.dart';
+import 'package:app_caseta/services/property_service.dart';
 import 'package:app_caseta/services/sync_service.dart';
 import 'package:drift/native.dart';
 import 'package:flutter/material.dart';
@@ -17,9 +18,19 @@ void main() {
 
   Future<void> pumpPantalla(WidgetTester tester, http.Client client) async {
     final api = ApiClient(client: client);
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: IncidentScreen(db: db, syncService: SyncService(db: db, obtenerToken: () => 'un-token', api: api))),
+        home: Scaffold(
+          body: IncidentScreen(
+            token: 'un-token',
+            db: db,
+            propertyService: PropertyService(api: api),
+            syncService: SyncService(db: db, obtenerToken: () => 'un-token', api: api),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();
@@ -70,5 +81,69 @@ void main() {
     await pumpPantalla(tester, mockClient);
 
     expect(find.text('Sin incidencias en cola.'), findsOneWidget);
+  });
+
+  const fixturePropiedades = '[{"id": "p1", "identificador": "Casa 1"}, {"id": "p2", "identificador": "Casa 2"}]';
+
+  MockClient servidorConCasas() => MockClient((request) async {
+    if (request.url.path == '/properties') return http.Response(fixturePropiedades, 200);
+    return http.Response('{"detail": "Error de servidor"}', 500);
+  });
+
+  testConIncidencia('sin elegir tipo la incidencia es de seguridad', (tester) async {
+    await pumpPantalla(tester, servidorConCasas());
+
+    await tester.enterText(find.byKey(const Key('descripcion_field')), 'Persona extraña en la puerta');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reportar'));
+    await tester.pumpAndSettle();
+
+    final fila = (await db.select(db.pendingIncidents).get()).single;
+    expect(fila.tipo, 'seguridad');
+    expect(fila.propertyId, isNull);
+    expect(fila.personaInvolucrada, isNull);
+  });
+
+  testConIncidencia('reporta una falla de mantenimiento con la casa y la persona involucradas', (tester) async {
+    await pumpPantalla(tester, servidorConCasas());
+
+    await tester.tap(find.text('Mantenimiento'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('descripcion_field')), 'Luminaria fundida frente a la casa');
+    await tester.tap(find.byKey(const Key('incidente_vivienda_dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Casa 2').last);
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('persona_field')), 'Vecino de la Casa 2');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reportar'));
+    await tester.pumpAndSettle();
+
+    final fila = (await db.select(db.pendingIncidents).get()).single;
+    expect(fila.tipo, 'mantenimiento');
+    expect(fila.propertyId, 'p2');
+    expect(fila.personaInvolucrada, 'Vecino de la Casa 2');
+    expect(find.textContaining('Mantenimiento ·'), findsOneWidget); // la cola dice de qué tipo es
+  });
+
+  testConIncidencia('tras reportar, el formulario vuelve a seguridad y sin casa', (tester) async {
+    await pumpPantalla(tester, servidorConCasas());
+
+    await tester.tap(find.text('Mantenimiento'));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('descripcion_field')), 'Portón atorado');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reportar'));
+    await tester.pumpAndSettle();
+
+    final segmentos = tester.widget<SegmentedButton<String>>(find.byKey(const Key('tipo_incidencia')));
+    expect(segmentos.selected, {'seguridad'});
+  });
+
+  testConIncidencia('sin conexión se puede reportar aunque no cargue la lista de casas', (tester) async {
+    await pumpPantalla(tester, MockClient((request) async => throw http.ClientException('sin red')));
+
+    await tester.enterText(find.byKey(const Key('descripcion_field')), 'Ruido excesivo');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Reportar'));
+    await tester.pumpAndSettle();
+
+    expect(await db.select(db.pendingIncidents).get(), hasLength(1));
   });
 }

@@ -1,6 +1,7 @@
 import 'package:app_caseta/db/app_database.dart';
 import 'package:app_caseta/screens/caseta_home_screen.dart';
 import 'package:app_caseta/services/access_log_service.dart';
+import 'package:app_caseta/services/package_service.dart';
 import 'package:app_caseta/services/api_client.dart';
 import 'package:app_caseta/services/property_service.dart';
 import 'package:app_caseta/services/sync_service.dart';
@@ -12,11 +13,13 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets('navega entre Accesos, Incidencias y QR visitante sin perder cada pantalla', (tester) async {
+  testWidgets('navega entre Accesos, Paquetes, Incidencias y Códigos QR sin perder cada pantalla', (tester) async {
     final db = AppDatabase.forTesting(NativeDatabase.memory());
 
     final mockClient = MockClient((request) async {
-      if (request.url.path == '/properties' || request.url.path == '/access-log') return http.Response('[]', 200);
+      if (request.url.path == '/properties' || request.url.path == '/access-log' || request.url.path == '/packages') {
+        return http.Response('[]', 200);
+      }
       return http.Response('{}', 200);
     });
     final api = ApiClient(client: mockClient);
@@ -30,6 +33,7 @@ void main() {
           propertyService: PropertyService(api: api),
           accessLogService: AccessLogService(api: api),
           visitorQrService: VisitorQrService(api: api),
+          packageService: PackageService(api: api),
           syncService: SyncService(db: db, obtenerToken: () => 'un-token', api: api),
           onLogout: () => logoutLlamado = true,
         ),
@@ -42,11 +46,15 @@ void main() {
     // para no ser ambiguo.
     expect(find.widgetWithText(ElevatedButton, 'Registrar entrada'), findsOneWidget);
 
+    await tester.tap(find.text('Paquetes'));
+    await tester.pumpAndSettle();
+    expect(find.text('Registrar llegada de paquete'), findsOneWidget);
+
     await tester.tap(find.text('Incidencias'));
     await tester.pumpAndSettle();
     expect(find.text('Reportar incidencia'), findsOneWidget);
 
-    await tester.tap(find.text('QR visitante'));
+    await tester.tap(find.text('Códigos QR'));
     await tester.pumpAndSettle();
     expect(find.text('Escanear QR de visitante'), findsOneWidget);
 

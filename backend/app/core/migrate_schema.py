@@ -67,11 +67,23 @@ COLUMNAS_NUEVAS: list[tuple[str, str, str]] = [
     ("expense", "acta_referencia", "VARCHAR"),
     ("expense", "cotizaciones", "JSON"),
     ("expense", "tipo_comprobante", "VARCHAR"),
+    # App caseta: paquetes registrados sin conexión (idempotencia) y códigos de
+    # proveedor que emite el guardia.
+    ("package", "client_id", "UUID"),
+    ("visitor_qr", "tipo", "VARCHAR NOT NULL DEFAULT 'visitante'"),
+    ("visitor_qr", "descripcion", "VARCHAR"),
+]
+
+# Cambios a columnas que ya existían (idempotentes en Postgres).
+ALTERACIONES: list[str] = [
+    # Un código de proveedor puede no tener vivienda asociada.
+    "ALTER TABLE {schema}.visitor_qr ALTER COLUMN property_id DROP NOT NULL",
 ]
 
 INDICES_NUEVOS: list[str] = [
     "CREATE UNIQUE INDEX IF NOT EXISTS ix_access_log_client_id ON {schema}.access_log (client_id)",
     "CREATE UNIQUE INDEX IF NOT EXISTS ix_incident_client_id ON {schema}.incident (client_id)",
+    "CREATE UNIQUE INDEX IF NOT EXISTS ix_package_client_id ON {schema}.package (client_id)",
 ]
 
 _PATRON_SCHEMA = re.compile(r"^tenant_[0-9a-f]{8}$")
@@ -89,6 +101,7 @@ def sentencias_para(schema_name: str) -> list[str]:
         f"ALTER TABLE {q}.{tabla} ADD COLUMN IF NOT EXISTS {columna} {definicion.format(schema=q)}"
         for tabla, columna, definicion in COLUMNAS_NUEVAS
     ]
+    sentencias += [alteracion.format(schema=q) for alteracion in ALTERACIONES]
     sentencias += [indice.format(schema=q) for indice in INDICES_NUEVOS]
     return sentencias
 

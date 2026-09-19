@@ -5,17 +5,36 @@ import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 
 import '../db/app_database.dart';
+import '../models/property.dart';
+import '../services/property_service.dart';
 import '../services/sync_service.dart';
 import '../utils/dates.dart';
 import '../widgets/estado_sync_badge.dart';
 
 const _uuid = Uuid();
+// La caseta levanta incidentes de seguridad y reporta fallas de mantenimiento
+// (una luminaria fundida, el portón). Reportar la falla no es administrar el
+// mantenimiento: el administrador y el comité le dan seguimiento.
+const _etiquetasTipoIncidencia = {'seguridad': 'Seguridad', 'mantenimiento': 'Mantenimiento', 'otro': 'Otro'};
+const _iconosTipoIncidencia = {
+  'seguridad': Icons.shield_outlined,
+  'mantenimiento': Icons.build_outlined,
+  'otro': Icons.report_problem_outlined,
+};
 
 class IncidentScreen extends StatefulWidget {
+  final String token;
   final AppDatabase db;
+  final PropertyService propertyService;
   final SyncService syncService;
 
-  const IncidentScreen({super.key, required this.db, required this.syncService});
+  const IncidentScreen({
+    super.key,
+    required this.token,
+    required this.db,
+    required this.propertyService,
+    required this.syncService,
+  });
 
   @override
   State<IncidentScreen> createState() => _IncidentScreenState();
@@ -24,17 +43,39 @@ class IncidentScreen extends StatefulWidget {
 class _IncidentScreenState extends State<IncidentScreen> {
   final _descripcionController = TextEditingController();
   final _fotoUrlController = TextEditingController();
+  final _personaController = TextEditingController();
+  String _tipo = 'seguridad';
+  String? _propertyId;
+  List<Property> _propiedades = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _cargarPropiedades();
+  }
 
   @override
   void dispose() {
     _descripcionController.dispose();
     _fotoUrlController.dispose();
+    _personaController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarPropiedades() async {
+    try {
+      final propiedades = await widget.propertyService.listarPropiedades(widget.token);
+      if (!mounted) return;
+      setState(() => _propiedades = propiedades);
+    } catch (_) {
+      // Sin conexión: se puede reportar igual, solo sin elegir la casa de la lista.
+    }
   }
 
   Future<void> _reportar() async {
     if (_descripcionController.text.trim().isEmpty) return;
     final fotoUrl = _fotoUrlController.text.trim();
+    final persona = _personaController.text.trim();
     await widget.db
         .into(widget.db.pendingIncidents)
         .insert(
@@ -42,12 +83,20 @@ class _IncidentScreenState extends State<IncidentScreen> {
             clientId: _uuid.v4(),
             descripcion: _descripcionController.text.trim(),
             fotoUrl: Value(fotoUrl.isEmpty ? null : fotoUrl),
+            tipo: Value(_tipo),
+            propertyId: Value(_propertyId),
+            personaInvolucrada: Value(persona.isEmpty ? null : persona),
             createdAtLocal: DateTime.now(),
           ),
         );
     if (!mounted) return;
     _descripcionController.clear();
     _fotoUrlController.clear();
+    _personaController.clear();
+    setState(() {
+      _tipo = 'seguridad';
+      _propertyId = null;
+    });
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Incidencia registrada localmente. Se sincroniza en cuanto hay conexión.')));
@@ -77,11 +126,39 @@ class _IncidentScreenState extends State<IncidentScreen> {
           children: [
             const Text('Reportar incidencia'),
             const SizedBox(height: 8),
+            SegmentedButton<String>(
+              key: const Key('tipo_incidencia'),
+              segments: _etiquetasTipoIncidencia.entries
+                  .map((e) => ButtonSegment(value: e.key, label: Text(e.value), icon: Icon(_iconosTipoIncidencia[e.key])))
+                  .toList(),
+              selected: {_tipo},
+              onSelectionChanged: (seleccion) => setState(() => _tipo = seleccion.first),
+            ),
+            const SizedBox(height: 8),
             TextField(
               key: const Key('descripcion_field'),
               controller: _descripcionController,
               decoration: const InputDecoration(labelText: 'Descripción'),
               maxLines: 3,
+            ),
+            const SizedBox(height: 8),
+            DropdownButton<String?>(
+              key: const Key('incidente_vivienda_dropdown'),
+              value: _propertyId,
+              isExpanded: true,
+              hint: const Text('Casa involucrada (opcional)'),
+              items: [
+                const DropdownMenuItem<String?>(value: null, child: Text('Sin casa involucrada')),
+                ..._propiedades.map((p) => DropdownMenuItem<String?>(value: p.id, child: Text(p.identificador))),
+              ],
+              onChanged: (valor) => setState(() => _propertyId = valor),
+            ),
+            const SizedBox(height: 8),
+            TextField(
+              key: const Key('persona_field'),
+              controller: _personaController,
+              textCapitalization: TextCapitalization.words,
+              decoration: const InputDecoration(labelText: 'Persona involucrada, interna o externa (opcional)'),
             ),
             const SizedBox(height: 8),
             TextField(
@@ -110,8 +187,9 @@ class _IncidentScreenState extends State<IncidentScreen> {
               .map(
                 (i) => ListTile(
                   dense: true,
+                  leading: Icon(_iconosTipoIncidencia[i.tipo] ?? Icons.report_problem_outlined),
                   title: Text(i.descripcion),
-                  subtitle: Text(formatoHoraCorta(i.createdAtLocal)),
+                  subtitle: Text('${_etiquetasTipoIncidencia[i.tipo] ?? i.tipo} · ${formatoHoraCorta(i.createdAtLocal)}'),
                   trailing: EstadoSyncBadge(estado: i.syncStatus),
                 ),
               )

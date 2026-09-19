@@ -10,7 +10,7 @@ import pytest
 
 import app.models  # noqa: F401
 from app.core.database_base import TenantBase
-from app.core.migrate_schema import COLUMNAS_NUEVAS, sentencias_para
+from app.core.migrate_schema import ALTERACIONES, COLUMNAS_NUEVAS, INDICES_NUEVOS, sentencias_para
 from app.main import app  # noqa: F401 — registra todos los modelos en TenantBase.metadata
 
 
@@ -33,7 +33,7 @@ def test_rechaza_un_nombre_de_schema_que_no_sea_de_tenant():
         sentencias_para("public")
 
 
-def test_genera_una_sentencia_por_columna_mas_los_indices():
+def test_genera_una_sentencia_por_columna_alteracion_e_indice():
     sentencias = sentencias_para("tenant_1ee8c5bd")
     assert all('"tenant_1ee8c5bd".' in s for s in sentencias)
-    assert len(sentencias) == len(COLUMNAS_NUEVAS) + 2
+    assert len(sentencias) == len(COLUMNAS_NUEVAS) + len(ALTERACIONES) + len(INDICES_NUEVOS)

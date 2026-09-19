@@ -79,4 +79,83 @@ void main() {
     final pendientes = await db.pendientesDeIncidencia();
     expect(pendientes, isEmpty);
   });
+
+  test('un acceso encolado sin datos extra queda con 0 acompañantes y sin nombre', () async {
+    await db
+        .into(db.pendingAccessLogs)
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'residente', createdAtLocal: DateTime.now()));
+
+    final fila = (await db.pendientesDeAcceso()).single;
+    expect(fila.acompanantes, 0);
+    expect(fila.nombreVisitante, isNull);
+    expect(fila.autorizadoPor, isNull);
+  });
+
+  test('una incidencia encolada sin tipo queda de seguridad', () async {
+    await db
+        .into(db.pendingIncidents)
+        .insert(PendingIncidentsCompanion.insert(clientId: 'i1', descripcion: 'Ruido', createdAtLocal: DateTime.now()));
+
+    expect((await db.pendientesDeIncidencia()).single.tipo, 'seguridad');
+  });
+
+  test('un paquete encolado queda pending y marcarPaqueteSincronizado lo saca de los pendientes', () async {
+    await db
+        .into(db.pendingPackages)
+        .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
+    expect((await db.pendientesDePaquete()).single.syncStatus, 'pending');
+
+    await db.marcarPaqueteSincronizado('k1', 'remote-k1');
+
+    expect(await db.pendientesDePaquete(), isEmpty);
+    expect((await db.select(db.pendingPackages).getSingle()).remoteId, 'remote-k1');
+  });
+
+  test('marcarPaqueteFallido conserva el mensaje del conflicto', () async {
+    await db
+        .into(db.pendingPackages)
+        .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
+
+    await db.marcarPaqueteFallido('k1', 'Conflicto');
+
+    final fila = await db.select(db.pendingPackages).getSingle();
+    expect((fila.syncStatus, fila.errorMessage), ('failed', 'Conflicto'));
+  });
+
+  test('actualizar desde la v1 conserva la cola pendiente y agrega lo nuevo', () async {
+    // Un guardia con la app ya instalada tiene la base v1 (con registros sin
+    // sincronizar): al actualizar no puede perder su cola.
+    final v1 = AppDatabase.forTesting(
+      NativeDatabase.memory(
+        setup: (raw) {
+          raw.execute(
+            'CREATE TABLE pending_access_logs (client_id TEXT NOT NULL PRIMARY KEY, property_id TEXT, tipo TEXT NOT NULL, '
+            "placas TEXT NOT NULL DEFAULT '[]', created_at_local INTEGER NOT NULL, sync_status TEXT NOT NULL DEFAULT 'pending', "
+            'error_message TEXT, remote_id TEXT)',
+          );
+          raw.execute(
+            'CREATE TABLE pending_incidents (client_id TEXT NOT NULL PRIMARY KEY, descripcion TEXT NOT NULL, foto_url TEXT, '
+            "created_at_local INTEGER NOT NULL, sync_status TEXT NOT NULL DEFAULT 'pending', error_message TEXT, remote_id TEXT)",
+          );
+          raw.execute("INSERT INTO pending_access_logs (client_id, tipo, created_at_local) VALUES ('viejo', 'visitante', 1700000000)");
+          raw.execute("INSERT INTO pending_incidents (client_id, descripcion, created_at_local) VALUES ('i-viejo', 'Fuga', 1700000000)");
+          raw.execute('PRAGMA user_version = 1');
+        },
+      ),
+    );
+    addTearDown(v1.close);
+
+    final acceso = (await v1.pendientesDeAcceso()).single;
+    expect(acceso.clientId, 'viejo');
+    expect(acceso.acompanantes, 0);
+    expect(acceso.nombreVisitante, isNull);
+    final incidencia = (await v1.pendientesDeIncidencia()).single;
+    expect(incidencia.tipo, 'seguridad');
+    expect(incidencia.propertyId, isNull);
+    // la tabla de paquetes existe y funciona
+    await v1
+        .into(v1.pendingPackages)
+        .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
+    expect(await v1.pendientesDePaquete(), hasLength(1));
+  });
 }

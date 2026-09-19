@@ -3,13 +3,21 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../models/visitor_qr_validation.dart';
 import '../services/api_client.dart';
+import '../services/property_service.dart';
 import '../services/visitor_qr_service.dart';
+import '../widgets/provider_code_card.dart';
 
 class QrScanScreen extends StatefulWidget {
   final String token;
   final VisitorQrService visitorQrService;
+  final PropertyService propertyService;
 
-  const QrScanScreen({super.key, required this.token, required this.visitorQrService});
+  const QrScanScreen({
+    super.key,
+    required this.token,
+    required this.visitorQrService,
+    required this.propertyService,
+  });
 
   @override
   State<QrScanScreen> createState() => _QrScanScreenState();
@@ -100,6 +108,12 @@ class _QrScanScreenState extends State<QrScanScreen> {
         if (_validando) const Center(child: CircularProgressIndicator()),
         if (_error != null) Text(_error!, style: const TextStyle(color: Colors.red)),
         if (_resultado != null) _buildResultado(_resultado!),
+        const SizedBox(height: 24),
+        ProviderCodeCard(
+          token: widget.token,
+          visitorQrService: widget.visitorQrService,
+          propertyService: widget.propertyService,
+        ),
       ],
     );
   }
@@ -108,10 +122,27 @@ class _QrScanScreenState extends State<QrScanScreen> {
     if (resultado.valido) {
       return Card(
         color: Colors.green.withValues(alpha: 0.1),
-        child: const Padding(
-          padding: EdgeInsets.all(16),
+        child: Padding(
+          padding: const EdgeInsets.all(16),
           child: Row(
-            children: [Icon(Icons.check_circle, color: Colors.green), SizedBox(width: 8), Text('Acceso autorizado.')],
+            children: [
+              const Icon(Icons.check_circle, color: Colors.green),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text('Acceso autorizado.', style: TextStyle(fontWeight: FontWeight.bold)),
+                    if (resultado.tipo == 'proveedor')
+                      Text('Proveedor${resultado.descripcion != null ? ': ${resultado.descripcion}' : ''}'),
+                    Text(
+                      resultado.vivienda != null ? 'Va a: ${resultado.vivienda}' : 'Servicio al condominio en general',
+                      key: const Key('destino_qr'),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
         ),
       );

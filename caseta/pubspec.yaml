@@ -45,6 +45,7 @@ dependencies:
   connectivity_plus: ^6.1.5
   # F2-10: escaneo de QR de visitantes.
   mobile_scanner: ^7.1.2
+  qr_flutter: ^4.1.0
 
 dev_dependencies:
   flutter_test:

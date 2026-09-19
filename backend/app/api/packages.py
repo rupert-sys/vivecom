@@ -11,6 +11,7 @@ from app.models.package import Package
 from app.models.property import Property
 from app.models.user import Rol
 from app.schemas.package import PackageCreate, PackageRead
+from app.services.incident_broadcast import manager
 from app.services.notification_providers.twilio_provider import TwilioProvider
 from app.services.package_notification_service import send_package_notifications
 
@@ -27,13 +28,43 @@ _notification_provider = TwilioProvider(
 
 
 @router.post("", response_model=PackageRead, status_code=status.HTTP_201_CREATED, dependencies=guardia_only)
-async def register_package(payload: PackageCreate, db: AsyncSession = Depends(get_tenant_db)):
-    """HU-S05: el guardia registra la llegada de un paquete."""
+async def register_package(
+    payload: PackageCreate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
+    """
+    HU-S05: el guardia registra la llegada de un paquete. La app caseta manda
+    `client_id` al capturarlo sin conexión: un reintento de sincronización con
+    el mismo client_id y la misma vivienda regresa el paquete ya registrado
+    (no lo duplica); con otra vivienda es un conflicto real (409), y se alerta
+    al admin por el mismo canal que access-log e incidencias (F2-11).
+    """
+    if payload.client_id is not None:
+        existente = (await db.execute(select(Package).where(Package.client_id == payload.client_id))).scalar_one_or_none()
+        if existente is not None:
+            if existente.property_id == payload.property_id:
+                return existente
+            await manager.broadcast(
+                current_user.schema_name,
+                {
+                    "evento": "sync_conflicto",
+                    "recurso": "package",
+                    "client_id": str(payload.client_id),
+                    "motivo": "Ya existe un paquete con este client_id pero para otra vivienda.",
+                },
+            )
+            raise HTTPException(status.HTTP_409_CONFLICT, "Conflicto de sincronización: este client_id ya existe con otros datos.")
+
     propiedad = await db.get(Property, payload.property_id)
     if propiedad is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
 
-    paquete = Package(property_id=payload.property_id, fecha_llegada=datetime.now(timezone.utc).replace(tzinfo=None))
+    paquete = Package(
+        property_id=payload.property_id,
+        fecha_llegada=datetime.now(timezone.utc).replace(tzinfo=None),
+        client_id=payload.client_id,
+    )
     db.add(paquete)
     await db.commit()
     return paquete

@@ -19,6 +19,12 @@ class PendingAccessLogs extends Table {
   TextColumn get propertyId => text().nullable()();
   TextColumn get tipo => text()(); // TipoAcceso: residente | visitante | proveedor
   TextColumn get placas => text().withDefault(const Constant('[]'))(); // JSON list<String>
+  // Reglamento Art. 17 V: la bitácora lleva nombre, acompañantes, identificación
+  // y quién autorizó el acceso.
+  TextColumn get nombreVisitante => text().nullable()();
+  IntColumn get acompanantes => integer().withDefault(const Constant(0))();
+  TextColumn get identificacion => text().nullable()();
+  TextColumn get autorizadoPor => text().nullable()(); // residente_previo | telefono | otro
   DateTimeColumn get createdAtLocal => dateTime()();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))(); // pending | synced | failed
   TextColumn get errorMessage => text().nullable()();
@@ -32,6 +38,11 @@ class PendingIncidents extends Table {
   TextColumn get clientId => text()();
   TextColumn get descripcion => text()();
   TextColumn get fotoUrl => text().nullable()();
+  // seguridad | mantenimiento | otro — la caseta reporta fallas de mantenimiento
+  // además de incidentes de seguridad.
+  TextColumn get tipo => text().withDefault(const Constant('seguridad'))();
+  TextColumn get propertyId => text().nullable()(); // casa involucrada
+  TextColumn get personaInvolucrada => text().nullable()();
   DateTimeColumn get createdAtLocal => dateTime()();
   TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
   TextColumn get errorMessage => text().nullable()();
@@ -41,13 +52,48 @@ class PendingIncidents extends Table {
   Set<Column> get primaryKey => {clientId};
 }
 
-@DriftDatabase(tables: [PendingAccessLogs, PendingIncidents])
+// Llegada de un paquete registrada por el guardia. Se encola igual que un
+// acceso: capturarla es lo crítico y no puede depender de tener red; al
+// sincronizar, el backend avisa al residente (F2-04).
+class PendingPackages extends Table {
+  TextColumn get clientId => text()();
+  TextColumn get propertyId => text()();
+  DateTimeColumn get createdAtLocal => dateTime()();
+  TextColumn get syncStatus => text().withDefault(const Constant('pending'))();
+  TextColumn get errorMessage => text().nullable()();
+  TextColumn get remoteId => text().nullable()();
+
+  @override
+  Set<Column> get primaryKey => {clientId};
+}
+
+@DriftDatabase(tables: [PendingAccessLogs, PendingIncidents, PendingPackages])
 class AppDatabase extends _$AppDatabase {
   AppDatabase() : super(_abrirConexion());
   AppDatabase.forTesting(super.executor);
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  // v2 (reglamento): datos extra de la bitácora de acceso, tipo/casa/persona de
+  // las incidencias y la cola de paquetes. Un dispositivo que ya tenía la app
+  // instalada conserva su cola pendiente al actualizar.
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+    onCreate: (m) => m.createAll(),
+    onUpgrade: (m, from, to) async {
+      if (from < 2) {
+        await m.addColumn(pendingAccessLogs, pendingAccessLogs.nombreVisitante);
+        await m.addColumn(pendingAccessLogs, pendingAccessLogs.acompanantes);
+        await m.addColumn(pendingAccessLogs, pendingAccessLogs.identificacion);
+        await m.addColumn(pendingAccessLogs, pendingAccessLogs.autorizadoPor);
+        await m.addColumn(pendingIncidents, pendingIncidents.tipo);
+        await m.addColumn(pendingIncidents, pendingIncidents.propertyId);
+        await m.addColumn(pendingIncidents, pendingIncidents.personaInvolucrada);
+        await m.createTable(pendingPackages);
+      }
+    },
+  );
 
   Future<List<PendingAccessLog>> pendientesDeAcceso() =>
       (select(pendingAccessLogs)..where((t) => t.syncStatus.isNotValue('synced'))).get();
@@ -68,6 +114,20 @@ class AppDatabase extends _$AppDatabase {
   Future<void> marcarAccesoFallido(String clientId, String error) =>
       (update(pendingAccessLogs)..where((t) => t.clientId.equals(clientId)))
           .write(PendingAccessLogsCompanion(syncStatus: const Value('failed'), errorMessage: Value(error)));
+
+  Future<List<PendingPackage>> pendientesDePaquete() =>
+      (select(pendingPackages)..where((t) => t.syncStatus.isNotValue('synced'))).get();
+
+  Stream<List<PendingPackage>> watchPaquetes() =>
+      (select(pendingPackages)..orderBy([(t) => OrderingTerm.desc(t.createdAtLocal)])).watch();
+
+  Future<void> marcarPaqueteSincronizado(String clientId, String remoteId) =>
+      (update(pendingPackages)..where((t) => t.clientId.equals(clientId)))
+          .write(PendingPackagesCompanion(syncStatus: const Value('synced'), remoteId: Value(remoteId), errorMessage: const Value(null)));
+
+  Future<void> marcarPaqueteFallido(String clientId, String error) =>
+      (update(pendingPackages)..where((t) => t.clientId.equals(clientId)))
+          .write(PendingPackagesCompanion(syncStatus: const Value('failed'), errorMessage: Value(error)));
 
   Future<void> marcarIncidenciaSincronizada(String clientId, String remoteId) =>
       (update(pendingIncidents)..where((t) => t.clientId.equals(clientId)))

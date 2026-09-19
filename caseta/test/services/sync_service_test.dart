@@ -120,4 +120,140 @@ void main() {
     expect(fila.syncStatus, 'synced');
     expect(fila.remoteId, 'remote-i1');
   });
+
+  test('manda al backend nombre, acompañantes, identificación y quién autorizó', () async {
+    await db
+        .into(db.pendingAccessLogs)
+        .insert(
+          PendingAccessLogsCompanion.insert(
+            clientId: 'c1',
+            tipo: 'visitante',
+            nombreVisitante: const Value('Ana López'),
+            acompanantes: const Value(2),
+            identificacion: const Value('INE 1234'),
+            autorizadoPor: const Value('telefono'),
+            createdAtLocal: DateTime.now(),
+          ),
+        );
+    Map<String, dynamic>? cuerpo;
+    final mockClient = MockClient((request) async {
+      cuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response('{"id": "r1"}', 201);
+    });
+
+    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+
+    expect(cuerpo!['nombre_visitante'], 'Ana López');
+    expect(cuerpo!['acompanantes'], 2);
+    expect(cuerpo!['identificacion'], 'INE 1234');
+    expect(cuerpo!['autorizado_por'], 'telefono');
+  });
+
+  test('un acceso sin datos extra no manda campos vacíos', () async {
+    await db
+        .into(db.pendingAccessLogs)
+        .insert(PendingAccessLogsCompanion.insert(clientId: 'c1', tipo: 'residente', createdAtLocal: DateTime.now()));
+    Map<String, dynamic>? cuerpo;
+    final mockClient = MockClient((request) async {
+      cuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response('{"id": "r1"}', 201);
+    });
+
+    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+
+    expect(cuerpo!.containsKey('nombre_visitante'), isFalse);
+    expect(cuerpo!.containsKey('identificacion'), isFalse);
+    expect(cuerpo!['acompanantes'], 0);
+  });
+
+  test('la incidencia manda su tipo, la casa y la persona involucrada', () async {
+    await db
+        .into(db.pendingIncidents)
+        .insert(
+          PendingIncidentsCompanion.insert(
+            clientId: 'i1',
+            descripcion: 'Luminaria fundida',
+            tipo: const Value('mantenimiento'),
+            propertyId: const Value('p2'),
+            personaInvolucrada: const Value('Vecino'),
+            createdAtLocal: DateTime.now(),
+          ),
+        );
+    Map<String, dynamic>? cuerpo;
+    final mockClient = MockClient((request) async {
+      cuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+      return http.Response('{"id": "ri1"}', 201);
+    });
+
+    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+
+    expect(cuerpo!['tipo'], 'mantenimiento');
+    expect(cuerpo!['property_id'], 'p2');
+    expect(cuerpo!['persona_involucrada'], 'Vecino');
+  });
+
+  test('sincroniza la llegada de un paquete con su client_id y pide avisar al residente', () async {
+    await db
+        .into(db.pendingPackages)
+        .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
+    final rutas = <String>[];
+    Map<String, dynamic>? cuerpo;
+    final mockClient = MockClient((request) async {
+      rutas.add(request.url.path);
+      if (request.url.path == '/packages') {
+        cuerpo = jsonDecode(request.body) as Map<String, dynamic>;
+        return http.Response('{"id": "rk1", "property_id": "p1"}', 201);
+      }
+      return http.Response('{"enviadas": 1}', 200);
+    });
+
+    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+
+    expect(cuerpo, {'client_id': 'k1', 'property_id': 'p1'});
+    expect(rutas, ['/packages', '/packages/send-notifications']);
+    final fila = await (db.select(db.pendingPackages)..where((t) => t.clientId.equals('k1'))).getSingle();
+    expect((fila.syncStatus, fila.remoteId), ('synced', 'rk1'));
+  });
+
+  test('si falla el disparo del aviso, el paquete queda sincronizado igual', () async {
+    await db
+        .into(db.pendingPackages)
+        .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/packages') return http.Response('{"id": "rk1"}', 201);
+      return http.Response('{"detail": "Twilio caído"}', 500);
+    });
+
+    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+
+    expect((await db.pendientesDePaquete()), isEmpty);
+  });
+
+  test('sin paquetes nuevos no se pide ningún aviso', () async {
+    await db
+        .into(db.pendingPackages)
+        .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
+    final rutas = <String>[];
+    final mockClient = MockClient((request) async {
+      rutas.add(request.url.path);
+      return http.Response('{"detail": "sin red"}', 503);
+    });
+
+    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+
+    expect(rutas, ['/packages']); // el paquete sigue pendiente: no hay nada que avisar todavía
+    expect((await db.pendientesDePaquete()).single.syncStatus, 'pending');
+  });
+
+  test('un conflicto (409) al sincronizar un paquete lo marca como failed', () async {
+    await db
+        .into(db.pendingPackages)
+        .insert(PendingPackagesCompanion.insert(clientId: 'k1', propertyId: 'p1', createdAtLocal: DateTime.now()));
+    final mockClient = MockClient((request) async => http.Response('{"detail": "Conflicto de sincronización"}', 409));
+
+    await SyncService(db: db, obtenerToken: () => 't', api: ApiClient(client: mockClient)).sincronizarPendientes();
+
+    final fila = await db.select(db.pendingPackages).getSingle();
+    expect((fila.syncStatus, fila.errorMessage), ('failed', 'Conflicto de sincronización'));
+  });
 }

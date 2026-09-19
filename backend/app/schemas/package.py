@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict
 
 class PackageCreate(BaseModel):
     property_id: uuid.UUID
+    # UUID generado por la app caseta al capturar la llegada sin conexión.
+    client_id: uuid.UUID | None = None
 
 
 class PackageRead(BaseModel):

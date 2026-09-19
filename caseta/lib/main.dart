@@ -5,6 +5,7 @@ import 'screens/caseta_home_screen.dart';
 import 'screens/login_screen.dart';
 import 'services/access_log_service.dart';
 import 'services/auth_service.dart';
+import 'services/package_service.dart';
 import 'services/property_service.dart';
 import 'services/sync_service.dart';
 import 'services/visitor_qr_service.dart';
@@ -26,6 +27,7 @@ class _VivecomCasetaAppState extends State<VivecomCasetaApp> {
   final PropertyService _propertyService = PropertyService();
   final AccessLogService _accessLogService = AccessLogService();
   final VisitorQrService _visitorQrService = VisitorQrService();
+  final PackageService _packageService = PackageService();
   late final SyncService _syncService;
 
   String? _token;
@@ -111,6 +113,7 @@ class _VivecomCasetaAppState extends State<VivecomCasetaApp> {
       propertyService: _propertyService,
       accessLogService: _accessLogService,
       visitorQrService: _visitorQrService,
+      packageService: _packageService,
       syncService: _syncService,
       onLogout: _onLogout,
     );

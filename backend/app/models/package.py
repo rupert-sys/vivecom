@@ -24,3 +24,7 @@ class Package(TenantBase):
     fecha_recogido: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
     notificacion_llegada_enviada: Mapped[bool] = mapped_column(Boolean, default=False)
     notificacion_recogido_enviada: Mapped[bool] = mapped_column(Boolean, default=False)
+    # UUID generado por la app caseta al registrar la llegada sin conexión: un
+    # reintento de sincronización (mismo client_id) no duplica el paquete — mismo
+    # esquema que AccessLog.client_id e Incident.client_id (F2-07/F2-11).
+    client_id: Mapped[uuid.UUID | None] = mapped_column(nullable=True, unique=True, index=True)

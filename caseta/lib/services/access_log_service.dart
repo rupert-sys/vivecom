@@ -1,4 +1,5 @@
 import '../models/access_log_entry.dart';
+import '../models/parking_status.dart';
 import 'api_client.dart';
 
 class AccessLogService {
@@ -14,6 +15,11 @@ class AccessLogService {
   Future<List<AccessLogEntry>> listarAbiertos(String token) async {
     final data = await _api.get('/access-log', token: token) as List;
     return data.map((e) => AccessLogEntry.fromJson(e as Map<String, dynamic>)).where((a) => a.horaSalida == null).toList();
+  }
+
+  Future<ParkingStatus> obtenerEstacionamiento(String token) async {
+    final data = await _api.get('/access-log/estacionamiento-visitas', token: token);
+    return ParkingStatus.fromJson(data as Map<String, dynamic>);
   }
 
   Future<void> registrarSalida(String accessLogId, String token) {

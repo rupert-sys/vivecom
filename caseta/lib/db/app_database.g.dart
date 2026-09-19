@@ -50,6 +50,51 @@ class $PendingAccessLogsTable extends PendingAccessLogs
     requiredDuringInsert: false,
     defaultValue: const Constant('[]'),
   );
+  static const VerificationMeta _nombreVisitanteMeta = const VerificationMeta(
+    'nombreVisitante',
+  );
+  @override
+  late final GeneratedColumn<String> nombreVisitante = GeneratedColumn<String>(
+    'nombre_visitante',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _acompanantesMeta = const VerificationMeta(
+    'acompanantes',
+  );
+  @override
+  late final GeneratedColumn<int> acompanantes = GeneratedColumn<int>(
+    'acompanantes',
+    aliasedName,
+    false,
+    type: DriftSqlType.int,
+    requiredDuringInsert: false,
+    defaultValue: const Constant(0),
+  );
+  static const VerificationMeta _identificacionMeta = const VerificationMeta(
+    'identificacion',
+  );
+  @override
+  late final GeneratedColumn<String> identificacion = GeneratedColumn<String>(
+    'identificacion',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _autorizadoPorMeta = const VerificationMeta(
+    'autorizadoPor',
+  );
+  @override
+  late final GeneratedColumn<String> autorizadoPor = GeneratedColumn<String>(
+    'autorizado_por',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
   static const VerificationMeta _createdAtLocalMeta = const VerificationMeta(
     'createdAtLocal',
   );
@@ -102,6 +147,10 @@ class $PendingAccessLogsTable extends PendingAccessLogs
     propertyId,
     tipo,
     placas,
+    nombreVisitante,
+    acompanantes,
+    identificacion,
+    autorizadoPor,
     createdAtLocal,
     syncStatus,
     errorMessage,
@@ -145,6 +194,42 @@ class $PendingAccessLogsTable extends PendingAccessLogs
       context.handle(
         _placasMeta,
         placas.isAcceptableOrUnknown(data['placas']!, _placasMeta),
+      );
+    }
+    if (data.containsKey('nombre_visitante')) {
+      context.handle(
+        _nombreVisitanteMeta,
+        nombreVisitante.isAcceptableOrUnknown(
+          data['nombre_visitante']!,
+          _nombreVisitanteMeta,
+        ),
+      );
+    }
+    if (data.containsKey('acompanantes')) {
+      context.handle(
+        _acompanantesMeta,
+        acompanantes.isAcceptableOrUnknown(
+          data['acompanantes']!,
+          _acompanantesMeta,
+        ),
+      );
+    }
+    if (data.containsKey('identificacion')) {
+      context.handle(
+        _identificacionMeta,
+        identificacion.isAcceptableOrUnknown(
+          data['identificacion']!,
+          _identificacionMeta,
+        ),
+      );
+    }
+    if (data.containsKey('autorizado_por')) {
+      context.handle(
+        _autorizadoPorMeta,
+        autorizadoPor.isAcceptableOrUnknown(
+          data['autorizado_por']!,
+          _autorizadoPorMeta,
+        ),
       );
     }
     if (data.containsKey('created_at_local')) {
@@ -204,6 +289,22 @@ class $PendingAccessLogsTable extends PendingAccessLogs
         DriftSqlType.string,
         data['${effectivePrefix}placas'],
       )!,
+      nombreVisitante: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}nombre_visitante'],
+      ),
+      acompanantes: attachedDatabase.typeMapping.read(
+        DriftSqlType.int,
+        data['${effectivePrefix}acompanantes'],
+      )!,
+      identificacion: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}identificacion'],
+      ),
+      autorizadoPor: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}autorizado_por'],
+      ),
       createdAtLocal: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at_local'],
@@ -235,6 +336,10 @@ class PendingAccessLog extends DataClass
   final String? propertyId;
   final String tipo;
   final String placas;
+  final String? nombreVisitante;
+  final int acompanantes;
+  final String? identificacion;
+  final String? autorizadoPor;
   final DateTime createdAtLocal;
   final String syncStatus;
   final String? errorMessage;
@@ -244,6 +349,10 @@ class PendingAccessLog extends DataClass
     this.propertyId,
     required this.tipo,
     required this.placas,
+    this.nombreVisitante,
+    required this.acompanantes,
+    this.identificacion,
+    this.autorizadoPor,
     required this.createdAtLocal,
     required this.syncStatus,
     this.errorMessage,
@@ -258,6 +367,16 @@ class PendingAccessLog extends DataClass
     }
     map['tipo'] = Variable<String>(tipo);
     map['placas'] = Variable<String>(placas);
+    if (!nullToAbsent || nombreVisitante != null) {
+      map['nombre_visitante'] = Variable<String>(nombreVisitante);
+    }
+    map['acompanantes'] = Variable<int>(acompanantes);
+    if (!nullToAbsent || identificacion != null) {
+      map['identificacion'] = Variable<String>(identificacion);
+    }
+    if (!nullToAbsent || autorizadoPor != null) {
+      map['autorizado_por'] = Variable<String>(autorizadoPor);
+    }
     map['created_at_local'] = Variable<DateTime>(createdAtLocal);
     map['sync_status'] = Variable<String>(syncStatus);
     if (!nullToAbsent || errorMessage != null) {
@@ -277,6 +396,16 @@ class PendingAccessLog extends DataClass
           : Value(propertyId),
       tipo: Value(tipo),
       placas: Value(placas),
+      nombreVisitante: nombreVisitante == null && nullToAbsent
+          ? const Value.absent()
+          : Value(nombreVisitante),
+      acompanantes: Value(acompanantes),
+      identificacion: identificacion == null && nullToAbsent
+          ? const Value.absent()
+          : Value(identificacion),
+      autorizadoPor: autorizadoPor == null && nullToAbsent
+          ? const Value.absent()
+          : Value(autorizadoPor),
       createdAtLocal: Value(createdAtLocal),
       syncStatus: Value(syncStatus),
       errorMessage: errorMessage == null && nullToAbsent
@@ -298,6 +427,10 @@ class PendingAccessLog extends DataClass
       propertyId: serializer.fromJson<String?>(json['propertyId']),
       tipo: serializer.fromJson<String>(json['tipo']),
       placas: serializer.fromJson<String>(json['placas']),
+      nombreVisitante: serializer.fromJson<String?>(json['nombreVisitante']),
+      acompanantes: serializer.fromJson<int>(json['acompanantes']),
+      identificacion: serializer.fromJson<String?>(json['identificacion']),
+      autorizadoPor: serializer.fromJson<String?>(json['autorizadoPor']),
       createdAtLocal: serializer.fromJson<DateTime>(json['createdAtLocal']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
@@ -312,6 +445,10 @@ class PendingAccessLog extends DataClass
       'propertyId': serializer.toJson<String?>(propertyId),
       'tipo': serializer.toJson<String>(tipo),
       'placas': serializer.toJson<String>(placas),
+      'nombreVisitante': serializer.toJson<String?>(nombreVisitante),
+      'acompanantes': serializer.toJson<int>(acompanantes),
+      'identificacion': serializer.toJson<String?>(identificacion),
+      'autorizadoPor': serializer.toJson<String?>(autorizadoPor),
       'createdAtLocal': serializer.toJson<DateTime>(createdAtLocal),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'errorMessage': serializer.toJson<String?>(errorMessage),
@@ -324,6 +461,10 @@ class PendingAccessLog extends DataClass
     Value<String?> propertyId = const Value.absent(),
     String? tipo,
     String? placas,
+    Value<String?> nombreVisitante = const Value.absent(),
+    int? acompanantes,
+    Value<String?> identificacion = const Value.absent(),
+    Value<String?> autorizadoPor = const Value.absent(),
     DateTime? createdAtLocal,
     String? syncStatus,
     Value<String?> errorMessage = const Value.absent(),
@@ -333,6 +474,16 @@ class PendingAccessLog extends DataClass
     propertyId: propertyId.present ? propertyId.value : this.propertyId,
     tipo: tipo ?? this.tipo,
     placas: placas ?? this.placas,
+    nombreVisitante: nombreVisitante.present
+        ? nombreVisitante.value
+        : this.nombreVisitante,
+    acompanantes: acompanantes ?? this.acompanantes,
+    identificacion: identificacion.present
+        ? identificacion.value
+        : this.identificacion,
+    autorizadoPor: autorizadoPor.present
+        ? autorizadoPor.value
+        : this.autorizadoPor,
     createdAtLocal: createdAtLocal ?? this.createdAtLocal,
     syncStatus: syncStatus ?? this.syncStatus,
     errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
@@ -346,6 +497,18 @@ class PendingAccessLog extends DataClass
           : this.propertyId,
       tipo: data.tipo.present ? data.tipo.value : this.tipo,
       placas: data.placas.present ? data.placas.value : this.placas,
+      nombreVisitante: data.nombreVisitante.present
+          ? data.nombreVisitante.value
+          : this.nombreVisitante,
+      acompanantes: data.acompanantes.present
+          ? data.acompanantes.value
+          : this.acompanantes,
+      identificacion: data.identificacion.present
+          ? data.identificacion.value
+          : this.identificacion,
+      autorizadoPor: data.autorizadoPor.present
+          ? data.autorizadoPor.value
+          : this.autorizadoPor,
       createdAtLocal: data.createdAtLocal.present
           ? data.createdAtLocal.value
           : this.createdAtLocal,
@@ -366,6 +529,10 @@ class PendingAccessLog extends DataClass
           ..write('propertyId: $propertyId, ')
           ..write('tipo: $tipo, ')
           ..write('placas: $placas, ')
+          ..write('nombreVisitante: $nombreVisitante, ')
+          ..write('acompanantes: $acompanantes, ')
+          ..write('identificacion: $identificacion, ')
+          ..write('autorizadoPor: $autorizadoPor, ')
           ..write('createdAtLocal: $createdAtLocal, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('errorMessage: $errorMessage, ')
@@ -380,6 +547,10 @@ class PendingAccessLog extends DataClass
     propertyId,
     tipo,
     placas,
+    nombreVisitante,
+    acompanantes,
+    identificacion,
+    autorizadoPor,
     createdAtLocal,
     syncStatus,
     errorMessage,
@@ -393,6 +564,10 @@ class PendingAccessLog extends DataClass
           other.propertyId == this.propertyId &&
           other.tipo == this.tipo &&
           other.placas == this.placas &&
+          other.nombreVisitante == this.nombreVisitante &&
+          other.acompanantes == this.acompanantes &&
+          other.identificacion == this.identificacion &&
+          other.autorizadoPor == this.autorizadoPor &&
           other.createdAtLocal == this.createdAtLocal &&
           other.syncStatus == this.syncStatus &&
           other.errorMessage == this.errorMessage &&
@@ -404,6 +579,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
   final Value<String?> propertyId;
   final Value<String> tipo;
   final Value<String> placas;
+  final Value<String?> nombreVisitante;
+  final Value<int> acompanantes;
+  final Value<String?> identificacion;
+  final Value<String?> autorizadoPor;
   final Value<DateTime> createdAtLocal;
   final Value<String> syncStatus;
   final Value<String?> errorMessage;
@@ -414,6 +593,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
     this.propertyId = const Value.absent(),
     this.tipo = const Value.absent(),
     this.placas = const Value.absent(),
+    this.nombreVisitante = const Value.absent(),
+    this.acompanantes = const Value.absent(),
+    this.identificacion = const Value.absent(),
+    this.autorizadoPor = const Value.absent(),
     this.createdAtLocal = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.errorMessage = const Value.absent(),
@@ -425,6 +608,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
     this.propertyId = const Value.absent(),
     required String tipo,
     this.placas = const Value.absent(),
+    this.nombreVisitante = const Value.absent(),
+    this.acompanantes = const Value.absent(),
+    this.identificacion = const Value.absent(),
+    this.autorizadoPor = const Value.absent(),
     required DateTime createdAtLocal,
     this.syncStatus = const Value.absent(),
     this.errorMessage = const Value.absent(),
@@ -438,6 +625,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
     Expression<String>? propertyId,
     Expression<String>? tipo,
     Expression<String>? placas,
+    Expression<String>? nombreVisitante,
+    Expression<int>? acompanantes,
+    Expression<String>? identificacion,
+    Expression<String>? autorizadoPor,
     Expression<DateTime>? createdAtLocal,
     Expression<String>? syncStatus,
     Expression<String>? errorMessage,
@@ -449,6 +640,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
       if (propertyId != null) 'property_id': propertyId,
       if (tipo != null) 'tipo': tipo,
       if (placas != null) 'placas': placas,
+      if (nombreVisitante != null) 'nombre_visitante': nombreVisitante,
+      if (acompanantes != null) 'acompanantes': acompanantes,
+      if (identificacion != null) 'identificacion': identificacion,
+      if (autorizadoPor != null) 'autorizado_por': autorizadoPor,
       if (createdAtLocal != null) 'created_at_local': createdAtLocal,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (errorMessage != null) 'error_message': errorMessage,
@@ -462,6 +657,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
     Value<String?>? propertyId,
     Value<String>? tipo,
     Value<String>? placas,
+    Value<String?>? nombreVisitante,
+    Value<int>? acompanantes,
+    Value<String?>? identificacion,
+    Value<String?>? autorizadoPor,
     Value<DateTime>? createdAtLocal,
     Value<String>? syncStatus,
     Value<String?>? errorMessage,
@@ -473,6 +672,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
       propertyId: propertyId ?? this.propertyId,
       tipo: tipo ?? this.tipo,
       placas: placas ?? this.placas,
+      nombreVisitante: nombreVisitante ?? this.nombreVisitante,
+      acompanantes: acompanantes ?? this.acompanantes,
+      identificacion: identificacion ?? this.identificacion,
+      autorizadoPor: autorizadoPor ?? this.autorizadoPor,
       createdAtLocal: createdAtLocal ?? this.createdAtLocal,
       syncStatus: syncStatus ?? this.syncStatus,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -495,6 +698,18 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
     }
     if (placas.present) {
       map['placas'] = Variable<String>(placas.value);
+    }
+    if (nombreVisitante.present) {
+      map['nombre_visitante'] = Variable<String>(nombreVisitante.value);
+    }
+    if (acompanantes.present) {
+      map['acompanantes'] = Variable<int>(acompanantes.value);
+    }
+    if (identificacion.present) {
+      map['identificacion'] = Variable<String>(identificacion.value);
+    }
+    if (autorizadoPor.present) {
+      map['autorizado_por'] = Variable<String>(autorizadoPor.value);
     }
     if (createdAtLocal.present) {
       map['created_at_local'] = Variable<DateTime>(createdAtLocal.value);
@@ -521,6 +736,10 @@ class PendingAccessLogsCompanion extends UpdateCompanion<PendingAccessLog> {
           ..write('propertyId: $propertyId, ')
           ..write('tipo: $tipo, ')
           ..write('placas: $placas, ')
+          ..write('nombreVisitante: $nombreVisitante, ')
+          ..write('acompanantes: $acompanantes, ')
+          ..write('identificacion: $identificacion, ')
+          ..write('autorizadoPor: $autorizadoPor, ')
           ..write('createdAtLocal: $createdAtLocal, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('errorMessage: $errorMessage, ')
@@ -570,6 +789,38 @@ class $PendingIncidentsTable extends PendingIncidents
     type: DriftSqlType.string,
     requiredDuringInsert: false,
   );
+  static const VerificationMeta _tipoMeta = const VerificationMeta('tipo');
+  @override
+  late final GeneratedColumn<String> tipo = GeneratedColumn<String>(
+    'tipo',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('seguridad'),
+  );
+  static const VerificationMeta _propertyIdMeta = const VerificationMeta(
+    'propertyId',
+  );
+  @override
+  late final GeneratedColumn<String> propertyId = GeneratedColumn<String>(
+    'property_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _personaInvolucradaMeta =
+      const VerificationMeta('personaInvolucrada');
+  @override
+  late final GeneratedColumn<String> personaInvolucrada =
+      GeneratedColumn<String>(
+        'persona_involucrada',
+        aliasedName,
+        true,
+        type: DriftSqlType.string,
+        requiredDuringInsert: false,
+      );
   static const VerificationMeta _createdAtLocalMeta = const VerificationMeta(
     'createdAtLocal',
   );
@@ -621,6 +872,9 @@ class $PendingIncidentsTable extends PendingIncidents
     clientId,
     descripcion,
     fotoUrl,
+    tipo,
+    propertyId,
+    personaInvolucrada,
     createdAtLocal,
     syncStatus,
     errorMessage,
@@ -661,6 +915,27 @@ class $PendingIncidentsTable extends PendingIncidents
       context.handle(
         _fotoUrlMeta,
         fotoUrl.isAcceptableOrUnknown(data['foto_url']!, _fotoUrlMeta),
+      );
+    }
+    if (data.containsKey('tipo')) {
+      context.handle(
+        _tipoMeta,
+        tipo.isAcceptableOrUnknown(data['tipo']!, _tipoMeta),
+      );
+    }
+    if (data.containsKey('property_id')) {
+      context.handle(
+        _propertyIdMeta,
+        propertyId.isAcceptableOrUnknown(data['property_id']!, _propertyIdMeta),
+      );
+    }
+    if (data.containsKey('persona_involucrada')) {
+      context.handle(
+        _personaInvolucradaMeta,
+        personaInvolucrada.isAcceptableOrUnknown(
+          data['persona_involucrada']!,
+          _personaInvolucradaMeta,
+        ),
       );
     }
     if (data.containsKey('created_at_local')) {
@@ -716,6 +991,18 @@ class $PendingIncidentsTable extends PendingIncidents
         DriftSqlType.string,
         data['${effectivePrefix}foto_url'],
       ),
+      tipo: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}tipo'],
+      )!,
+      propertyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}property_id'],
+      ),
+      personaInvolucrada: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}persona_involucrada'],
+      ),
       createdAtLocal: attachedDatabase.typeMapping.read(
         DriftSqlType.dateTime,
         data['${effectivePrefix}created_at_local'],
@@ -745,6 +1032,9 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
   final String clientId;
   final String descripcion;
   final String? fotoUrl;
+  final String tipo;
+  final String? propertyId;
+  final String? personaInvolucrada;
   final DateTime createdAtLocal;
   final String syncStatus;
   final String? errorMessage;
@@ -753,6 +1043,9 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     required this.clientId,
     required this.descripcion,
     this.fotoUrl,
+    required this.tipo,
+    this.propertyId,
+    this.personaInvolucrada,
     required this.createdAtLocal,
     required this.syncStatus,
     this.errorMessage,
@@ -765,6 +1058,13 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     map['descripcion'] = Variable<String>(descripcion);
     if (!nullToAbsent || fotoUrl != null) {
       map['foto_url'] = Variable<String>(fotoUrl);
+    }
+    map['tipo'] = Variable<String>(tipo);
+    if (!nullToAbsent || propertyId != null) {
+      map['property_id'] = Variable<String>(propertyId);
+    }
+    if (!nullToAbsent || personaInvolucrada != null) {
+      map['persona_involucrada'] = Variable<String>(personaInvolucrada);
     }
     map['created_at_local'] = Variable<DateTime>(createdAtLocal);
     map['sync_status'] = Variable<String>(syncStatus);
@@ -784,6 +1084,13 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
       fotoUrl: fotoUrl == null && nullToAbsent
           ? const Value.absent()
           : Value(fotoUrl),
+      tipo: Value(tipo),
+      propertyId: propertyId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(propertyId),
+      personaInvolucrada: personaInvolucrada == null && nullToAbsent
+          ? const Value.absent()
+          : Value(personaInvolucrada),
       createdAtLocal: Value(createdAtLocal),
       syncStatus: Value(syncStatus),
       errorMessage: errorMessage == null && nullToAbsent
@@ -804,6 +1111,11 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
       clientId: serializer.fromJson<String>(json['clientId']),
       descripcion: serializer.fromJson<String>(json['descripcion']),
       fotoUrl: serializer.fromJson<String?>(json['fotoUrl']),
+      tipo: serializer.fromJson<String>(json['tipo']),
+      propertyId: serializer.fromJson<String?>(json['propertyId']),
+      personaInvolucrada: serializer.fromJson<String?>(
+        json['personaInvolucrada'],
+      ),
       createdAtLocal: serializer.fromJson<DateTime>(json['createdAtLocal']),
       syncStatus: serializer.fromJson<String>(json['syncStatus']),
       errorMessage: serializer.fromJson<String?>(json['errorMessage']),
@@ -817,6 +1129,9 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
       'clientId': serializer.toJson<String>(clientId),
       'descripcion': serializer.toJson<String>(descripcion),
       'fotoUrl': serializer.toJson<String?>(fotoUrl),
+      'tipo': serializer.toJson<String>(tipo),
+      'propertyId': serializer.toJson<String?>(propertyId),
+      'personaInvolucrada': serializer.toJson<String?>(personaInvolucrada),
       'createdAtLocal': serializer.toJson<DateTime>(createdAtLocal),
       'syncStatus': serializer.toJson<String>(syncStatus),
       'errorMessage': serializer.toJson<String?>(errorMessage),
@@ -828,6 +1143,9 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     String? clientId,
     String? descripcion,
     Value<String?> fotoUrl = const Value.absent(),
+    String? tipo,
+    Value<String?> propertyId = const Value.absent(),
+    Value<String?> personaInvolucrada = const Value.absent(),
     DateTime? createdAtLocal,
     String? syncStatus,
     Value<String?> errorMessage = const Value.absent(),
@@ -836,6 +1154,11 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     clientId: clientId ?? this.clientId,
     descripcion: descripcion ?? this.descripcion,
     fotoUrl: fotoUrl.present ? fotoUrl.value : this.fotoUrl,
+    tipo: tipo ?? this.tipo,
+    propertyId: propertyId.present ? propertyId.value : this.propertyId,
+    personaInvolucrada: personaInvolucrada.present
+        ? personaInvolucrada.value
+        : this.personaInvolucrada,
     createdAtLocal: createdAtLocal ?? this.createdAtLocal,
     syncStatus: syncStatus ?? this.syncStatus,
     errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
@@ -848,6 +1171,13 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
           ? data.descripcion.value
           : this.descripcion,
       fotoUrl: data.fotoUrl.present ? data.fotoUrl.value : this.fotoUrl,
+      tipo: data.tipo.present ? data.tipo.value : this.tipo,
+      propertyId: data.propertyId.present
+          ? data.propertyId.value
+          : this.propertyId,
+      personaInvolucrada: data.personaInvolucrada.present
+          ? data.personaInvolucrada.value
+          : this.personaInvolucrada,
       createdAtLocal: data.createdAtLocal.present
           ? data.createdAtLocal.value
           : this.createdAtLocal,
@@ -867,6 +1197,9 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
           ..write('clientId: $clientId, ')
           ..write('descripcion: $descripcion, ')
           ..write('fotoUrl: $fotoUrl, ')
+          ..write('tipo: $tipo, ')
+          ..write('propertyId: $propertyId, ')
+          ..write('personaInvolucrada: $personaInvolucrada, ')
           ..write('createdAtLocal: $createdAtLocal, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('errorMessage: $errorMessage, ')
@@ -880,6 +1213,9 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
     clientId,
     descripcion,
     fotoUrl,
+    tipo,
+    propertyId,
+    personaInvolucrada,
     createdAtLocal,
     syncStatus,
     errorMessage,
@@ -892,6 +1228,9 @@ class PendingIncident extends DataClass implements Insertable<PendingIncident> {
           other.clientId == this.clientId &&
           other.descripcion == this.descripcion &&
           other.fotoUrl == this.fotoUrl &&
+          other.tipo == this.tipo &&
+          other.propertyId == this.propertyId &&
+          other.personaInvolucrada == this.personaInvolucrada &&
           other.createdAtLocal == this.createdAtLocal &&
           other.syncStatus == this.syncStatus &&
           other.errorMessage == this.errorMessage &&
@@ -902,6 +1241,9 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
   final Value<String> clientId;
   final Value<String> descripcion;
   final Value<String?> fotoUrl;
+  final Value<String> tipo;
+  final Value<String?> propertyId;
+  final Value<String?> personaInvolucrada;
   final Value<DateTime> createdAtLocal;
   final Value<String> syncStatus;
   final Value<String?> errorMessage;
@@ -911,6 +1253,9 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     this.clientId = const Value.absent(),
     this.descripcion = const Value.absent(),
     this.fotoUrl = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.propertyId = const Value.absent(),
+    this.personaInvolucrada = const Value.absent(),
     this.createdAtLocal = const Value.absent(),
     this.syncStatus = const Value.absent(),
     this.errorMessage = const Value.absent(),
@@ -921,6 +1266,9 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     required String clientId,
     required String descripcion,
     this.fotoUrl = const Value.absent(),
+    this.tipo = const Value.absent(),
+    this.propertyId = const Value.absent(),
+    this.personaInvolucrada = const Value.absent(),
     required DateTime createdAtLocal,
     this.syncStatus = const Value.absent(),
     this.errorMessage = const Value.absent(),
@@ -933,6 +1281,9 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     Expression<String>? clientId,
     Expression<String>? descripcion,
     Expression<String>? fotoUrl,
+    Expression<String>? tipo,
+    Expression<String>? propertyId,
+    Expression<String>? personaInvolucrada,
     Expression<DateTime>? createdAtLocal,
     Expression<String>? syncStatus,
     Expression<String>? errorMessage,
@@ -943,6 +1294,9 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
       if (clientId != null) 'client_id': clientId,
       if (descripcion != null) 'descripcion': descripcion,
       if (fotoUrl != null) 'foto_url': fotoUrl,
+      if (tipo != null) 'tipo': tipo,
+      if (propertyId != null) 'property_id': propertyId,
+      if (personaInvolucrada != null) 'persona_involucrada': personaInvolucrada,
       if (createdAtLocal != null) 'created_at_local': createdAtLocal,
       if (syncStatus != null) 'sync_status': syncStatus,
       if (errorMessage != null) 'error_message': errorMessage,
@@ -955,6 +1309,9 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     Value<String>? clientId,
     Value<String>? descripcion,
     Value<String?>? fotoUrl,
+    Value<String>? tipo,
+    Value<String?>? propertyId,
+    Value<String?>? personaInvolucrada,
     Value<DateTime>? createdAtLocal,
     Value<String>? syncStatus,
     Value<String?>? errorMessage,
@@ -965,6 +1322,9 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
       clientId: clientId ?? this.clientId,
       descripcion: descripcion ?? this.descripcion,
       fotoUrl: fotoUrl ?? this.fotoUrl,
+      tipo: tipo ?? this.tipo,
+      propertyId: propertyId ?? this.propertyId,
+      personaInvolucrada: personaInvolucrada ?? this.personaInvolucrada,
       createdAtLocal: createdAtLocal ?? this.createdAtLocal,
       syncStatus: syncStatus ?? this.syncStatus,
       errorMessage: errorMessage ?? this.errorMessage,
@@ -984,6 +1344,15 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
     }
     if (fotoUrl.present) {
       map['foto_url'] = Variable<String>(fotoUrl.value);
+    }
+    if (tipo.present) {
+      map['tipo'] = Variable<String>(tipo.value);
+    }
+    if (propertyId.present) {
+      map['property_id'] = Variable<String>(propertyId.value);
+    }
+    if (personaInvolucrada.present) {
+      map['persona_involucrada'] = Variable<String>(personaInvolucrada.value);
     }
     if (createdAtLocal.present) {
       map['created_at_local'] = Variable<DateTime>(createdAtLocal.value);
@@ -1009,6 +1378,445 @@ class PendingIncidentsCompanion extends UpdateCompanion<PendingIncident> {
           ..write('clientId: $clientId, ')
           ..write('descripcion: $descripcion, ')
           ..write('fotoUrl: $fotoUrl, ')
+          ..write('tipo: $tipo, ')
+          ..write('propertyId: $propertyId, ')
+          ..write('personaInvolucrada: $personaInvolucrada, ')
+          ..write('createdAtLocal: $createdAtLocal, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('errorMessage: $errorMessage, ')
+          ..write('remoteId: $remoteId, ')
+          ..write('rowid: $rowid')
+          ..write(')'))
+        .toString();
+  }
+}
+
+class $PendingPackagesTable extends PendingPackages
+    with TableInfo<$PendingPackagesTable, PendingPackage> {
+  @override
+  final GeneratedDatabase attachedDatabase;
+  final String? _alias;
+  $PendingPackagesTable(this.attachedDatabase, [this._alias]);
+  static const VerificationMeta _clientIdMeta = const VerificationMeta(
+    'clientId',
+  );
+  @override
+  late final GeneratedColumn<String> clientId = GeneratedColumn<String>(
+    'client_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _propertyIdMeta = const VerificationMeta(
+    'propertyId',
+  );
+  @override
+  late final GeneratedColumn<String> propertyId = GeneratedColumn<String>(
+    'property_id',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: true,
+  );
+  static const VerificationMeta _createdAtLocalMeta = const VerificationMeta(
+    'createdAtLocal',
+  );
+  @override
+  late final GeneratedColumn<DateTime> createdAtLocal =
+      GeneratedColumn<DateTime>(
+        'created_at_local',
+        aliasedName,
+        false,
+        type: DriftSqlType.dateTime,
+        requiredDuringInsert: true,
+      );
+  static const VerificationMeta _syncStatusMeta = const VerificationMeta(
+    'syncStatus',
+  );
+  @override
+  late final GeneratedColumn<String> syncStatus = GeneratedColumn<String>(
+    'sync_status',
+    aliasedName,
+    false,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+    defaultValue: const Constant('pending'),
+  );
+  static const VerificationMeta _errorMessageMeta = const VerificationMeta(
+    'errorMessage',
+  );
+  @override
+  late final GeneratedColumn<String> errorMessage = GeneratedColumn<String>(
+    'error_message',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  static const VerificationMeta _remoteIdMeta = const VerificationMeta(
+    'remoteId',
+  );
+  @override
+  late final GeneratedColumn<String> remoteId = GeneratedColumn<String>(
+    'remote_id',
+    aliasedName,
+    true,
+    type: DriftSqlType.string,
+    requiredDuringInsert: false,
+  );
+  @override
+  List<GeneratedColumn> get $columns => [
+    clientId,
+    propertyId,
+    createdAtLocal,
+    syncStatus,
+    errorMessage,
+    remoteId,
+  ];
+  @override
+  String get aliasedName => _alias ?? actualTableName;
+  @override
+  String get actualTableName => $name;
+  static const String $name = 'pending_packages';
+  @override
+  VerificationContext validateIntegrity(
+    Insertable<PendingPackage> instance, {
+    bool isInserting = false,
+  }) {
+    final context = VerificationContext();
+    final data = instance.toColumns(true);
+    if (data.containsKey('client_id')) {
+      context.handle(
+        _clientIdMeta,
+        clientId.isAcceptableOrUnknown(data['client_id']!, _clientIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_clientIdMeta);
+    }
+    if (data.containsKey('property_id')) {
+      context.handle(
+        _propertyIdMeta,
+        propertyId.isAcceptableOrUnknown(data['property_id']!, _propertyIdMeta),
+      );
+    } else if (isInserting) {
+      context.missing(_propertyIdMeta);
+    }
+    if (data.containsKey('created_at_local')) {
+      context.handle(
+        _createdAtLocalMeta,
+        createdAtLocal.isAcceptableOrUnknown(
+          data['created_at_local']!,
+          _createdAtLocalMeta,
+        ),
+      );
+    } else if (isInserting) {
+      context.missing(_createdAtLocalMeta);
+    }
+    if (data.containsKey('sync_status')) {
+      context.handle(
+        _syncStatusMeta,
+        syncStatus.isAcceptableOrUnknown(data['sync_status']!, _syncStatusMeta),
+      );
+    }
+    if (data.containsKey('error_message')) {
+      context.handle(
+        _errorMessageMeta,
+        errorMessage.isAcceptableOrUnknown(
+          data['error_message']!,
+          _errorMessageMeta,
+        ),
+      );
+    }
+    if (data.containsKey('remote_id')) {
+      context.handle(
+        _remoteIdMeta,
+        remoteId.isAcceptableOrUnknown(data['remote_id']!, _remoteIdMeta),
+      );
+    }
+    return context;
+  }
+
+  @override
+  Set<GeneratedColumn> get $primaryKey => {clientId};
+  @override
+  PendingPackage map(Map<String, dynamic> data, {String? tablePrefix}) {
+    final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
+    return PendingPackage(
+      clientId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}client_id'],
+      )!,
+      propertyId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}property_id'],
+      )!,
+      createdAtLocal: attachedDatabase.typeMapping.read(
+        DriftSqlType.dateTime,
+        data['${effectivePrefix}created_at_local'],
+      )!,
+      syncStatus: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}sync_status'],
+      )!,
+      errorMessage: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}error_message'],
+      ),
+      remoteId: attachedDatabase.typeMapping.read(
+        DriftSqlType.string,
+        data['${effectivePrefix}remote_id'],
+      ),
+    );
+  }
+
+  @override
+  $PendingPackagesTable createAlias(String alias) {
+    return $PendingPackagesTable(attachedDatabase, alias);
+  }
+}
+
+class PendingPackage extends DataClass implements Insertable<PendingPackage> {
+  final String clientId;
+  final String propertyId;
+  final DateTime createdAtLocal;
+  final String syncStatus;
+  final String? errorMessage;
+  final String? remoteId;
+  const PendingPackage({
+    required this.clientId,
+    required this.propertyId,
+    required this.createdAtLocal,
+    required this.syncStatus,
+    this.errorMessage,
+    this.remoteId,
+  });
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    map['client_id'] = Variable<String>(clientId);
+    map['property_id'] = Variable<String>(propertyId);
+    map['created_at_local'] = Variable<DateTime>(createdAtLocal);
+    map['sync_status'] = Variable<String>(syncStatus);
+    if (!nullToAbsent || errorMessage != null) {
+      map['error_message'] = Variable<String>(errorMessage);
+    }
+    if (!nullToAbsent || remoteId != null) {
+      map['remote_id'] = Variable<String>(remoteId);
+    }
+    return map;
+  }
+
+  PendingPackagesCompanion toCompanion(bool nullToAbsent) {
+    return PendingPackagesCompanion(
+      clientId: Value(clientId),
+      propertyId: Value(propertyId),
+      createdAtLocal: Value(createdAtLocal),
+      syncStatus: Value(syncStatus),
+      errorMessage: errorMessage == null && nullToAbsent
+          ? const Value.absent()
+          : Value(errorMessage),
+      remoteId: remoteId == null && nullToAbsent
+          ? const Value.absent()
+          : Value(remoteId),
+    );
+  }
+
+  factory PendingPackage.fromJson(
+    Map<String, dynamic> json, {
+    ValueSerializer? serializer,
+  }) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return PendingPackage(
+      clientId: serializer.fromJson<String>(json['clientId']),
+      propertyId: serializer.fromJson<String>(json['propertyId']),
+      createdAtLocal: serializer.fromJson<DateTime>(json['createdAtLocal']),
+      syncStatus: serializer.fromJson<String>(json['syncStatus']),
+      errorMessage: serializer.fromJson<String?>(json['errorMessage']),
+      remoteId: serializer.fromJson<String?>(json['remoteId']),
+    );
+  }
+  @override
+  Map<String, dynamic> toJson({ValueSerializer? serializer}) {
+    serializer ??= driftRuntimeOptions.defaultSerializer;
+    return <String, dynamic>{
+      'clientId': serializer.toJson<String>(clientId),
+      'propertyId': serializer.toJson<String>(propertyId),
+      'createdAtLocal': serializer.toJson<DateTime>(createdAtLocal),
+      'syncStatus': serializer.toJson<String>(syncStatus),
+      'errorMessage': serializer.toJson<String?>(errorMessage),
+      'remoteId': serializer.toJson<String?>(remoteId),
+    };
+  }
+
+  PendingPackage copyWith({
+    String? clientId,
+    String? propertyId,
+    DateTime? createdAtLocal,
+    String? syncStatus,
+    Value<String?> errorMessage = const Value.absent(),
+    Value<String?> remoteId = const Value.absent(),
+  }) => PendingPackage(
+    clientId: clientId ?? this.clientId,
+    propertyId: propertyId ?? this.propertyId,
+    createdAtLocal: createdAtLocal ?? this.createdAtLocal,
+    syncStatus: syncStatus ?? this.syncStatus,
+    errorMessage: errorMessage.present ? errorMessage.value : this.errorMessage,
+    remoteId: remoteId.present ? remoteId.value : this.remoteId,
+  );
+  PendingPackage copyWithCompanion(PendingPackagesCompanion data) {
+    return PendingPackage(
+      clientId: data.clientId.present ? data.clientId.value : this.clientId,
+      propertyId: data.propertyId.present
+          ? data.propertyId.value
+          : this.propertyId,
+      createdAtLocal: data.createdAtLocal.present
+          ? data.createdAtLocal.value
+          : this.createdAtLocal,
+      syncStatus: data.syncStatus.present
+          ? data.syncStatus.value
+          : this.syncStatus,
+      errorMessage: data.errorMessage.present
+          ? data.errorMessage.value
+          : this.errorMessage,
+      remoteId: data.remoteId.present ? data.remoteId.value : this.remoteId,
+    );
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingPackage(')
+          ..write('clientId: $clientId, ')
+          ..write('propertyId: $propertyId, ')
+          ..write('createdAtLocal: $createdAtLocal, ')
+          ..write('syncStatus: $syncStatus, ')
+          ..write('errorMessage: $errorMessage, ')
+          ..write('remoteId: $remoteId')
+          ..write(')'))
+        .toString();
+  }
+
+  @override
+  int get hashCode => Object.hash(
+    clientId,
+    propertyId,
+    createdAtLocal,
+    syncStatus,
+    errorMessage,
+    remoteId,
+  );
+  @override
+  bool operator ==(Object other) =>
+      identical(this, other) ||
+      (other is PendingPackage &&
+          other.clientId == this.clientId &&
+          other.propertyId == this.propertyId &&
+          other.createdAtLocal == this.createdAtLocal &&
+          other.syncStatus == this.syncStatus &&
+          other.errorMessage == this.errorMessage &&
+          other.remoteId == this.remoteId);
+}
+
+class PendingPackagesCompanion extends UpdateCompanion<PendingPackage> {
+  final Value<String> clientId;
+  final Value<String> propertyId;
+  final Value<DateTime> createdAtLocal;
+  final Value<String> syncStatus;
+  final Value<String?> errorMessage;
+  final Value<String?> remoteId;
+  final Value<int> rowid;
+  const PendingPackagesCompanion({
+    this.clientId = const Value.absent(),
+    this.propertyId = const Value.absent(),
+    this.createdAtLocal = const Value.absent(),
+    this.syncStatus = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  });
+  PendingPackagesCompanion.insert({
+    required String clientId,
+    required String propertyId,
+    required DateTime createdAtLocal,
+    this.syncStatus = const Value.absent(),
+    this.errorMessage = const Value.absent(),
+    this.remoteId = const Value.absent(),
+    this.rowid = const Value.absent(),
+  }) : clientId = Value(clientId),
+       propertyId = Value(propertyId),
+       createdAtLocal = Value(createdAtLocal);
+  static Insertable<PendingPackage> custom({
+    Expression<String>? clientId,
+    Expression<String>? propertyId,
+    Expression<DateTime>? createdAtLocal,
+    Expression<String>? syncStatus,
+    Expression<String>? errorMessage,
+    Expression<String>? remoteId,
+    Expression<int>? rowid,
+  }) {
+    return RawValuesInsertable({
+      if (clientId != null) 'client_id': clientId,
+      if (propertyId != null) 'property_id': propertyId,
+      if (createdAtLocal != null) 'created_at_local': createdAtLocal,
+      if (syncStatus != null) 'sync_status': syncStatus,
+      if (errorMessage != null) 'error_message': errorMessage,
+      if (remoteId != null) 'remote_id': remoteId,
+      if (rowid != null) 'rowid': rowid,
+    });
+  }
+
+  PendingPackagesCompanion copyWith({
+    Value<String>? clientId,
+    Value<String>? propertyId,
+    Value<DateTime>? createdAtLocal,
+    Value<String>? syncStatus,
+    Value<String?>? errorMessage,
+    Value<String?>? remoteId,
+    Value<int>? rowid,
+  }) {
+    return PendingPackagesCompanion(
+      clientId: clientId ?? this.clientId,
+      propertyId: propertyId ?? this.propertyId,
+      createdAtLocal: createdAtLocal ?? this.createdAtLocal,
+      syncStatus: syncStatus ?? this.syncStatus,
+      errorMessage: errorMessage ?? this.errorMessage,
+      remoteId: remoteId ?? this.remoteId,
+      rowid: rowid ?? this.rowid,
+    );
+  }
+
+  @override
+  Map<String, Expression> toColumns(bool nullToAbsent) {
+    final map = <String, Expression>{};
+    if (clientId.present) {
+      map['client_id'] = Variable<String>(clientId.value);
+    }
+    if (propertyId.present) {
+      map['property_id'] = Variable<String>(propertyId.value);
+    }
+    if (createdAtLocal.present) {
+      map['created_at_local'] = Variable<DateTime>(createdAtLocal.value);
+    }
+    if (syncStatus.present) {
+      map['sync_status'] = Variable<String>(syncStatus.value);
+    }
+    if (errorMessage.present) {
+      map['error_message'] = Variable<String>(errorMessage.value);
+    }
+    if (remoteId.present) {
+      map['remote_id'] = Variable<String>(remoteId.value);
+    }
+    if (rowid.present) {
+      map['rowid'] = Variable<int>(rowid.value);
+    }
+    return map;
+  }
+
+  @override
+  String toString() {
+    return (StringBuffer('PendingPackagesCompanion(')
+          ..write('clientId: $clientId, ')
+          ..write('propertyId: $propertyId, ')
           ..write('createdAtLocal: $createdAtLocal, ')
           ..write('syncStatus: $syncStatus, ')
           ..write('errorMessage: $errorMessage, ')
@@ -1027,6 +1835,9 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   late final $PendingIncidentsTable pendingIncidents = $PendingIncidentsTable(
     this,
   );
+  late final $PendingPackagesTable pendingPackages = $PendingPackagesTable(
+    this,
+  );
   @override
   Iterable<TableInfo<Table, Object?>> get allTables =>
       allSchemaEntities.whereType<TableInfo<Table, Object?>>();
@@ -1034,6 +1845,7 @@ abstract class _$AppDatabase extends GeneratedDatabase {
   List<DatabaseSchemaEntity> get allSchemaEntities => [
     pendingAccessLogs,
     pendingIncidents,
+    pendingPackages,
   ];
 }
 
@@ -1043,6 +1855,10 @@ typedef $$PendingAccessLogsTableCreateCompanionBuilder =
       Value<String?> propertyId,
       required String tipo,
       Value<String> placas,
+      Value<String?> nombreVisitante,
+      Value<int> acompanantes,
+      Value<String?> identificacion,
+      Value<String?> autorizadoPor,
       required DateTime createdAtLocal,
       Value<String> syncStatus,
       Value<String?> errorMessage,
@@ -1055,6 +1871,10 @@ typedef $$PendingAccessLogsTableUpdateCompanionBuilder =
       Value<String?> propertyId,
       Value<String> tipo,
       Value<String> placas,
+      Value<String?> nombreVisitante,
+      Value<int> acompanantes,
+      Value<String?> identificacion,
+      Value<String?> autorizadoPor,
       Value<DateTime> createdAtLocal,
       Value<String> syncStatus,
       Value<String?> errorMessage,
@@ -1088,6 +1908,26 @@ class $$PendingAccessLogsTableFilterComposer
 
   ColumnFilters<String> get placas => $composableBuilder(
     column: $table.placas,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get nombreVisitante => $composableBuilder(
+    column: $table.nombreVisitante,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<int> get acompanantes => $composableBuilder(
+    column: $table.acompanantes,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get identificacion => $composableBuilder(
+    column: $table.identificacion,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get autorizadoPor => $composableBuilder(
+    column: $table.autorizadoPor,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1141,6 +1981,26 @@ class $$PendingAccessLogsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get nombreVisitante => $composableBuilder(
+    column: $table.nombreVisitante,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<int> get acompanantes => $composableBuilder(
+    column: $table.acompanantes,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get identificacion => $composableBuilder(
+    column: $table.identificacion,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get autorizadoPor => $composableBuilder(
+    column: $table.autorizadoPor,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAtLocal => $composableBuilder(
     column: $table.createdAtLocal,
     builder: (column) => ColumnOrderings(column),
@@ -1184,6 +2044,26 @@ class $$PendingAccessLogsTableAnnotationComposer
 
   GeneratedColumn<String> get placas =>
       $composableBuilder(column: $table.placas, builder: (column) => column);
+
+  GeneratedColumn<String> get nombreVisitante => $composableBuilder(
+    column: $table.nombreVisitante,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<int> get acompanantes => $composableBuilder(
+    column: $table.acompanantes,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get identificacion => $composableBuilder(
+    column: $table.identificacion,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get autorizadoPor => $composableBuilder(
+    column: $table.autorizadoPor,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAtLocal => $composableBuilder(
     column: $table.createdAtLocal,
@@ -1248,6 +2128,10 @@ class $$PendingAccessLogsTableTableManager
                 Value<String?> propertyId = const Value.absent(),
                 Value<String> tipo = const Value.absent(),
                 Value<String> placas = const Value.absent(),
+                Value<String?> nombreVisitante = const Value.absent(),
+                Value<int> acompanantes = const Value.absent(),
+                Value<String?> identificacion = const Value.absent(),
+                Value<String?> autorizadoPor = const Value.absent(),
                 Value<DateTime> createdAtLocal = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
@@ -1258,6 +2142,10 @@ class $$PendingAccessLogsTableTableManager
                 propertyId: propertyId,
                 tipo: tipo,
                 placas: placas,
+                nombreVisitante: nombreVisitante,
+                acompanantes: acompanantes,
+                identificacion: identificacion,
+                autorizadoPor: autorizadoPor,
                 createdAtLocal: createdAtLocal,
                 syncStatus: syncStatus,
                 errorMessage: errorMessage,
@@ -1270,6 +2158,10 @@ class $$PendingAccessLogsTableTableManager
                 Value<String?> propertyId = const Value.absent(),
                 required String tipo,
                 Value<String> placas = const Value.absent(),
+                Value<String?> nombreVisitante = const Value.absent(),
+                Value<int> acompanantes = const Value.absent(),
+                Value<String?> identificacion = const Value.absent(),
+                Value<String?> autorizadoPor = const Value.absent(),
                 required DateTime createdAtLocal,
                 Value<String> syncStatus = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
@@ -1280,6 +2172,10 @@ class $$PendingAccessLogsTableTableManager
                 propertyId: propertyId,
                 tipo: tipo,
                 placas: placas,
+                nombreVisitante: nombreVisitante,
+                acompanantes: acompanantes,
+                identificacion: identificacion,
+                autorizadoPor: autorizadoPor,
                 createdAtLocal: createdAtLocal,
                 syncStatus: syncStatus,
                 errorMessage: errorMessage,
@@ -1329,6 +2225,9 @@ typedef $$PendingIncidentsTableCreateCompanionBuilder =
       required String clientId,
       required String descripcion,
       Value<String?> fotoUrl,
+      Value<String> tipo,
+      Value<String?> propertyId,
+      Value<String?> personaInvolucrada,
       required DateTime createdAtLocal,
       Value<String> syncStatus,
       Value<String?> errorMessage,
@@ -1340,6 +2239,9 @@ typedef $$PendingIncidentsTableUpdateCompanionBuilder =
       Value<String> clientId,
       Value<String> descripcion,
       Value<String?> fotoUrl,
+      Value<String> tipo,
+      Value<String?> propertyId,
+      Value<String?> personaInvolucrada,
       Value<DateTime> createdAtLocal,
       Value<String> syncStatus,
       Value<String?> errorMessage,
@@ -1368,6 +2270,21 @@ class $$PendingIncidentsTableFilterComposer
 
   ColumnFilters<String> get fotoUrl => $composableBuilder(
     column: $table.fotoUrl,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get propertyId => $composableBuilder(
+    column: $table.propertyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get personaInvolucrada => $composableBuilder(
+    column: $table.personaInvolucrada,
     builder: (column) => ColumnFilters(column),
   );
 
@@ -1416,6 +2333,21 @@ class $$PendingIncidentsTableOrderingComposer
     builder: (column) => ColumnOrderings(column),
   );
 
+  ColumnOrderings<String> get tipo => $composableBuilder(
+    column: $table.tipo,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get propertyId => $composableBuilder(
+    column: $table.propertyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get personaInvolucrada => $composableBuilder(
+    column: $table.personaInvolucrada,
+    builder: (column) => ColumnOrderings(column),
+  );
+
   ColumnOrderings<DateTime> get createdAtLocal => $composableBuilder(
     column: $table.createdAtLocal,
     builder: (column) => ColumnOrderings(column),
@@ -1456,6 +2388,19 @@ class $$PendingIncidentsTableAnnotationComposer
 
   GeneratedColumn<String> get fotoUrl =>
       $composableBuilder(column: $table.fotoUrl, builder: (column) => column);
+
+  GeneratedColumn<String> get tipo =>
+      $composableBuilder(column: $table.tipo, builder: (column) => column);
+
+  GeneratedColumn<String> get propertyId => $composableBuilder(
+    column: $table.propertyId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get personaInvolucrada => $composableBuilder(
+    column: $table.personaInvolucrada,
+    builder: (column) => column,
+  );
 
   GeneratedColumn<DateTime> get createdAtLocal => $composableBuilder(
     column: $table.createdAtLocal,
@@ -1516,6 +2461,9 @@ class $$PendingIncidentsTableTableManager
                 Value<String> clientId = const Value.absent(),
                 Value<String> descripcion = const Value.absent(),
                 Value<String?> fotoUrl = const Value.absent(),
+                Value<String> tipo = const Value.absent(),
+                Value<String?> propertyId = const Value.absent(),
+                Value<String?> personaInvolucrada = const Value.absent(),
                 Value<DateTime> createdAtLocal = const Value.absent(),
                 Value<String> syncStatus = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
@@ -1525,6 +2473,9 @@ class $$PendingIncidentsTableTableManager
                 clientId: clientId,
                 descripcion: descripcion,
                 fotoUrl: fotoUrl,
+                tipo: tipo,
+                propertyId: propertyId,
+                personaInvolucrada: personaInvolucrada,
                 createdAtLocal: createdAtLocal,
                 syncStatus: syncStatus,
                 errorMessage: errorMessage,
@@ -1536,6 +2487,9 @@ class $$PendingIncidentsTableTableManager
                 required String clientId,
                 required String descripcion,
                 Value<String?> fotoUrl = const Value.absent(),
+                Value<String> tipo = const Value.absent(),
+                Value<String?> propertyId = const Value.absent(),
+                Value<String?> personaInvolucrada = const Value.absent(),
                 required DateTime createdAtLocal,
                 Value<String> syncStatus = const Value.absent(),
                 Value<String?> errorMessage = const Value.absent(),
@@ -1545,6 +2499,9 @@ class $$PendingIncidentsTableTableManager
                 clientId: clientId,
                 descripcion: descripcion,
                 fotoUrl: fotoUrl,
+                tipo: tipo,
+                propertyId: propertyId,
+                personaInvolucrada: personaInvolucrada,
                 createdAtLocal: createdAtLocal,
                 syncStatus: syncStatus,
                 errorMessage: errorMessage,
@@ -1585,6 +2542,248 @@ typedef $$PendingIncidentsTableProcessedTableManager =
       PendingIncident,
       PrefetchHooks Function()
     >;
+typedef $$PendingPackagesTableCreateCompanionBuilder =
+    PendingPackagesCompanion Function({
+      required String clientId,
+      required String propertyId,
+      required DateTime createdAtLocal,
+      Value<String> syncStatus,
+      Value<String?> errorMessage,
+      Value<String?> remoteId,
+      Value<int> rowid,
+    });
+typedef $$PendingPackagesTableUpdateCompanionBuilder =
+    PendingPackagesCompanion Function({
+      Value<String> clientId,
+      Value<String> propertyId,
+      Value<DateTime> createdAtLocal,
+      Value<String> syncStatus,
+      Value<String?> errorMessage,
+      Value<String?> remoteId,
+      Value<int> rowid,
+    });
+
+class $$PendingPackagesTableFilterComposer
+    extends Composer<_$AppDatabase, $PendingPackagesTable> {
+  $$PendingPackagesTableFilterComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnFilters<String> get clientId => $composableBuilder(
+    column: $table.clientId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get propertyId => $composableBuilder(
+    column: $table.propertyId,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<DateTime> get createdAtLocal => $composableBuilder(
+    column: $table.createdAtLocal,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => ColumnFilters(column),
+  );
+
+  ColumnFilters<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnFilters(column),
+  );
+}
+
+class $$PendingPackagesTableOrderingComposer
+    extends Composer<_$AppDatabase, $PendingPackagesTable> {
+  $$PendingPackagesTableOrderingComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  ColumnOrderings<String> get clientId => $composableBuilder(
+    column: $table.clientId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get propertyId => $composableBuilder(
+    column: $table.propertyId,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<DateTime> get createdAtLocal => $composableBuilder(
+    column: $table.createdAtLocal,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => ColumnOrderings(column),
+  );
+
+  ColumnOrderings<String> get remoteId => $composableBuilder(
+    column: $table.remoteId,
+    builder: (column) => ColumnOrderings(column),
+  );
+}
+
+class $$PendingPackagesTableAnnotationComposer
+    extends Composer<_$AppDatabase, $PendingPackagesTable> {
+  $$PendingPackagesTableAnnotationComposer({
+    required super.$db,
+    required super.$table,
+    super.joinBuilder,
+    super.$addJoinBuilderToRootComposer,
+    super.$removeJoinBuilderFromRootComposer,
+  });
+  GeneratedColumn<String> get clientId =>
+      $composableBuilder(column: $table.clientId, builder: (column) => column);
+
+  GeneratedColumn<String> get propertyId => $composableBuilder(
+    column: $table.propertyId,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<DateTime> get createdAtLocal => $composableBuilder(
+    column: $table.createdAtLocal,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get syncStatus => $composableBuilder(
+    column: $table.syncStatus,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get errorMessage => $composableBuilder(
+    column: $table.errorMessage,
+    builder: (column) => column,
+  );
+
+  GeneratedColumn<String> get remoteId =>
+      $composableBuilder(column: $table.remoteId, builder: (column) => column);
+}
+
+class $$PendingPackagesTableTableManager
+    extends
+        RootTableManager<
+          _$AppDatabase,
+          $PendingPackagesTable,
+          PendingPackage,
+          $$PendingPackagesTableFilterComposer,
+          $$PendingPackagesTableOrderingComposer,
+          $$PendingPackagesTableAnnotationComposer,
+          $$PendingPackagesTableCreateCompanionBuilder,
+          $$PendingPackagesTableUpdateCompanionBuilder,
+          (
+            PendingPackage,
+            BaseReferences<
+              _$AppDatabase,
+              $PendingPackagesTable,
+              PendingPackage
+            >,
+          ),
+          PendingPackage,
+          PrefetchHooks Function()
+        > {
+  $$PendingPackagesTableTableManager(
+    _$AppDatabase db,
+    $PendingPackagesTable table,
+  ) : super(
+        TableManagerState(
+          db: db,
+          table: table,
+          createFilteringComposer: () =>
+              $$PendingPackagesTableFilterComposer($db: db, $table: table),
+          createOrderingComposer: () =>
+              $$PendingPackagesTableOrderingComposer($db: db, $table: table),
+          createComputedFieldComposer: () =>
+              $$PendingPackagesTableAnnotationComposer($db: db, $table: table),
+          updateCompanionCallback:
+              ({
+                Value<String> clientId = const Value.absent(),
+                Value<String> propertyId = const Value.absent(),
+                Value<DateTime> createdAtLocal = const Value.absent(),
+                Value<String> syncStatus = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PendingPackagesCompanion(
+                clientId: clientId,
+                propertyId: propertyId,
+                createdAtLocal: createdAtLocal,
+                syncStatus: syncStatus,
+                errorMessage: errorMessage,
+                remoteId: remoteId,
+                rowid: rowid,
+              ),
+          createCompanionCallback:
+              ({
+                required String clientId,
+                required String propertyId,
+                required DateTime createdAtLocal,
+                Value<String> syncStatus = const Value.absent(),
+                Value<String?> errorMessage = const Value.absent(),
+                Value<String?> remoteId = const Value.absent(),
+                Value<int> rowid = const Value.absent(),
+              }) => PendingPackagesCompanion.insert(
+                clientId: clientId,
+                propertyId: propertyId,
+                createdAtLocal: createdAtLocal,
+                syncStatus: syncStatus,
+                errorMessage: errorMessage,
+                remoteId: remoteId,
+                rowid: rowid,
+              ),
+          withReferenceMapper: (p0) => p0
+              .map(
+                (e) => (
+                  e.readTable<$PendingPackagesTable, PendingPackage>(table),
+                  BaseReferences<
+                    _$AppDatabase,
+                    $PendingPackagesTable,
+                    PendingPackage
+                  >(db, table, e),
+                ),
+              )
+              .toList(),
+          prefetchHooksCallback: null,
+        ),
+      );
+}
+
+typedef $$PendingPackagesTableProcessedTableManager =
+    ProcessedTableManager<
+      _$AppDatabase,
+      $PendingPackagesTable,
+      PendingPackage,
+      $$PendingPackagesTableFilterComposer,
+      $$PendingPackagesTableOrderingComposer,
+      $$PendingPackagesTableAnnotationComposer,
+      $$PendingPackagesTableCreateCompanionBuilder,
+      $$PendingPackagesTableUpdateCompanionBuilder,
+      (
+        PendingPackage,
+        BaseReferences<_$AppDatabase, $PendingPackagesTable, PendingPackage>,
+      ),
+      PendingPackage,
+      PrefetchHooks Function()
+    >;
 
 class $AppDatabaseManager {
   final _$AppDatabase _db;
@@ -1593,4 +2792,6 @@ class $AppDatabaseManager {
       $$PendingAccessLogsTableTableManager(_db, _db.pendingAccessLogs);
   $$PendingIncidentsTableTableManager get pendingIncidents =>
       $$PendingIncidentsTableTableManager(_db, _db.pendingIncidents);
+  $$PendingPackagesTableTableManager get pendingPackages =>
+      $$PendingPackagesTableTableManager(_db, _db.pendingPackages);
 }

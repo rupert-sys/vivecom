@@ -7,6 +7,8 @@ class AccessLogEntry {
   final DateTime horaEntrada;
   final DateTime? horaSalida;
   final List<String> placas;
+  final String? nombreVisitante;
+  final int acompanantes;
 
   AccessLogEntry({
     required this.id,
@@ -15,6 +17,8 @@ class AccessLogEntry {
     required this.horaEntrada,
     required this.horaSalida,
     required this.placas,
+    this.nombreVisitante,
+    this.acompanantes = 0,
   });
 
   factory AccessLogEntry.fromJson(Map<String, dynamic> json) {
@@ -25,6 +29,8 @@ class AccessLogEntry {
       horaEntrada: utcNaiveToDateTime(json['hora_entrada'] as String),
       horaSalida: json['hora_salida'] != null ? utcNaiveToDateTime(json['hora_salida'] as String) : null,
       placas: (json['placas'] as List).cast<String>(),
+      nombreVisitante: json['nombre_visitante'] as String?,
+      acompanantes: (json['acompanantes'] as int?) ?? 0,
     );
   }
 }

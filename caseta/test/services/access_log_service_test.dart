@@ -45,4 +45,31 @@ void main() {
 
     expect(() => service.registrarSalida('a1', 'un-token'), throwsA(isA<ApiException>()));
   });
+
+  test('obtenerEstacionamiento pide los cajones de visitas y cuenta los vehículos que rebasaron el plazo', () async {
+    final mockClient = MockClient((request) async {
+      expect(request.url.path, '/access-log/estacionamiento-visitas');
+      return http.Response(
+        '{"total_cajones": 7, "ocupados": 5, "libres": 2, "horas_maximas": 24, "excedidos": ["a", "b"]}',
+        200,
+      );
+    });
+
+    final estado = await AccessLogService(api: ApiClient(client: mockClient)).obtenerEstacionamiento('un-token');
+
+    expect((estado.totalCajones, estado.ocupados, estado.libres), (7, 5, 2));
+    expect((estado.horasMaximas, estado.excedidos), (24, 2));
+  });
+
+  test('listarAbiertos decodifica el nombre y los acompañantes de la bitácora', () async {
+    final mockClient = MockClient((request) async => http.Response(
+          '[{"id": "a1", "property_id": "p1", "tipo": "visitante", "hora_entrada": "2026-10-01T10:00:00", '
+          '"hora_salida": null, "placas": [], "nombre_visitante": "Ana", "acompanantes": 2}]',
+          200,
+        ));
+
+    final abiertos = await AccessLogService(api: ApiClient(client: mockClient)).listarAbiertos('t');
+
+    expect((abiertos.single.nombreVisitante, abiertos.single.acompanantes), ('Ana', 2));
+  });
 }

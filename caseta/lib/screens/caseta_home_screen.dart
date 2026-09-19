@@ -3,15 +3,18 @@ import 'package:flutter/material.dart';
 
 import '../db/app_database.dart';
 import '../services/access_log_service.dart';
+import '../services/package_service.dart';
 import '../services/property_service.dart';
 import '../services/sync_service.dart';
 import '../services/visitor_qr_service.dart';
 import 'access_log_screen.dart';
 import 'incident_screen.dart';
+import 'packages_screen.dart';
 import 'qr_scan_screen.dart';
 
 // Shell de navegación de la app caseta (F2-07 a F2-10): registro de
-// accesos, incidencias y validación de QR de visitantes, con un indicador
+// accesos, paquetes, incidencias y códigos QR (validar el de una visita,
+// emitir el de un proveedor), con un indicador
 // de conectividad/pendientes siempre visible — es lo primero que un guardia
 // necesita saber ("¿se está sincronizando lo que ya capturé?").
 class CasetaHomeScreen extends StatefulWidget {
@@ -20,6 +23,7 @@ class CasetaHomeScreen extends StatefulWidget {
   final PropertyService propertyService;
   final AccessLogService accessLogService;
   final VisitorQrService visitorQrService;
+  final PackageService packageService;
   final SyncService syncService;
   final VoidCallback onLogout;
 
@@ -30,6 +34,7 @@ class CasetaHomeScreen extends StatefulWidget {
     required this.propertyService,
     required this.accessLogService,
     required this.visitorQrService,
+    required this.packageService,
     required this.syncService,
     required this.onLogout,
   });
@@ -51,8 +56,24 @@ class _CasetaHomeScreenState extends State<CasetaHomeScreen> {
         accessLogService: widget.accessLogService,
         syncService: widget.syncService,
       ),
-      IncidentScreen(db: widget.db, syncService: widget.syncService),
-      QrScanScreen(token: widget.token, visitorQrService: widget.visitorQrService),
+      PackagesScreen(
+        token: widget.token,
+        db: widget.db,
+        propertyService: widget.propertyService,
+        packageService: widget.packageService,
+        syncService: widget.syncService,
+      ),
+      IncidentScreen(
+        token: widget.token,
+        db: widget.db,
+        propertyService: widget.propertyService,
+        syncService: widget.syncService,
+      ),
+      QrScanScreen(
+        token: widget.token,
+        visitorQrService: widget.visitorQrService,
+        propertyService: widget.propertyService,
+      ),
     ];
 
     return Scaffold(
@@ -69,8 +90,9 @@ class _CasetaHomeScreenState extends State<CasetaHomeScreen> {
         onDestinationSelected: (indice) => setState(() => _indiceSeleccionado = indice),
         destinations: const [
           NavigationDestination(icon: Icon(Icons.login), label: 'Accesos'),
+          NavigationDestination(icon: Icon(Icons.inventory_2), label: 'Paquetes'),
           NavigationDestination(icon: Icon(Icons.report_problem), label: 'Incidencias'),
-          NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'QR visitante'),
+          NavigationDestination(icon: Icon(Icons.qr_code_scanner), label: 'Códigos QR'),
         ],
       ),
     );
@@ -93,25 +115,31 @@ class _ConectividadIndicador extends StatelessWidget {
             return StreamBuilder<List<PendingIncident>>(
               stream: db.watchIncidencias(),
               builder: (context, incidenciasSnapshot) {
-                final pendientes =
-                    (accesosSnapshot.data ?? []).where((a) => a.syncStatus == 'pending').length +
-                    (incidenciasSnapshot.data ?? []).where((i) => i.syncStatus == 'pending').length;
-                return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: Row(
-                    children: [
-                      Icon(
-                        enLinea ? Icons.cloud_done : Icons.cloud_off,
-                        key: Key(enLinea ? 'conectividad_online' : 'conectividad_offline'),
-                        size: 20,
+                return StreamBuilder<List<PendingPackage>>(
+                  stream: db.watchPaquetes(),
+                  builder: (context, paquetesSnapshot) {
+                    final pendientes =
+                        (accesosSnapshot.data ?? []).where((a) => a.syncStatus == 'pending').length +
+                        (incidenciasSnapshot.data ?? []).where((i) => i.syncStatus == 'pending').length +
+                        (paquetesSnapshot.data ?? []).where((p) => p.syncStatus == 'pending').length;
+                    return Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8),
+                      child: Row(
+                        children: [
+                          Icon(
+                            enLinea ? Icons.cloud_done : Icons.cloud_off,
+                            key: Key(enLinea ? 'conectividad_online' : 'conectividad_offline'),
+                            size: 20,
+                          ),
+                          if (pendientes > 0)
+                            Padding(
+                              padding: const EdgeInsets.only(left: 4),
+                              child: Text('$pendientes', key: const Key('contador_pendientes')),
+                            ),
+                        ],
                       ),
-                      if (pendientes > 0)
-                        Padding(
-                          padding: const EdgeInsets.only(left: 4),
-                          child: Text('$pendientes', key: const Key('contador_pendientes')),
-                        ),
-                    ],
-                  ),
+                    );
+                  },
                 );
               },
             );

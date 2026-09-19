@@ -24,6 +24,11 @@ void main() {
 
   Future<void> pumpPantalla(WidgetTester tester, http.Client client) async {
     final api = ApiClient(client: client);
+    // El formulario creció (nombre, acompañantes, identificación...) y un ListView
+    // solo construye lo visible: una pantalla alta permite ver todas las secciones.
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -73,10 +78,11 @@ void main() {
 
     await pumpPantalla(tester, mockClient);
 
+    await tester.enterText(find.byKey(const Key('nombre_field')), 'Juan Pérez');
     await tester.tap(find.widgetWithText(ElevatedButton, 'Registrar entrada'));
     await tester.pumpAndSettle();
 
-    expect(find.textContaining('Visitante ·'), findsOneWidget);
+    expect(find.textContaining('Visitante · Juan Pérez ·'), findsOneWidget);
     expect(find.text('Pendiente'), findsOneWidget);
   });
 
@@ -125,5 +131,127 @@ void main() {
     await pumpPantalla(tester, mockClient);
 
     expect(find.text('Sin conexión'), findsOneWidget);
+  });
+
+  testConAcceso('un visitante o proveedor sin nombre no se registra (reglamento Art. 17 V.1)', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response(_fixturePropiedades, 200);
+      return http.Response('[]', 200);
+    });
+
+    await pumpPantalla(tester, mockClient);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Registrar entrada'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('error_formulario')), findsOneWidget);
+    expect(find.text('Sin registros en cola.'), findsOneWidget);
+  });
+
+  testConAcceso('un residente entra sin que se le pida nombre, acompañantes ni identificación', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response(_fixturePropiedades, 200);
+      if (request.method == 'GET') return http.Response('[]', 200);
+      return http.Response('{"detail": "x"}', 500);
+    });
+
+    await pumpPantalla(tester, mockClient);
+    await tester.tap(find.byKey(const Key('tipo_dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Residente').last);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('nombre_field')), findsNothing);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Registrar entrada'));
+    await tester.pumpAndSettle();
+    expect(find.text('Pendiente'), findsOneWidget);
+  });
+
+  testConAcceso('guarda nombre, acompañantes, identificación y quién autorizó en la cola local', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response(_fixturePropiedades, 200);
+      if (request.method == 'GET') return http.Response('[]', 200);
+      return http.Response('{"detail": "x"}', 500);
+    });
+
+    await pumpPantalla(tester, mockClient);
+    await tester.enterText(find.byKey(const Key('nombre_field')), 'Ana López');
+    await tester.enterText(find.byKey(const Key('identificacion_field')), 'INE 1234');
+    await tester.tap(find.byKey(const Key('acompanantes_mas')));
+    await tester.tap(find.byKey(const Key('acompanantes_mas')));
+    await tester.pump();
+    expect(find.text('2'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('autorizacion_dropdown')));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Le llamé al residente').last);
+    await tester.pumpAndSettle();
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Registrar entrada'));
+    await tester.pumpAndSettle();
+
+    final fila = (await db.select(db.pendingAccessLogs).get()).single;
+    expect(fila.nombreVisitante, 'Ana López');
+    expect(fila.acompanantes, 2);
+    expect(fila.identificacion, 'INE 1234');
+    expect(fila.autorizadoPor, 'telefono');
+    // el formulario queda limpio para el siguiente
+    expect(tester.widget<TextField>(find.byKey(const Key('nombre_field'))).controller!.text, isEmpty);
+    expect(find.text('0'), findsOneWidget);
+  });
+
+  Future<void> pumpConCajones(WidgetTester tester, {required int ocupados, int excedidos = 0}) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response(_fixturePropiedades, 200);
+      if (request.url.path == '/access-log/estacionamiento-visitas') {
+        final ids = List.generate(excedidos, (i) => '"x$i"').join(',');
+        return http.Response(
+          '{"total_cajones": 7, "ocupados": $ocupados, "libres": ${7 - ocupados}, "horas_maximas": 24, "excedidos": [$ids]}',
+          200,
+        );
+      }
+      return http.Response('[]', 200);
+    });
+    await pumpPantalla(tester, mockClient);
+  }
+
+  testConAcceso('muestra los cajones de visitas libres y cuántos vehículos rebasaron el plazo', (tester) async {
+    await pumpConCajones(tester, ocupados: 3, excedidos: 1);
+
+    final tarjeta = find.byKey(const Key('estacionamiento_visitas'));
+    expect(find.descendant(of: tarjeta, matching: find.text('Cajones de visitas: 4 libres de 7')), findsOneWidget);
+    expect(find.descendant(of: tarjeta, matching: find.textContaining('1 vehículo rebasó las 24 h')), findsOneWidget);
+    expect(find.textContaining('Llenos'), findsNothing);
+  });
+
+  testConAcceso('con los cajones llenos avisa que solo pasa quien tenga lugar propio', (tester) async {
+    await pumpConCajones(tester, ocupados: 7);
+
+    expect(find.text('Cajones de visitas: 0 libres de 7'), findsOneWidget);
+    expect(find.textContaining('solo pasa si el visitado tiene lugar propio'), findsOneWidget);
+  });
+
+  testConAcceso('sin conexión no se muestra el estacionamiento pero se puede registrar', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response(_fixturePropiedades, 200);
+      if (request.url.path == '/access-log/estacionamiento-visitas') return http.Response('{"detail": "x"}', 503);
+      return http.Response('[]', 200);
+    });
+
+    await pumpPantalla(tester, mockClient);
+
+    expect(find.byKey(const Key('estacionamiento_visitas')), findsNothing);
+    expect(find.widgetWithText(ElevatedButton, 'Registrar entrada'), findsOneWidget);
+  });
+
+  testConAcceso('un condominio sin cajones de visitas configurados no muestra la tarjeta', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response(_fixturePropiedades, 200);
+      if (request.url.path == '/access-log/estacionamiento-visitas') {
+        return http.Response('{"total_cajones": 0, "ocupados": 0, "libres": 0, "horas_maximas": 24, "excedidos": []}', 200);
+      }
+      return http.Response('[]', 200);
+    });
+
+    await pumpPantalla(tester, mockClient);
+
+    expect(find.byKey(const Key('estacionamiento_visitas')), findsNothing);
   });
 }
