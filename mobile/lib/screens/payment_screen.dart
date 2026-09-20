@@ -7,10 +7,12 @@ import '../models/tenant_clabe.dart';
 import '../services/api_client.dart';
 import '../services/clabe_service.dart';
 import '../services/fee_service.dart';
+import '../services/payment_agreement_service.dart';
 import '../services/payment_proof_service.dart';
 import '../services/property_service.dart';
 import '../services/statement_service.dart';
 import '../utils/labels.dart';
+import 'payment_agreement_screen.dart';
 import 'payment_proof_screen.dart';
 
 class PaymentScreen extends StatefulWidget {
@@ -21,6 +23,7 @@ class PaymentScreen extends StatefulWidget {
   final FeeService feeService;
   final ClabeService clabeService;
   final PaymentProofService proofService;
+  final PaymentAgreementService agreementService;
 
   const PaymentScreen({
     super.key,
@@ -31,6 +34,7 @@ class PaymentScreen extends StatefulWidget {
     required this.feeService,
     required this.clabeService,
     required this.proofService,
+    required this.agreementService,
   });
 
   @override
@@ -116,6 +120,8 @@ class _PaymentScreenState extends State<PaymentScreen> {
         _buildUltimoPago(),
         const SizedBox(height: 16),
         _buildAdjuntarComprobante(),
+        const SizedBox(height: 8),
+        _buildAcuerdoDePago(),
         const SizedBox(height: 32),
         Text('Pago anticipado', style: Theme.of(context).textTheme.titleMedium),
         const SizedBox(height: 8),
@@ -136,6 +142,24 @@ class _PaymentScreenState extends State<PaymentScreen> {
         onTap: () => Navigator.of(context).push(
           MaterialPageRoute(
             builder: (_) => PaymentProofScreen(token: widget.token, proofService: widget.proofService),
+          ),
+        ),
+      ),
+    );
+  }
+
+  // "No puedo pagar a tiempo": abre la pantalla del acuerdo de pago (prórroga de cuotas).
+  Widget _buildAcuerdoDePago() {
+    return Card(
+      child: ListTile(
+        key: const Key('acuerdo_de_pago'),
+        leading: const Icon(Icons.event_repeat),
+        title: const Text('Acuerdo de pago'),
+        subtitle: const Text('¿No puedes pagar a tiempo por una causa justificada? Solicítalo por escrito al comité.'),
+        trailing: const Icon(Icons.chevron_right),
+        onTap: () => Navigator.of(context).push(
+          MaterialPageRoute(
+            builder: (_) => PaymentAgreementScreen(token: widget.token, agreementService: widget.agreementService),
           ),
         ),
       ),

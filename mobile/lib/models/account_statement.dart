@@ -61,6 +61,7 @@ class AccountStatement {
   final List<PaymentSummary> pagos;
   // Cuotas vencidas según el reglamento, y lo que eso restringe a la vivienda.
   final bool enMora;
+  final bool enAcuerdo; // tiene un acuerdo de pago vigente
   final List<String> restriccionesPorMora;
 
   AccountStatement({
@@ -71,6 +72,7 @@ class AccountStatement {
     required this.cargos,
     required this.pagos,
     this.enMora = false,
+    this.enAcuerdo = false,
     this.restriccionesPorMora = const [],
   });
 
@@ -83,6 +85,7 @@ class AccountStatement {
       cargos: (json['cargos'] as List).map((e) => FeeChargeSummary.fromJson(e as Map<String, dynamic>)).toList(),
       pagos: (json['pagos'] as List).map((e) => PaymentSummary.fromJson(e as Map<String, dynamic>)).toList(),
       enMora: (json['en_mora'] as bool?) ?? false,
+      enAcuerdo: (json['en_acuerdo'] as bool?) ?? false,
       restriccionesPorMora: ((json['restricciones_por_mora'] as List?) ?? const []).map((e) => e as String).toList(),
     );
   }

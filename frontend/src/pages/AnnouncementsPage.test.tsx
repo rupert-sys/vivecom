@@ -42,6 +42,7 @@ const reglamentoSinDudas: Reglamento = {
   cajones_visitas: 0,
   horas_max_estacionamiento_visitas: 24,
   dudas_en_avisos_por_defecto: false,
+  prorroga_max_meses: 3,
 }
 
 function mockUser(rol: string) {

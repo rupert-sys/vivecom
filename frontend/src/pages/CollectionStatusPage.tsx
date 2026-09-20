@@ -8,9 +8,15 @@ import type { CollectionStatus, EstatusCobranza } from '../types'
 
 const ROLES_CON_ACCESO = new Set(['admin', 'tesorero'])
 
-const ETIQUETA: Record<EstatusCobranza, string> = { moroso: 'Moroso', pendiente: 'Pendiente', al_corriente: 'Al corriente' }
+const ETIQUETA: Record<EstatusCobranza, string> = {
+  moroso: 'Moroso',
+  con_acuerdo: 'Con acuerdo',
+  pendiente: 'Pendiente',
+  al_corriente: 'Al corriente',
+}
 const COLOR: Record<EstatusCobranza, string> = {
   moroso: 'var(--brick)',
+  con_acuerdo: 'var(--dustblue)',
   pendiente: 'var(--amber)',
   al_corriente: 'var(--teal)',
 }
@@ -74,7 +80,7 @@ export function CollectionStatusPage() {
 
       <div style={{ display: 'flex', gap: 'var(--space-2)', margin: 'var(--space-3) 0', flexWrap: 'wrap' }}>
         <input type="month" aria-label="Periodo" value={mes} onChange={(e) => setMes(e.target.value)} />
-        {(['todas', 'moroso', 'pendiente', 'al_corriente'] as Filtro[]).map((f) => (
+        {(['todas', 'moroso', 'con_acuerdo', 'pendiente', 'al_corriente'] as Filtro[]).map((f) => (
           <button key={f} aria-pressed={filtro === f} onClick={() => setFiltro(f)}>
             {f === 'todas' ? 'Todas' : ETIQUETA[f]}
           </button>
@@ -95,6 +101,9 @@ export function CollectionStatusPage() {
               </StatCard>
               <StatCard label="Morosos" color={COLOR.moroso}>
                 {estado.morosas}
+              </StatCard>
+              <StatCard label="Con acuerdo de pago" color={COLOR.con_acuerdo}>
+                {estado.con_acuerdo}
               </StatCard>
               <StatCard label="Adeudo total">${estado.adeudo_total.toFixed(2)}</StatCard>
             </div>

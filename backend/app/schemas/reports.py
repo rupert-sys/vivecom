@@ -21,7 +21,7 @@ class CollectionsSummary(BaseModel):
 class EstatusVivienda(BaseModel):
     property_id: uuid.UUID
     identificador: str
-    estatus: str  # al_corriente | pendiente | moroso
+    estatus: str  # al_corriente | pendiente | con_acuerdo | moroso
     adeudo_total: float
     cargos_vencidos: int
     # None si la vivienda no tiene cargo en el periodo consultado.
@@ -36,5 +36,6 @@ class EstatusCobranza(BaseModel):
     al_corriente: int
     pendientes: int
     morosas: int
+    con_acuerdo: int = 0  # deben, pero tienen un acuerdo de pago vigente (no cuentan como morosas)
     adeudo_total: float
     viviendas: list[EstatusVivienda]

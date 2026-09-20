@@ -9,6 +9,7 @@ import 'services/clabe_service.dart';
 import 'services/expense_service.dart';
 import 'services/fee_service.dart';
 import 'services/lost_found_service.dart';
+import 'services/payment_agreement_service.dart';
 import 'services/payment_proof_service.dart';
 import 'services/poll_service.dart';
 import 'services/property_service.dart';
@@ -43,6 +44,7 @@ class _VivecomAppState extends State<VivecomApp> {
   final ReservationService _reservationService = ReservationService();
   final VisitService _visitService = VisitService();
   final PaymentProofService _proofService = PaymentProofService();
+  final PaymentAgreementService _agreementService = PaymentAgreementService();
 
   String? _token;
   TokenPayload? _usuario;
@@ -130,6 +132,7 @@ class _VivecomAppState extends State<VivecomApp> {
       reservationService: _reservationService,
       visitService: _visitService,
       proofService: _proofService,
+      agreementService: _agreementService,
       onLogout: _onLogout,
     );
   }

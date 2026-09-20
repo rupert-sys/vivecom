@@ -1,6 +1,6 @@
 import { apiUpload } from './client'
 
-export type TipoArchivo = 'gasto' | 'pago' | 'incidencia'
+export type TipoArchivo = 'gasto' | 'pago' | 'incidencia' | 'acuerdo'
 
 export interface UploadedFile {
   id: string

@@ -10,7 +10,7 @@ from app.models.user import Rol
 from app.schemas.property import PropertyCreate, PropertyRead, PropertyUpdate
 from app.schemas.statement import AccountStatement
 from app.services.payment_reference import generate_payment_reference
-from app.services.reglamento_service import get_reglamento, hoy_local, vivienda_en_mora
+from app.services.reglamento_service import acuerdos_vigentes, get_reglamento, hoy_local, vivienda_en_mora
 from app.services.statement_service import get_account_statement
 
 router = APIRouter(prefix="/properties", tags=["properties"])
@@ -88,6 +88,7 @@ async def get_property_statement(
 
     return AccountStatement(
         en_mora=en_mora,
+        en_acuerdo=bool(await acuerdos_vigentes(db, property_id)),
         restricciones_por_mora=restricciones,
         property_id=estado.propiedad.id,
         identificador=estado.propiedad.identificador,

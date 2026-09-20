@@ -30,6 +30,7 @@ _SUBEN = {
     "gasto": {Rol.admin.value},  # solo el administrador registra gastos (POST /expenses)
     "pago": None,  # cualquier usuario autenticado (el residente adjunta su comprobante del banco)
     "incidencia": {Rol.admin.value, Rol.guardia.value, Rol.comite_aprobador.value},
+    "acuerdo": None,  # el escrito o documento de respaldo de una solicitud de acuerdo de pago (cualquier residente)
 }
 
 
@@ -45,6 +46,8 @@ def puede_ver(archivo: StoredFile, usuario: CurrentUser) -> bool:
         return True
     if archivo.kind == "pago":
         return usuario.rol in STAFF_FINANZAS
+    if archivo.kind == "acuerdo":  # lo ve quien decide o da seguimiento al acuerdo
+        return usuario.rol in {Rol.comite_lectura.value, Rol.comite_aprobador.value} | STAFF_FINANZAS
     if archivo.kind == "incidencia":
         return usuario.rol in {Rol.admin.value, Rol.guardia.value, Rol.comite_lectura.value, Rol.comite_aprobador.value}
     return False
@@ -68,7 +71,7 @@ async def upload_file(
     para adjuntarlo a un gasto (`comprobante_archivo_id`) o a un comprobante de pago.
     """
     if kind not in _SUBEN:
-        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "kind debe ser gasto, pago o incidencia")
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "kind debe ser gasto, pago, incidencia o acuerdo")
     permitidos = _SUBEN[kind]
     if permitidos is not None and current_user.rol not in permitidos:
         raise HTTPException(status.HTTP_403_FORBIDDEN, "No tienes permiso para subir este tipo de archivo")

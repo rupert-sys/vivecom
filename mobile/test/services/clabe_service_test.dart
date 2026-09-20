@@ -9,7 +9,10 @@ void main() {
     final mockClient = MockClient((request) async {
       expect(request.url.toString(), 'http://localhost:8000/tenant/clabe');
       expect(request.headers['Authorization'], 'Bearer un-token');
-      return http.Response('{"id": "t1", "nombre": "Residencial Las Torres", "clabe_destino": "646180157012345678"}', 200);
+      return http.Response(
+        '{"id": "t1", "nombre": "Residencial Las Torres", "clabe_destino": "646180157012345678"}',
+        200,
+      );
     });
     final service = ClabeService(api: ApiClient(client: mockClient));
 

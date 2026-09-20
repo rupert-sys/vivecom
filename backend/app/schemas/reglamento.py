@@ -16,6 +16,7 @@ class ReglamentoRead(BaseModel):
     cajones_visitas: int
     horas_max_estacionamiento_visitas: int
     dudas_en_avisos_por_defecto: bool
+    prorroga_max_meses: int
 
 
 class ReglamentoUpdate(BaseModel):
@@ -30,3 +31,4 @@ class ReglamentoUpdate(BaseModel):
     cajones_visitas: int | None = Field(default=None, ge=0, le=500)
     horas_max_estacionamiento_visitas: int | None = Field(default=None, ge=1, le=720)
     dudas_en_avisos_por_defecto: bool | None = None
+    prorroga_max_meses: int | None = Field(default=None, ge=1, le=12)

@@ -21,6 +21,7 @@ from app.services.package_notification_service import send_package_notifications
 from app.services.poll_service import process_poll_closures
 from app.services.reminder_service import send_payment_confirmations, send_payment_reminders
 from app.services.reservation_service import process_reservation_timeouts
+from app.services.payment_agreement_service import procesar_acuerdos
 from app.workers.celery_app import celery_app
 
 _notification_provider = TwilioProvider(
@@ -193,6 +194,26 @@ async def _process_reservation_timeouts_for_all_tenants() -> dict[str, int]:
     return resultados
 
 
+async def _process_agreements_for_all_tenants(hoy: date) -> dict[str, int]:
+    engine = create_async_engine(settings.database_url)
+    session_factory = async_sessionmaker(engine, expire_on_commit=False)
+
+    resultados: dict[str, int] = {}
+    async with session_factory() as control_db:
+        tenants = (await control_db.execute(select(Tenant))).scalars().all()
+
+    for tenant in tenants:
+        try:
+            async with tenant_session(tenant.schema_name) as db:
+                resultado = await procesar_acuerdos(db, hoy)
+            resultados[tenant.schema_name] = resultado["cumplidos"] + resultado["incumplidos"]
+        except Exception as exc:  # noqa: BLE001
+            resultados[tenant.schema_name] = f"error: {exc}"
+
+    await engine.dispose()
+    return resultados
+
+
 @celery_app.task(name="app.workers.tasks.generate_monthly_charges_task")
 def generate_monthly_charges_task() -> dict[str, int]:
     periodo = date.today().replace(day=1)
@@ -232,3 +253,8 @@ def process_poll_closures_task() -> dict[str, int]:
 @celery_app.task(name="app.workers.tasks.process_reservation_timeouts_task")
 def process_reservation_timeouts_task() -> dict[str, int]:
     return asyncio.run(_process_reservation_timeouts_for_all_tenants())
+
+
+@celery_app.task(name="app.workers.tasks.process_payment_agreements_task")
+def process_payment_agreements_task() -> dict[str, int]:
+    return asyncio.run(_process_agreements_for_all_tenants(date.today()))

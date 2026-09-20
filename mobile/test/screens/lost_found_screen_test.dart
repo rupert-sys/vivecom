@@ -17,7 +17,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: LostFoundScreen(token: 'un-token', lostFoundService: LostFoundService(api: ApiClient(client: client))),
+          body: LostFoundScreen(
+            token: 'un-token',
+            lostFoundService: LostFoundService(api: ApiClient(client: client)),
+          ),
         ),
       ),
     );

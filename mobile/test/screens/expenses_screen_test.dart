@@ -108,7 +108,10 @@ void main() {
 
   testWidgets('muestra el resumen con saldo a favor, ingresos, gastos y gastos por categoría', (tester) async {
     final mockClient = MockClient((request) async {
-      return http.Response(request.url.path == '/expenses/summary' ? _fixtureResumen(saldo: 4000) : _fixtureGastos, 200);
+      return http.Response(
+        request.url.path == '/expenses/summary' ? _fixtureResumen(saldo: 4000) : _fixtureGastos,
+        200,
+      );
     });
 
     await pumpGastos(tester, mockClient);
@@ -122,7 +125,10 @@ void main() {
 
   testWidgets('con más gastos que ingresos el resumen dice saldo en contra', (tester) async {
     final mockClient = MockClient((request) async {
-      return http.Response(request.url.path == '/expenses/summary' ? _fixtureResumen(saldo: -500) : _fixtureGastos, 200);
+      return http.Response(
+        request.url.path == '/expenses/summary' ? _fixtureResumen(saldo: -500) : _fixtureGastos,
+        200,
+      );
     });
 
     await pumpGastos(tester, mockClient);
@@ -144,7 +150,8 @@ void main() {
   });
 }
 
-String _fixtureResumen({double saldo = 0}) => '''
+String _fixtureResumen({double saldo = 0}) =>
+    '''
 {"desde": null, "hasta": null, "ingresos": 9000.0, "gastos": 5000.0, "saldo": $saldo, "por_cobrar": 1500.0,
  "gastos_por_tipo": [{"concepto": "operativo", "total": 5000.0, "cantidad": 2}],
  "gastos_por_categoria": [{"concepto": "Jardinería", "total": 1200.0, "cantidad": 1}]}

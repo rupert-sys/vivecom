@@ -49,3 +49,7 @@ class ReglamentoConfig(TenantBase):
     # Avisos: si un aviso nuevo recibe dudas de los residentes salvo que el administrador diga lo
     # contrario al publicarlo. Apagado por defecto: el canal de dudas es opt-in por condominio.
     dudas_en_avisos_por_defecto: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    # Acuerdos de pago (prórroga de cuotas, Art. 1 VIII y Art. 9 VII): plazo máximo, en meses, en que un
+    # acuerdo debe quedar liquidado contando desde que se solicita.
+    prorroga_max_meses: Mapped[int] = mapped_column(Integer, default=3)

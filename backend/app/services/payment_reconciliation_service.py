@@ -33,6 +33,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.core.concurrency import advertir_si_with_for_update_es_no_op
 from app.models.fee_charge import EstadoCargo, FeeCharge
 from app.models.payment import Payment
+from app.models.payment_agreement import PaymentAgreement
 from app.models.property import Property
 
 # Revisión (post-F2-20): reconcile_payment hacía un read-modify-write de
@@ -151,7 +152,9 @@ async def reconcile_payment_ya_con_candado(db: AsyncSession, payment: Payment) -
     # dos conciliaciones concurrentes para la misma vivienda pueden leer
     # el mismo saldo_a_favor de partida y pisarse una a la otra al
     # escribir (ver revisión de F2-20/F3 arriba).
-    await db.execute(select(Property).where(Property.id == payment.property_id).with_for_update())
+    propiedad = (
+        await db.execute(select(Property).where(Property.id == payment.property_id).with_for_update())
+    ).scalar_one()
 
     result = await db.execute(
         select(FeeCharge)
@@ -162,9 +165,32 @@ async def reconcile_payment_ya_con_candado(db: AsyncSession, payment: Payment) -
         )
         .order_by(FeeCharge.periodo.asc())
     )
-    candidatos = result.scalars().all()
+    candidatos = list(result.scalars().all())
 
-    restante = float(payment.monto)
+    # Con un acuerdo de pago vigente, primero se pagan las cuotas CORRIENTES (las que no cubre el acuerdo) y
+    # al final lo acordado: así pagar la cuota del mes no se va a la deuda vieja y deja al vecino en mora por
+    # la cuota nueva. (Python ordena estable: dentro de cada grupo se conserva el orden por periodo.)
+    acuerdos = (
+        await db.execute(
+            select(PaymentAgreement).where(
+                PaymentAgreement.property_id == payment.property_id, PaymentAgreement.estado == "vigente"
+            )
+        )
+    ).scalars().all()
+    cubiertos = {cargo for a in acuerdos for cargo in (a.cargos_cubiertos or [])}
+    if cubiertos:
+        candidatos.sort(key=lambda c: str(c.id) in cubiertos)
+
+    # Con un acuerdo de pago vigente (pagos en parcialidades), el saldo a favor que ya tenía la vivienda se
+    # junta con este pago para saldar la deuda: si no, un abono menor al cargo más viejo se iba a saldo a
+    # favor y NUNCA se sumaba al siguiente abono, y las parcialidades no saldarían nada. Fuera de un acuerdo
+    # se conserva el comportamiento de siempre (un depósito solo salda lo que él solo alcanza a cubrir; ver
+    # test_deposit_must_cover_recargo_to_settle_overdue_charge): cambiarlo para todos es decisión de producto.
+    saldo_previo = float(propiedad.saldo_a_favor)
+    usar_saldo = bool(cubiertos) and bool(candidatos) and saldo_previo > TOLERANCIA_CENTAVOS
+    restante = float(payment.monto) + (saldo_previo if usar_saldo else 0.0)
+    if usar_saldo:
+        propiedad.saldo_a_favor = 0  # pasó al fondo de este pago; lo que sobre vuelve a saldo más abajo
     conciliados = []
     for charge in candidatos:
         total_cargo = float(charge.monto_base) + float(charge.recargo_aplicado)
@@ -182,7 +208,6 @@ async def reconcile_payment_ya_con_candado(db: AsyncSession, payment: Payment) -
         conciliados.extend(cargos_anticipados)
 
     if restante > TOLERANCIA_CENTAVOS:
-        propiedad = await db.get(Property, payment.property_id)
         propiedad.saldo_a_favor = float(propiedad.saldo_a_favor) + restante
 
     if conciliados or restante > TOLERANCIA_CENTAVOS:

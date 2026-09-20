@@ -14,7 +14,9 @@ void main() {
 
   Future<void> pumpLogin(WidgetTester tester, AuthService authService, VoidCallback onLoginSuccess) async {
     await tester.pumpWidget(
-      MaterialApp(home: LoginScreen(authService: authService, onLoginSuccess: onLoginSuccess)),
+      MaterialApp(
+        home: LoginScreen(authService: authService, onLoginSuccess: onLoginSuccess),
+      ),
     );
   }
 

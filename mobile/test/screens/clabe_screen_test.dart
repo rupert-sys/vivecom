@@ -11,7 +11,11 @@ const _fixtureClabe = '{"id": "t1", "nombre": "Residencial Las Torres", "clabe_d
 
 void main() {
   Future<void> pumpClabe(WidgetTester tester, ClabeService service) async {
-    await tester.pumpWidget(MaterialApp(home: ClabeScreen(token: 'un-token', clabeService: service)));
+    await tester.pumpWidget(
+      MaterialApp(
+        home: ClabeScreen(token: 'un-token', clabeService: service),
+      ),
+    );
   }
 
   testWidgets('muestra el nombre del condominio y la CLABE vigente', (tester) async {
@@ -40,9 +44,7 @@ void main() {
       }
       return null;
     });
-    addTearDown(
-      () => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null),
-    );
+    addTearDown(() => tester.binding.defaultBinaryMessenger.setMockMethodCallHandler(SystemChannels.platform, null));
 
     await pumpClabe(tester, service);
     await tester.pumpAndSettle();

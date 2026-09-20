@@ -76,6 +76,9 @@ COLUMNAS_NUEVAS: list[tuple[str, str, str]] = [
     ("announcement", "permite_dudas", "BOOLEAN NOT NULL DEFAULT FALSE"),
     ("announcement", "dudas_hasta", "DATE"),
     ("reglamento_config", "dudas_en_avisos_por_defecto", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    # Acuerdos de pago (la tabla payment_agreement la crea create_all).
+    ("reglamento_config", "prorroga_max_meses", "INTEGER NOT NULL DEFAULT 3"),
+    ("payment_agreement", "pagos_previos", "JSON"),
 ]
 
 # Cambios a columnas que ya existían (idempotentes en Postgres).

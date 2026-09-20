@@ -13,6 +13,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.core.business_rules import RECARGO_DIA_DEL_MES, RECARGO_PORCENTAJE
 from app.models.fee_charge import EstadoCargo, FeeCharge
+from app.models.payment_agreement import PaymentAgreement
 from app.models.reglamento import ReglamentoConfig
 
 # Los condominios de Vivecom son todos de México (alcance §6): los límites de
@@ -39,6 +40,7 @@ class Reglamento:
     cajones_visitas: int = 0
     horas_max_estacionamiento_visitas: int = 24
     dudas_en_avisos_por_defecto: bool = False
+    prorroga_max_meses: int = 3
 
     @property
     def dia_recargo(self) -> int:
@@ -61,6 +63,7 @@ def reglamento_de_fila(fila: ReglamentoConfig | None) -> Reglamento:
         cajones_visitas=fila.cajones_visitas,
         horas_max_estacionamiento_visitas=fila.horas_max_estacionamiento_visitas,
         dudas_en_avisos_por_defecto=fila.dudas_en_avisos_por_defecto,
+        prorroga_max_meses=fila.prorroga_max_meses,
     )
 
 
@@ -93,8 +96,26 @@ def esta_en_mora(cargo: FeeCharge, hoy: date, dia_recargo: int) -> bool:
     return meses_con_recargo(cargo.periodo, hoy, dia_recargo) >= 1
 
 
+async def acuerdos_vigentes(db: AsyncSession, property_id=None) -> list[PaymentAgreement]:
+    consulta = select(PaymentAgreement).where(PaymentAgreement.estado == "vigente")
+    if property_id is not None:
+        consulta = consulta.where(PaymentAgreement.property_id == property_id)
+    return list((await db.execute(consulta)).scalars().all())
+
+
+def cargos_cubiertos(acuerdos: list[PaymentAgreement]) -> set[str]:
+    """Los cargos de los acuerdos vigentes: mientras se cumple el acuerdo, no cuentan como mora."""
+    return {cargo for a in acuerdos for cargo in (a.cargos_cubiertos or [])}
+
+
+def cargos_con_recargo_congelado(acuerdos: list[PaymentAgreement]) -> set[str]:
+    """Los cargos cubiertos por un acuerdo vigente cuyo comité decidió congelar el recargo."""
+    return {cargo for a in acuerdos if a.congela_recargo for cargo in (a.cargos_cubiertos or [])}
+
+
 async def viviendas_morosas(db: AsyncSession, hoy: date, reglamento: Reglamento | None = None) -> set:
     reglamento = reglamento or await get_reglamento(db)
+    cubiertos = cargos_cubiertos(await acuerdos_vigentes(db))
     cargos = (
         await db.execute(
             select(FeeCharge).where(
@@ -102,11 +123,17 @@ async def viviendas_morosas(db: AsyncSession, hoy: date, reglamento: Reglamento 
             )
         )
     ).scalars().all()
-    return {c.property_id for c in cargos if esta_en_mora(c, hoy, reglamento.dia_recargo)}
+    return {c.property_id for c in cargos if str(c.id) not in cubiertos and esta_en_mora(c, hoy, reglamento.dia_recargo)}
 
 
 async def vivienda_en_mora(db: AsyncSession, property_id, hoy: date, reglamento: Reglamento | None = None) -> bool:
+    """
+    ¿La vivienda está en mora? Lo que cubre un acuerdo de pago VIGENTE no cuenta (el comité reconoció la causa,
+    Art. 9 VII: es un incumplimiento involuntario, no el voluntario que sanciona el Art. 9 VI); las cuotas
+    posteriores al acuerdo sí, con normalidad.
+    """
     reglamento = reglamento or await get_reglamento(db)
+    cubiertos = cargos_cubiertos(await acuerdos_vigentes(db, property_id))
     cargos = (
         await db.execute(
             select(FeeCharge).where(
@@ -116,4 +143,4 @@ async def vivienda_en_mora(db: AsyncSession, property_id, hoy: date, reglamento:
             )
         )
     ).scalars().all()
-    return any(esta_en_mora(c, hoy, reglamento.dia_recargo) for c in cargos)
+    return any(str(c.id) not in cubiertos and esta_en_mora(c, hoy, reglamento.dia_recargo) for c in cargos)

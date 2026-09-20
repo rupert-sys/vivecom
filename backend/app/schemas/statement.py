@@ -37,4 +37,6 @@ class AccountStatement(BaseModel):
     # Reglamento: la vivienda con cuotas vencidas pierde ciertos derechos. La app
     # los muestra en un aviso en vez de que el residente los descubra al fallar.
     en_mora: bool = False
+    # Tiene un acuerdo de pago vigente: lo cubierto por él no cuenta como mora (conserva voto y áreas comunes).
+    en_acuerdo: bool = False
     restricciones_por_mora: list[str] = []

@@ -27,6 +27,7 @@ export function ReglamentoPage() {
   const [cajones, setCajones] = useState('')
   const [horasVisitas, setHorasVisitas] = useState('')
   const [dudasPorDefecto, setDudasPorDefecto] = useState(false)
+  const [prorrogaMeses, setProrrogaMeses] = useState('')
 
   useEffect(() => {
     getReglamento()
@@ -43,6 +44,7 @@ export function ReglamentoPage() {
         setCajones(String(r.cajones_visitas))
         setHorasVisitas(String(r.horas_max_estacionamiento_visitas))
         setDudasPorDefecto(r.dudas_en_avisos_por_defecto)
+        setProrrogaMeses(String(r.prorroga_max_meses))
       })
       .catch((err) => setError(err instanceof ApiError ? err.message : 'No se pudo cargar el reglamento.'))
       .finally(() => setLoading(false))
@@ -65,6 +67,7 @@ export function ReglamentoPage() {
         cajones_visitas: Number(cajones),
         horas_max_estacionamiento_visitas: Number(horasVisitas),
         dudas_en_avisos_por_defecto: dudasPorDefecto,
+        prorroga_max_meses: Number(prorrogaMeses),
       })
       setError(null)
       setGuardado(true)
@@ -154,6 +157,13 @@ export function ReglamentoPage() {
           <label style={casilla}>
             <input type="checkbox" checked={dudasPorDefecto} onChange={(e) => setDudasPorDefecto(e.target.checked)} />
             Los avisos nuevos reciben dudas de los residentes (el administrador puede cambiarlo al publicar cada aviso)
+          </label>
+
+          <h3>Acuerdos de pago (prórroga de cuotas)</h3>
+          <label style={campo}>
+            Plazo máximo para liquidar un acuerdo (meses)
+            <input type="number" min={1} max={12} value={prorrogaMeses} onChange={(e) => setProrrogaMeses(e.target.value)} required />
+            <small style={{ color: 'var(--ink-soft)' }}>Se cuenta desde que el vecino lo solicita.</small>
           </label>
 
           <h3>Estacionamiento de visitas</h3>

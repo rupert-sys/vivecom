@@ -9,7 +9,10 @@ void main() {
     final mockClient = MockClient((request) async {
       expect(request.url.toString(), 'http://localhost:8000/properties/p1');
       expect(request.headers['Authorization'], 'Bearer un-token');
-      return http.Response('{"id": "p1", "identificador": "Casa 1", "referencia_pago": "0012345", "saldo_a_favor": 100.0}', 200);
+      return http.Response(
+        '{"id": "p1", "identificador": "Casa 1", "referencia_pago": "0012345", "saldo_a_favor": 100.0}',
+        200,
+      );
     });
     final service = PropertyService(api: ApiClient(client: mockClient));
 

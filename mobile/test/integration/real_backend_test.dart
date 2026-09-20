@@ -38,36 +38,33 @@ void main() {
   const email = 'residente2@qaflujof129.mx';
   const password = 'ResidenteQA123';
 
-  test(
-    'la app residente ve, contra el backend real, el resultado completo del flujo de cobro de F1-29',
-    () async {
-      SharedPreferences.setMockInitialValues({});
-      final authService = AuthService();
+  test('la app residente ve, contra el backend real, el resultado completo del flujo de cobro de F1-29', () async {
+    SharedPreferences.setMockInitialValues({});
+    final authService = AuthService();
 
-      await authService.login(email, password);
-      final token = await authService.obtenerToken();
-      expect(token, isNotNull);
+    await authService.login(email, password);
+    final token = await authService.obtenerToken();
+    expect(token, isNotNull);
 
-      final usuario = TokenPayload.decode(token!);
-      expect(usuario.rol, 'residente');
-      expect(usuario.propertyId, isNotNull);
+    final usuario = TokenPayload.decode(token!);
+    expect(usuario.rol, 'residente');
+    expect(usuario.propertyId, isNotNull);
 
-      final estado = await StatementService().obtenerEstadoDeCuenta(usuario.propertyId!, token);
+    final estado = await StatementService().obtenerEstadoDeCuenta(usuario.propertyId!, token);
 
-      expect(estado.identificador, 'Casa QA-1');
-      // $350 depositados de más (no múltiplo exacto de la cuota) → saldo a
-      // favor, no un cargo a medias (payment_reconciliation_service.py).
-      expect(estado.saldoAFavor, 350.0);
-      expect(estado.deudaTotal, 0.0);
-      // Septiembre (cobro exacto) + octubre (pago anticipado, F1-08:
-      // depósito exacto sin deuda pendiente crea el siguiente cargo ya
-      // pagado) — ambos deben verse "pagado" desde la app residente.
-      expect(estado.cargos, hasLength(2));
-      expect(estado.cargos.every((c) => c.estado == 'pagado'), isTrue);
-      expect(estado.pagos.where((p) => p.estado == 'confirmado'), hasLength(3));
+    expect(estado.identificador, 'Casa QA-1');
+    // $350 depositados de más (no múltiplo exacto de la cuota) → saldo a
+    // favor, no un cargo a medias (payment_reconciliation_service.py).
+    expect(estado.saldoAFavor, 350.0);
+    expect(estado.deudaTotal, 0.0);
+    // Septiembre (cobro exacto) + octubre (pago anticipado, F1-08:
+    // depósito exacto sin deuda pendiente crea el siguiente cargo ya
+    // pagado) — ambos deben verse "pagado" desde la app residente.
+    expect(estado.cargos, hasLength(2));
+    expect(estado.cargos.every((c) => c.estado == 'pagado'), isTrue);
+    expect(estado.pagos.where((p) => p.estado == 'confirmado'), hasLength(3));
 
-      final clabe = await ClabeService().obtenerClabe(token);
-      expect(clabe.clabeDestino, '999999999999999991');
-    },
-  );
+    final clabe = await ClabeService().obtenerClabe(token);
+    expect(clabe.clabeDestino, '999999999999999991');
+  });
 }

@@ -22,10 +22,7 @@ void main() {
   test('obtenerDisponibilidad decodifica los horarios ocupados', () async {
     final mockClient = MockClient((request) async {
       expect(request.url.toString(), 'http://localhost:8000/amenities/a1/availability');
-      return http.Response(
-        '[{"fecha_inicio": "2026-10-01T10:00:00", "fecha_fin": "2026-10-01T12:00:00"}]',
-        200,
-      );
+      return http.Response('[{"fecha_inicio": "2026-10-01T10:00:00", "fecha_fin": "2026-10-01T12:00:00"}]', 200);
     });
     final service = AmenityService(api: ApiClient(client: mockClient));
 
@@ -43,11 +40,13 @@ void main() {
   });
 
   test('decodifica las reglas, la cuota y la capacidad de una amenidad', () async {
-    final mockClient = MockClient((request) async => http.Response(
-          '[{"id": "a1", "nombre": "Cajones", "periodo_limite_horas": 24, "capacidad": 7, "cuota": 1000.0, '
-          '"notas_reglamento": "Art. 2", "reglas": ["Solicítala con al menos 8 días de anticipación."]}]',
-          200,
-        ));
+    final mockClient = MockClient(
+      (request) async => http.Response(
+        '[{"id": "a1", "nombre": "Cajones", "periodo_limite_horas": 24, "capacidad": 7, "cuota": 1000.0, '
+        '"notas_reglamento": "Art. 2", "reglas": ["Solicítala con al menos 8 días de anticipación."]}]',
+        200,
+      ),
+    );
     final amenidades = await AmenityService(api: ApiClient(client: mockClient)).listarAmenidades('t');
 
     expect(amenidades.single.capacidad, 7);

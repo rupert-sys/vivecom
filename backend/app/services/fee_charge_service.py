@@ -16,7 +16,9 @@ from app.models.fee import Fee
 from app.models.fee_charge import EstadoCargo, FeeCharge
 from app.models.property import Property
 from app.services.payment_reconciliation_service import TOLERANCIA_CENTAVOS
-from app.services.reglamento_service import get_reglamento, meses_con_recargo
+from app.services.reglamento_service import (
+    acuerdos_vigentes, cargos_con_recargo_congelado, get_reglamento, meses_con_recargo,
+)
 
 # Revisión (post-F2-20): el chequeo de "ya tiene cargo este periodo" era un
 # SELECT seguido de INSERTs condicionales, sin restricción única en
@@ -114,6 +116,9 @@ async def apply_late_surcharges(db: AsyncSession, hoy: date) -> list[FeeCharge]:
     cambiaron en esta corrida.
     """
     reglamento = await get_reglamento(db)
+    # Los cargos de un acuerdo de pago vigente con recargo congelado no se tocan mientras se cumple; si el
+    # acuerdo se incumple o se cancela, dejan de estar en este conjunto y el recálculo absoluto los alcanza.
+    congelados = cargos_con_recargo_congelado(await acuerdos_vigentes(db))
     result = await db.execute(
         select(FeeCharge).where(
             FeeCharge.estado.in_([EstadoCargo.pendiente, EstadoCargo.vencido]), FeeCharge.payment_id.is_(None)
@@ -123,6 +128,8 @@ async def apply_late_surcharges(db: AsyncSession, hoy: date) -> list[FeeCharge]:
     afectados = []
     hubo_cambios = False
     for charge in result.scalars().all():
+        if str(charge.id) in congelados:
+            continue
         meses = meses_con_recargo(charge.periodo, hoy, reglamento.dia_recargo)
         if meses == 0:
             continue

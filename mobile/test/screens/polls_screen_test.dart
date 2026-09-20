@@ -6,7 +6,8 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
-String _fixtureVotaciones({bool yaVoto = false, bool cerrada = false, bool? restringido}) => '''
+String _fixtureVotaciones({bool yaVoto = false, bool cerrada = false, bool? restringido}) =>
+    '''
 [
   {"id": "p1", "pregunta": "¿Aprobamos el reglamento?",
    "fecha_cierre": "${cerrada ? '2020-01-01' : '2099-01-01'}", "resultados_en_vivo": false,
@@ -21,7 +22,10 @@ void main() {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
-          body: PollsScreen(token: 'un-token', pollService: PollService(api: ApiClient(client: client))),
+          body: PollsScreen(
+            token: 'un-token',
+            pollService: PollService(api: ApiClient(client: client)),
+          ),
         ),
       ),
     );

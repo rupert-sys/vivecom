@@ -32,10 +32,7 @@ void main() {
 
     test('lanza ApiException con el primer mensaje cuando el detail es una lista (422 de Pydantic)', () async {
       final mockClient = MockClient((request) async {
-        return http.Response(
-          '{"detail": [{"msg": "value is not a valid email address"}]}',
-          422,
-        );
+        return http.Response('{"detail": [{"msg": "value is not a valid email address"}]}', 422);
       });
       final api = ApiClient(client: mockClient);
 

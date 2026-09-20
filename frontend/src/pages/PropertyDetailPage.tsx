@@ -163,6 +163,11 @@ export function PropertyDetailPage() {
             Deuda: <span className="mono">${estadoDeCuenta.deuda_total.toFixed(2)}</span> — Saldo a favor:{' '}
             <span className="mono">${estadoDeCuenta.saldo_a_favor.toFixed(2)}</span>
           </p>
+          {estadoDeCuenta.en_acuerdo && (
+            <p style={{ color: 'var(--dustblue)' }}>
+              <strong>Con un acuerdo de pago vigente.</strong> Lo cubierto por el acuerdo no cuenta como mora.
+            </p>
+          )}
           {estadoDeCuenta.en_mora && (
             <div style={{ color: 'var(--brick)' }}>
               <strong>Vivienda en mora.</strong>

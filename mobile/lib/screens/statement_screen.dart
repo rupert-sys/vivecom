@@ -98,7 +98,23 @@ class _StatementScreenState extends State<StatementScreen> {
             ...estado.restriccionesPorMora.map((r) => Padding(padding: const EdgeInsets.only(top: 4), child: Text('• $r'))),
             const SizedBox(height: 4),
             const Text('Se levantan en cuanto te pongas al corriente.'),
+            const Text('Si tienes una causa justificada, puedes pedir un acuerdo de pago en la pestaña Pago.'),
           ],
+        ),
+      ),
+    );
+  }
+
+  // Con un acuerdo de pago vigente lo cubierto no cuenta como mora: se dice de frente.
+  Widget _buildAvisoDeAcuerdo() {
+    return Card(
+      key: const Key('aviso_acuerdo'),
+      color: Colors.blue.shade50,
+      child: const Padding(
+        padding: EdgeInsets.all(16),
+        child: Text(
+          'Tienes un acuerdo de pago vigente. Mientras cumplas el calendario no cuentas como moroso. '
+          'Lo ves en la pestaña Pago.',
         ),
       ),
     );
@@ -112,6 +128,7 @@ class _StatementScreenState extends State<StatementScreen> {
         Text(estado.identificador, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         if (estado.enMora) ...[_buildAvisoDeMora(estado), const SizedBox(height: 16)],
+        if (estado.enAcuerdo) ...[_buildAvisoDeAcuerdo(), const SizedBox(height: 16)],
         Card(
           color: deudaColor,
           child: Padding(

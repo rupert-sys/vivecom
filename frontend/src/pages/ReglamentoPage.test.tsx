@@ -22,6 +22,7 @@ const arequipa: Reglamento = {
   cajones_visitas: 7,
   horas_max_estacionamiento_visitas: 24,
   dudas_en_avisos_por_defecto: false,
+  prorroga_max_meses: 3,
 }
 
 function mockUser(rol: string) {
@@ -87,6 +88,7 @@ describe('ReglamentoPage', () => {
       cajones_visitas: 7,
       horas_max_estacionamiento_visitas: 24,
       dudas_en_avisos_por_defecto: false,
+      prorroga_max_meses: 3,
     })
     expect(await screen.findByText(/reglamento guardado/i)).toBeInTheDocument()
   })
@@ -159,5 +161,22 @@ describe('ReglamentoPage', () => {
 
     await waitFor(() => expect(updateSpy).toHaveBeenCalled())
     expect(updateSpy.mock.calls[0][0]).toMatchObject({ dudas_en_avisos_por_defecto: false })
+  })
+
+  it('el reglamento define el plazo máximo de un acuerdo de pago', async () => {
+    mockUser('admin')
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue({ ...arequipa, prorroga_max_meses: 3 })
+    const updateSpy = vi.spyOn(reglamentoApi, 'updateReglamento').mockResolvedValue(arequipa)
+    const user = userEvent.setup()
+
+    render(<ReglamentoPage />)
+    const campo = await screen.findByLabelText(/plazo máximo para liquidar un acuerdo/i)
+    expect(campo).toHaveValue(3)
+    await user.clear(campo)
+    await user.type(campo, '6')
+    await user.click(screen.getByRole('button', { name: /guardar reglamento/i }))
+
+    await waitFor(() => expect(updateSpy).toHaveBeenCalled())
+    expect(updateSpy.mock.calls[0][0]).toMatchObject({ prorroga_max_meses: 6 })
   })
 })

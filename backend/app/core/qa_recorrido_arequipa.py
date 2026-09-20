@@ -6,7 +6,7 @@ Aprovisiona un condominio NUEVO, lo configura con el reglamento y hace pasar por
 promete: cuotas con recargo del 5% mensual sobre saldo, pago por SPEI / en efectivo / con comprobante,
 morosos sin voto ni áreas comunes, el área adoquinada (8 días, hasta la 01:00, $1,000), gastos que
 requieren asamblea y 3 cotizaciones, la caseta (bitácora, cajones de visitas, proveedores, paquetes,
-incidencias con foto) y las dudas en avisos.
+incidencias con foto), las dudas en avisos y el acuerdo de pago (prórroga de cuotas).
 
 Como qa_flujo_cobro.py, NO corre con pytest/SQLite: usa /signup, el webhook firmado de STP y varios
 schemas de Postgres reales. Corre por HTTP contra un backend levantado (uvicorn + Postgres):
@@ -477,6 +477,90 @@ def main() -> int:
                  c.post(f"/polls/{pid2['id']}/vote", headers=RES[2], json={"option_id": pid2["opciones"][0]["id"]}).status_code == 204)
             cobranza2 = c.get("/reports/collection-status", headers=T).json()
             R.ok("el estatus de cobranza ahora tiene 4 al corriente y 1 moroso (Casa 5)", cobranza2["al_corriente"] == 4 and cobranza2["morosas"] == 1)
+        except Exception as exc:  # noqa: BLE001
+            R.excepcion(exc)
+
+        # ------------------------------------------------------------------ 13
+        R.titulo("13. Casa 5 no puede pagar todo a tiempo: acuerdo de pago en 3 mensualidades")
+        try:
+            deuda5 = c.get(f"/properties/{propiedad[5]}/statement", headers=RES[5]).json()["deuda_total"]
+            primer_pago = hoy + timedelta(days=30)
+            causa = "Perdí mi empleo en el último mes y regularizo mis ingresos."
+            solicitar = lambda n, **cuerpo: c.post("/payment-agreements", headers=RES[n], json=cuerpo)  # noqa: E731
+
+            R.ok("Casa 1, que no debe nada, no tiene qué prorrogar (409)",
+                 solicitar(1, causa=causa, numero_de_pagos=2, primer_pago=primer_pago.isoformat()).status_code == 409)
+            R.ok("una causa de menos de 20 caracteres se rechaza",
+                 solicitar(5, causa="No puedo", numero_de_pagos=3, primer_pago=primer_pago.isoformat()).status_code == 422)
+            R.ok("un primer pago que ya pasó se rechaza",
+                 solicitar(5, causa=causa, numero_de_pagos=3, primer_pago=hoy.isoformat()).status_code == 422)
+            R.ok("6 pagos desde dentro de un mes rebasan el plazo máximo de 3 meses",
+                 solicitar(5, causa=causa, numero_de_pagos=6, primer_pago=primer_pago.isoformat()).status_code == 422)
+
+            nueva = solicitar(5, causa=causa, numero_de_pagos=3, primer_pago=primer_pago.isoformat())
+            R.ok("Casa 5 solicita 3 pagos y queda 'solicitado'", nueva.status_code == 201 and nueva.json()["estado"] == "solicitado", nueva.text[:150])
+            aid5 = nueva.json()["id"]
+            R.ok("no puede tener dos acuerdos abiertos a la vez",
+                 solicitar(5, causa=causa, numero_de_pagos=2, primer_pago=primer_pago.isoformat()).status_code == 409)
+
+            pid5 = c.post("/polls", headers=V, json={"pregunta": "¿Ponemos cámaras en el acceso?", "opciones": ["Sí", "No"],
+                                                     "fecha_cierre": (hoy + timedelta(days=30)).isoformat()}).json()
+            e5 = c.get(f"/properties/{propiedad[5]}/statement", headers=RES[5]).json()
+            R.ok("una solicitud pendiente NO suspende nada: sigue en mora y sin voto",
+                 e5["en_mora"] is True and e5["en_acuerdo"] is False
+                 and c.post(f"/polls/{pid5['id']}/vote", headers=RES[5], json={"option_id": pid5["opciones"][0]["id"]}).status_code == 403)
+            R.ok("Casa 4 no ve la solicitud de Casa 5", c.get("/payment-agreements", headers=RES[4]).json() == [])
+            R.ok("el comité de solo lectura la ve pero no la decide",
+                 [a["vivienda"] for a in c.get("/payment-agreements", headers=CL).json()] == ["Casa 5"]
+                 and c.post(f"/payment-agreements/{aid5}/approve", headers=CL, json={}).status_code == 403)
+            R.ok("un residente no puede aprobar su propia solicitud",
+                 c.post(f"/payment-agreements/{aid5}/approve", headers=RES[5], json={}).status_code == 403)
+
+            aprobado = c.post(f"/payment-agreements/{aid5}/approve", headers=CA, json={"congela_recargo": True})
+            ac = aprobado.json()
+            R.ok("el comité aprobador lo aprueba: queda vigente con su calendario de 3 pagos que suman la deuda",
+                 aprobado.status_code == 200 and ac["estado"] == "vigente" and len(ac["calendario"]) == 3
+                 and abs(sum(x["monto"] for x in ac["calendario"]) - deuda5) < 0.01 and abs(ac["deuda_inicial"] - deuda5) < 0.01,
+                 f"{aprobado.status_code} {aprobado.text[:200]}")
+            R.ok("el primer pago es el que pidió Casa 5 y el recargo queda congelado",
+                 ac["calendario"][0]["fecha"] == primer_pago.isoformat() and ac["congela_recargo"] is True)
+
+            e5 = c.get(f"/properties/{propiedad[5]}/statement", headers=RES[5]).json()
+            R.ok("con el acuerdo vigente Casa 5 deja de estar en mora, aunque sigue debiendo",
+                 e5["en_mora"] is False and e5["en_acuerdo"] is True and e5["restricciones_por_mora"] == [] and abs(e5["deuda_total"] - deuda5) < 0.01,
+                 str({k: e5[k] for k in ("en_mora", "en_acuerdo", "deuda_total")}))
+            R.ok("y recupera el voto", c.post(f"/polls/{pid5['id']}/vote", headers=RES[5], json={"option_id": pid5["opciones"][0]["id"]}).status_code == 204)
+            reserva5 = c.post("/reservations", headers=RES[5], json={"amenity_id": area["id"], "fecha_inicio": _utc(hoy + timedelta(days=20), 15),
+                                                                     "fecha_fin": _utc(hoy + timedelta(days=21), 1)})
+            R.ok("y las áreas comunes", reserva5.status_code == 201, f"{reserva5.status_code} {reserva5.text[:120]}")
+            cobranza3 = c.get("/reports/collection-status", headers=T).json()
+            fila5 = next(v for v in cobranza3["viviendas"] if v["identificador"] == "Casa 5")
+            R.ok("tesorería ve a Casa 5 'con acuerdo', ya no como morosa",
+                 fila5["estatus"] == "con_acuerdo" and cobranza3["con_acuerdo"] == 1 and cobranza3["morosas"] == 0,
+                 str({k: cobranza3[k] for k in ("al_corriente", "con_acuerdo", "morosas")}))
+            R.ok("la constancia de no adeudo sigue negada mientras haya deuda",
+                 c.get(f"/reports/no-debt-certificate/{propiedad[5]}", headers=T).status_code == 409)
+            c.post("/fees/apply-late-surcharges", headers=A).raise_for_status()
+            R.ok("correr el recargo no le suma nada mientras el acuerdo esté vigente",
+                 abs(c.get(f"/properties/{propiedad[5]}/statement", headers=RES[5]).json()["deuda_total"] - deuda5) < 0.01)
+
+            pago1 = ac["calendario"][0]["monto"]
+            _spei(c, clabe=clabe, monto=pago1, referencia=casas[5]["referencia_pago"], clave=f"REC-{sufijo}-A1")
+            va = next(a for a in c.get("/payment-agreements", headers=RES[5]).json() if a["id"] == aid5)
+            R.ok("Casa 5 hace su primer pago: el acuerdo lo cuenta y el siguiente es el 2º del calendario",
+                 va["estado"] == "vigente" and abs(va["abonado"] - pago1) < 0.01 and va["proximo_pago"]["fecha"] == ac["calendario"][1]["fecha"],
+                 str({k: va[k] for k in ("estado", "abonado", "proximo_pago")}))
+            R.ok("sigue sin estar en mora", c.get(f"/properties/{propiedad[5]}/statement", headers=RES[5]).json()["en_mora"] is False)
+
+            _spei(c, clabe=clabe, monto=va["pendiente_cubierto"], referencia=casas[5]["referencia_pago"], clave=f"REC-{sufijo}-A2")
+            c.post("/payment-agreements/process", headers=A).raise_for_status()
+            va = next(a for a in c.get("/payment-agreements", headers=RES[5]).json() if a["id"] == aid5)
+            e5 = c.get(f"/properties/{propiedad[5]}/statement", headers=RES[5]).json()
+            R.ok("al liquidar lo acordado el seguimiento diario lo marca 'cumplido' y Casa 5 queda sin deuda",
+                 va["estado"] == "cumplido" and e5["deuda_total"] == 0.0 and e5["en_mora"] is False and e5["en_acuerdo"] is False,
+                 str({"estado": va["estado"], "deuda": e5["deuda_total"]}))
+            R.ok("con todo pagado, las 5 viviendas están al corriente",
+                 c.get("/reports/collection-status", headers=T).json()["al_corriente"] == 5)
         except Exception as exc:  # noqa: BLE001
             R.excepcion(exc)
 

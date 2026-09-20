@@ -2,6 +2,7 @@ import 'package:app_residente/screens/payment_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/clabe_service.dart';
 import 'package:app_residente/services/fee_service.dart';
+import 'package:app_residente/services/payment_agreement_service.dart';
 import 'package:app_residente/services/payment_proof_service.dart';
 import 'package:app_residente/services/property_service.dart';
 import 'package:app_residente/services/statement_service.dart';
@@ -27,11 +28,7 @@ const _pagoConfirmado =
 http.Response _cuotaMensualResponse({double monto = 800.0}) =>
     http.Response('[{"id": "f1", "monto": $monto, "periodicidad": "mensual", "activa_desde": "2026-01-01"}]', 200);
 
-Future<void> _pumpPayment(
-  WidgetTester tester,
-  http.Client client, {
-  double deudaTotal = 0.0,
-}) async {
+Future<void> _pumpPayment(WidgetTester tester, http.Client client, {double deudaTotal = 0.0}) async {
   await tester.pumpWidget(
     MaterialApp(
       home: PaymentScreen(
@@ -42,6 +39,7 @@ Future<void> _pumpPayment(
         feeService: FeeService(api: ApiClient(client: client)),
         clabeService: ClabeService(api: ApiClient(client: client)),
         proofService: PaymentProofService(api: ApiClient(client: client)),
+        agreementService: PaymentAgreementService(api: ApiClient(client: client)),
       ),
     ),
   );
@@ -105,7 +103,10 @@ void main() {
       if (path.endsWith('/clabe')) return http.Response(_fixtureClabe, 200);
       if (path == '/properties/p1') return http.Response(_fixturePropiedad, 200);
       if (path == '/fees') {
-        return http.Response('[{"id": "f1", "monto": 1500.0, "periodicidad": "bimestral", "activa_desde": "2026-01-01"}]', 200);
+        return http.Response(
+          '[{"id": "f1", "monto": 1500.0, "periodicidad": "bimestral", "activa_desde": "2026-01-01"}]',
+          200,
+        );
       }
       return http.Response('not found', 404);
     });
@@ -156,5 +157,25 @@ void main() {
 
     expect(find.text('Comprobantes de pago'), findsOneWidget);
     expect(find.text('Todavía no has enviado comprobantes.'), findsOneWidget);
+  });
+
+  testWidgets('ofrece el acuerdo de pago y abre su pantalla', (tester) async {
+    final mockClient = MockClient((request) async {
+      final path = request.url.path;
+      if (path.endsWith('/statement')) return _statementResponse();
+      if (path.endsWith('/clabe')) return http.Response(_fixtureClabe, 200);
+      if (path == '/properties/p1') return http.Response(_fixturePropiedad, 200);
+      if (path == '/fees') return _cuotaMensualResponse();
+      if (path == '/payment-agreements') return http.Response('[]', 200);
+      return http.Response('not found', 404);
+    });
+
+    await _pumpPayment(tester, mockClient);
+    await tester.ensureVisible(find.byKey(const Key('acuerdo_de_pago')));
+    await tester.tap(find.byKey(const Key('acuerdo_de_pago')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acuerdo de pago'), findsWidgets);
+    expect(find.text('¿No puedes pagar a tiempo?'), findsOneWidget);
   });
 }

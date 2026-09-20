@@ -6,6 +6,7 @@ import 'package:app_residente/services/clabe_service.dart';
 import 'package:app_residente/services/expense_service.dart';
 import 'package:app_residente/services/fee_service.dart';
 import 'package:app_residente/services/lost_found_service.dart';
+import 'package:app_residente/services/payment_agreement_service.dart';
 import 'package:app_residente/services/payment_proof_service.dart';
 import 'package:app_residente/services/poll_service.dart';
 import 'package:app_residente/services/property_service.dart';
@@ -19,7 +20,9 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets('navega entre Estado de cuenta, Pago, Historial, Gastos, Comunidad y CLABE sin perder cada pantalla', (tester) async {
+  testWidgets('navega entre Estado de cuenta, Pago, Historial, Gastos, Comunidad y CLABE sin perder cada pantalla', (
+    tester,
+  ) async {
     final mockClient = MockClient((request) async {
       final path = request.url.path;
       if (path.endsWith('/statement')) {
@@ -29,13 +32,22 @@ void main() {
         );
       }
       if (path.endsWith('/clabe')) {
-        return http.Response('{"id": "t1", "nombre": "Residencial Las Torres", "clabe_destino": "646180157012345678"}', 200);
+        return http.Response(
+          '{"id": "t1", "nombre": "Residencial Las Torres", "clabe_destino": "646180157012345678"}',
+          200,
+        );
       }
       if (path == '/properties/p1') {
-        return http.Response('{"id": "p1", "identificador": "Casa 1", "referencia_pago": "0012345", "saldo_a_favor": 0.0}', 200);
+        return http.Response(
+          '{"id": "p1", "identificador": "Casa 1", "referencia_pago": "0012345", "saldo_a_favor": 0.0}',
+          200,
+        );
       }
       if (path == '/fees') {
-        return http.Response('[{"id": "f1", "monto": 800.0, "periodicidad": "mensual", "activa_desde": "2026-01-01"}]', 200);
+        return http.Response(
+          '[{"id": "f1", "monto": 800.0, "periodicidad": "mensual", "activa_desde": "2026-01-01"}]',
+          200,
+        );
       }
       if (path == '/expenses') {
         return http.Response(
@@ -73,6 +85,7 @@ void main() {
           reservationService: ReservationService(api: ApiClient(client: mockClient)),
           visitService: VisitService(api: ApiClient(client: mockClient)),
           proofService: PaymentProofService(api: ApiClient(client: mockClient)),
+          agreementService: PaymentAgreementService(api: ApiClient(client: mockClient)),
           onLogout: () {},
         ),
       ),
@@ -117,12 +130,9 @@ void main() {
     final mockClient = MockClient((request) async {
       final path = request.url.path;
       if (path == '/polls') {
-        return http.Response(
-          '''[{"id": "v1", "pregunta": "¿Cambiamos el portón?", "fecha_cierre": "2099-01-01", "resultados_en_vivo": false,
+        return http.Response('''[{"id": "v1", "pregunta": "¿Cambiamos el portón?", "fecha_cierre": "2099-01-01", "resultados_en_vivo": false,
   "quorum_alcanzado": false, "reactivada": false, "opciones": [{"id": "o1", "texto": "Sí"}, {"id": "o2", "texto": "No"}],
-  "ya_voto": false, "voto_restringido_por_mora": false}]''',
-          200,
-        );
+  "ya_voto": false, "voto_restringido_por_mora": false}]''', 200);
       }
       if (path.endsWith('/statement')) {
         return http.Response(
@@ -152,6 +162,7 @@ void main() {
           reservationService: ReservationService(api: api),
           visitService: VisitService(api: api),
           proofService: PaymentProofService(api: api),
+          agreementService: PaymentAgreementService(api: api),
           onLogout: () {},
         ),
       ),
@@ -161,16 +172,15 @@ void main() {
     expect(find.descendant(of: find.byType(NavigationBar), matching: find.text('1')), findsOneWidget);
   });
 
-  testWidgets('la insignia de Comunidad suma las votaciones por votar y las respuestas nuevas a mis dudas', (tester) async {
+  testWidgets('la insignia de Comunidad suma las votaciones por votar y las respuestas nuevas a mis dudas', (
+    tester,
+  ) async {
     final mockClient = MockClient((request) async {
       final path = request.url.path;
       if (path == '/polls') {
-        return http.Response(
-          '''[{"id": "v1", "pregunta": "¿Cambiamos el portón?", "fecha_cierre": "2099-01-01", "resultados_en_vivo": false,
+        return http.Response('''[{"id": "v1", "pregunta": "¿Cambiamos el portón?", "fecha_cierre": "2099-01-01", "resultados_en_vivo": false,
   "quorum_alcanzado": false, "reactivada": false, "opciones": [{"id": "o1", "texto": "Sí"}, {"id": "o2", "texto": "No"}],
-  "ya_voto": false, "voto_restringido_por_mora": false}]''',
-          200,
-        );
+  "ya_voto": false, "voto_restringido_por_mora": false}]''', 200);
       }
       if (path == '/announcement-questions/mine') {
         return http.Response(
@@ -209,6 +219,7 @@ void main() {
           reservationService: ReservationService(api: api),
           visitService: VisitService(api: api),
           proofService: PaymentProofService(api: api),
+          agreementService: PaymentAgreementService(api: api),
           onLogout: () {},
         ),
       ),

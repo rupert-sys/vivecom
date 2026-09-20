@@ -139,4 +139,30 @@ void main() {
 
     expect(find.byKey(const Key('aviso_mora')), findsNothing);
   });
+
+  testWidgets('con un acuerdo de pago vigente lo dice y no hay aviso de mora', (tester) async {
+    final conAcuerdo = _fixtureEstadoDeCuenta.replaceFirst('"pagos"', '"en_mora": false, "en_acuerdo": true, "pagos"');
+    final service = StatementService(
+      api: ApiClient(client: MockClient((request) async => http.Response(conAcuerdo, 200))),
+    );
+
+    await pumpStatement(tester, service);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('aviso_acuerdo')), findsOneWidget);
+    expect(find.byKey(const Key('aviso_mora')), findsNothing);
+  });
+
+  testWidgets('el aviso de mora ofrece la salida del acuerdo de pago', (tester) async {
+    final enMora = _fixtureEstadoDeCuenta.replaceFirst(
+      '"pagos"',
+      '"en_mora": true, "restricciones_por_mora": ["No puedes votar."], "pagos"',
+    );
+    final service = StatementService(api: ApiClient(client: MockClient((request) async => http.Response(enMora, 200))));
+
+    await pumpStatement(tester, service);
+    await tester.pumpAndSettle();
+
+    expect(find.textContaining('acuerdo de pago en la pestaña Pago'), findsOneWidget);
+  });
 }

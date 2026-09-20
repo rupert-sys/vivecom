@@ -96,8 +96,14 @@ void main() {
 
     final reglas = find.byKey(const Key('reglas_amenidad'));
     expect(reglas, findsOneWidget);
-    expect(find.descendant(of: reglas, matching: find.text('• Solicítala con al menos 8 días de anticipación.')), findsOneWidget);
-    expect(find.descendant(of: reglas, matching: find.text('• Horario máximo de uso: hasta las 01:00.')), findsOneWidget);
+    expect(
+      find.descendant(of: reglas, matching: find.text('• Solicítala con al menos 8 días de anticipación.')),
+      findsOneWidget,
+    );
+    expect(
+      find.descendant(of: reglas, matching: find.text('• Horario máximo de uso: hasta las 01:00.')),
+      findsOneWidget,
+    );
     expect(find.descendant(of: reglas, matching: find.text('Reglamento Art. 2')), findsOneWidget);
   });
 
@@ -115,15 +121,12 @@ void main() {
   testWidgets('cada reservación con cuota dice si tesorería ya la recibió', (tester) async {
     final mockClient = MockClient((request) async {
       if (request.url.path == '/amenities') return http.Response(amenidadConReglas, 200);
-      return http.Response(
-        '''
+      return http.Response('''
 [{"id": "r1", "amenity_id": "a1", "property_id": "p1", "fecha_inicio": "2026-10-01T10:00:00",
   "fecha_fin": "2026-10-01T12:00:00", "estado": "aprobada", "aprobador_id": null, "cuota": 1000.0, "cuota_pagada": false},
  {"id": "r2", "amenity_id": "a1", "property_id": "p1", "fecha_inicio": "2026-11-01T10:00:00",
   "fecha_fin": "2026-11-01T12:00:00", "estado": "aprobada", "aprobador_id": null, "cuota": 1000.0, "cuota_pagada": true}]
-''',
-        200,
-      );
+''', 200);
     });
 
     await pumpReservaciones(tester, mockClient);
@@ -169,7 +172,10 @@ void main() {
     expect(fechaConsultada, isNotNull);
     final bloque = find.byKey(const Key('disponibilidad_dia'));
     expect(bloque, findsOneWidget);
-    expect(find.descendant(of: bloque, matching: find.textContaining('0 de 1 lugar libre todo el día')), findsOneWidget);
+    expect(
+      find.descendant(of: bloque, matching: find.textContaining('0 de 1 lugar libre todo el día')),
+      findsOneWidget,
+    );
     expect(find.descendant(of: bloque, matching: find.text('Ya reservado:')), findsOneWidget);
   });
 

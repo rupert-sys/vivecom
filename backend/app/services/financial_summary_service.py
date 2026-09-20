@@ -15,7 +15,9 @@ from app.models.payment import EstadoPago, Payment
 from app.models.property import Property
 from app.schemas.expense import FinancialSummary, TotalPorConcepto
 from app.schemas.reports import EstatusCobranza, EstatusVivienda
-from app.services.reglamento_service import TZ_CONDOMINIO, esta_en_mora, get_reglamento, hoy_local
+from app.services.reglamento_service import (
+    TZ_CONDOMINIO, acuerdos_vigentes, cargos_cubiertos, esta_en_mora, get_reglamento, hoy_local,
+)
 
 
 def _a_utc_ingenuo(dia: date, fin_de_dia: bool = False) -> datetime:
@@ -82,6 +84,10 @@ async def get_collection_status(db: AsyncSession, periodo: date) -> EstatusCobra
     reglamento = await get_reglamento(db)
     periodo = periodo.replace(day=1)
 
+    vigentes = await acuerdos_vigentes(db)
+    cubiertos = cargos_cubiertos(vigentes)
+    con_acuerdo = {a.property_id for a in vigentes}
+
     viviendas = (await db.execute(select(Property).order_by(Property.identificador))).scalars().all()
     cargos = (await db.execute(select(FeeCharge))).scalars().all()
     por_vivienda: dict = {}
@@ -92,11 +98,14 @@ async def get_collection_status(db: AsyncSession, periodo: date) -> EstatusCobra
     for vivienda in viviendas:
         propios = por_vivienda.get(vivienda.id, [])
         sin_pagar = [c for c in propios if c.estado != EstadoCargo.pagado]
-        vencidos = [c for c in sin_pagar if esta_en_mora(c, hoy, reglamento.dia_recargo)]
+        # Lo que cubre un acuerdo de pago vigente no cuenta como mora mientras se cumpla.
+        vencidos = [c for c in sin_pagar if str(c.id) not in cubiertos and esta_en_mora(c, hoy, reglamento.dia_recargo)]
         del_periodo = [c for c in propios if c.periodo == periodo]
 
         if vencidos:
             estatus = "moroso"
+        elif vivienda.id in con_acuerdo:
+            estatus = "con_acuerdo"
         elif sin_pagar:
             estatus = "pendiente"
         else:
@@ -112,7 +121,7 @@ async def get_collection_status(db: AsyncSession, periodo: date) -> EstatusCobra
             )
         )
 
-    orden = {"moroso": 0, "pendiente": 1, "al_corriente": 2}
+    orden = {"moroso": 0, "con_acuerdo": 1, "pendiente": 2, "al_corriente": 3}
     filas.sort(key=lambda f: (orden[f.estatus], f.identificador))
     return EstatusCobranza(
         periodo=periodo,
@@ -120,6 +129,7 @@ async def get_collection_status(db: AsyncSession, periodo: date) -> EstatusCobra
         al_corriente=sum(f.estatus == "al_corriente" for f in filas),
         pendientes=sum(f.estatus == "pendiente" for f in filas),
         morosas=sum(f.estatus == "moroso" for f in filas),
+        con_acuerdo=sum(f.estatus == "con_acuerdo" for f in filas),
         adeudo_total=round(sum(f.adeudo_total for f in filas), 2),
         viviendas=filas,
     )

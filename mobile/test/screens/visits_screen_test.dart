@@ -15,7 +15,12 @@ void main() {
   Future<void> pumpVisitas(WidgetTester tester, http.Client client) async {
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(body: VisitsScreen(token: 'un-token', visitService: VisitService(api: ApiClient(client: client)))),
+        home: Scaffold(
+          body: VisitsScreen(
+            token: 'un-token',
+            visitService: VisitService(api: ApiClient(client: client)),
+          ),
+        ),
       ),
     );
     await tester.pumpAndSettle();

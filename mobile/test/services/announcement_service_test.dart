@@ -46,9 +46,6 @@ void main() {
     });
     final service = AnnouncementService(api: ApiClient(client: mockClient));
 
-    expect(
-      () => service.marcarLeido('a1', 'un-token'),
-      throwsA(isA<ApiException>()),
-    );
+    expect(() => service.marcarLeido('a1', 'un-token'), throwsA(isA<ApiException>()));
   });
 }

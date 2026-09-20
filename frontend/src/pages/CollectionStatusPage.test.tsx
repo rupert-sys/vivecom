@@ -16,6 +16,7 @@ const estado: CollectionStatus = {
   al_corriente: 1,
   pendientes: 1,
   morosas: 1,
+  con_acuerdo: 0,
   adeudo_total: 1500,
   viviendas: [
     { property_id: 'p1', identificador: 'Casa 1', estatus: 'moroso', adeudo_total: 1500, cargos_vencidos: 2, periodo_pagado: false },
@@ -153,5 +154,26 @@ describe('CollectionStatusPage', () => {
     renderPage()
 
     expect(await screen.findByText('Error de servidor')).toBeInTheDocument()
+  })
+
+  it('las viviendas con un acuerdo de pago vigente tienen su propio estatus, tarjeta y filtro', async () => {
+    mockUser('tesorero')
+    vi.spyOn(reportsApi, 'getCollectionStatus').mockResolvedValue({
+      ...estado,
+      con_acuerdo: 1,
+      viviendas: [
+        estado.viviendas[0],
+        { property_id: 'p9', identificador: 'Casa 9', estatus: 'con_acuerdo', adeudo_total: 750, cargos_vencidos: 0, periodo_pagado: false },
+      ],
+    })
+    const user = userEvent.setup()
+
+    renderPage()
+
+    expect(await screen.findByText('Con acuerdo de pago')).toBeInTheDocument()
+    expect((await screen.findByText('Casa 9')).closest('tr')).toHaveTextContent('Con acuerdo')
+    await user.click(screen.getByRole('button', { name: 'Con acuerdo' }))
+    expect(screen.getByText('Casa 9')).toBeInTheDocument()
+    expect(screen.queryByText('Casa 1')).not.toBeInTheDocument()
   })
 })

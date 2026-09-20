@@ -13,6 +13,12 @@ celery_app.conf.beat_schedule = {
         # correrlo de más no duplica nada — solo importa que corra el día 1.
         "schedule": crontab(hour=1, minute=0),
     },
+    "seguimiento-de-acuerdos-de-pago": {
+        "task": "app.workers.tasks.process_payment_agreements_task",
+        # A las 00:00, un minuto ANTES del recargo: un acuerdo que se incumplió ayer debe dejar de congelar su
+        # recargo justo antes de que corra el recálculo de las 00:01.
+        "schedule": crontab(hour=0, minute=0),
+    },
     "aplicar-recargos-por-mora": {
         "task": "app.workers.tasks.apply_late_surcharges_task",
         # Corre diario justo después de medianoche, para capturar el "minuto

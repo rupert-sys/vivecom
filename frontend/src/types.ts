@@ -40,9 +40,10 @@ export interface Reglamento {
   cajones_visitas: number
   horas_max_estacionamiento_visitas: number
   dudas_en_avisos_por_defecto: boolean
+  prorroga_max_meses: number
 }
 
-export type EstatusCobranza = 'al_corriente' | 'pendiente' | 'moroso'
+export type EstatusCobranza = 'al_corriente' | 'pendiente' | 'con_acuerdo' | 'moroso'
 
 export interface EstatusVivienda {
   property_id: string
@@ -59,6 +60,7 @@ export interface CollectionStatus {
   al_corriente: number
   pendientes: number
   morosas: number
+  con_acuerdo: number // deben, pero tienen un acuerdo de pago vigente (no cuentan como morosas)
   adeudo_total: number
   viviendas: EstatusVivienda[]
 }
@@ -69,6 +71,7 @@ export interface AccountStatement {
   saldo_a_favor: number
   deuda_total: number
   en_mora: boolean
+  en_acuerdo: boolean // tiene un acuerdo de pago vigente
   restricciones_por_mora: string[]
 }
 
@@ -294,4 +297,35 @@ export interface ReadStatusEntry {
   identificador: string
   leido: boolean
   leido_at: string | null
+}
+
+export type EstadoAcuerdo = 'solicitado' | 'vigente' | 'rechazado' | 'cumplido' | 'incumplido' | 'cancelado'
+
+export interface ScheduledPayment {
+  fecha: string
+  monto: number
+}
+
+// Acuerdo de pago (prórroga de cuotas, Art. 1 VIII y 9 VII): el residente solicita por escrito, el comité decide.
+export interface PaymentAgreement {
+  id: string
+  property_id: string
+  vivienda: string | null
+  estado: EstadoAcuerdo
+  causa: string
+  propuesta_pagos: number
+  propuesta_primer_pago: string
+  capturado_por_admin: boolean
+  created_at: string
+  decidido_en: string | null
+  motivo_rechazo: string | null
+  archivo_url: string | null // enlace firmado al documento de respaldo
+  vigente_desde: string | null
+  calendario: ScheduledPayment[] | null
+  congela_recargo: boolean | null
+  deuda_inicial: number | null
+  abonado: number | null
+  pendiente_cubierto: number | null
+  proximo_pago: ScheduledPayment | null
+  incumplimientos_previos: number
 }

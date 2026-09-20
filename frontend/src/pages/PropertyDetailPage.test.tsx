@@ -26,6 +26,7 @@ const reglamento: Reglamento = {
   cajones_visitas: 7,
   horas_max_estacionamiento_visitas: 24,
   dudas_en_avisos_por_defecto: false,
+  prorroga_max_meses: 3,
 }
 
 const cuenta: AccountStatement = {
@@ -34,6 +35,7 @@ const cuenta: AccountStatement = {
   saldo_a_favor: 50,
   deuda_total: 1500,
   en_mora: true,
+  en_acuerdo: false,
   restricciones_por_mora: ['No puedes votar en las votaciones.', 'No puedes reservar áreas comunes.'],
 }
 
@@ -191,5 +193,16 @@ describe('PropertyDetailPage', () => {
 
     expect(await screen.findByText(/Ana Pérez/)).toBeInTheDocument()
     expect(screen.queryByText('Estado de cuenta')).not.toBeInTheDocument()
+  })
+
+  it('una vivienda con acuerdo de pago vigente lo dice y ya no se marca en mora', async () => {
+    mockUser('tesorero')
+    vi.spyOn(propertiesApi, 'listPropertyResidents').mockResolvedValue([])
+    vi.spyOn(paymentsApi, 'getAccountStatement').mockResolvedValue({ ...cuenta, en_mora: false, en_acuerdo: true, restricciones_por_mora: [] })
+
+    renderPage()
+
+    expect(await screen.findByText(/con un acuerdo de pago vigente/i)).toBeInTheDocument()
+    expect(screen.queryByText(/vivienda en mora/i)).not.toBeInTheDocument()
   })
 })
