@@ -1,6 +1,9 @@
 import 'package:app_residente/screens/statement_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/statement_service.dart';
+import 'package:app_residente/widgets/anadir_a_inicio.dart';
+import 'package:app_residente/widgets/descarga_apk.dart';
+import 'package:app_residente/widgets/instalar_app.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
@@ -165,4 +168,46 @@ void main() {
 
     expect(find.textContaining('acuerdo de pago en la pestaña Pago'), findsOneWidget);
   });
+
+  testWidgets('en la web ofrece instalar la app dentro del estado de cuenta (la sesión guardada no vuelve al login)', (
+    tester,
+  ) async {
+    Uri? abierta;
+    final service = StatementService(
+      api: ApiClient(client: MockClient((request) async => http.Response(_fixtureEstadoDeCuenta, 200))),
+    );
+    await tester.pumpWidget(
+      MaterialApp(
+        home: StatementScreen(
+          propertyId: 'p1',
+          token: 'un-token',
+          statementService: service,
+          onLogout: () {},
+          instalarApp: InstalarApp(
+            apk: DescargarApk(visible: true, abrir: (url) async => abierta = url),
+            atajo: const AnadirAPantallaDeInicio(visible: false),
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('¿Usas Android?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('descargar_apk')));
+    expect(abierta!.path, '/vivecom-android.apk');
+  });
+
+  testWidgets(
+    'sin forzarlo (app nativa, iPhone ya instalada, computadora) el estado de cuenta no muestra nada de instalación',
+    (tester) async {
+      final service = StatementService(
+        api: ApiClient(client: MockClient((request) async => http.Response(_fixtureEstadoDeCuenta, 200))),
+      );
+      await pumpStatement(tester, service);
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('tarjeta_apk')), findsNothing);
+      expect(find.byKey(const Key('tarjeta_atajo')), findsNothing);
+    },
+  );
 }

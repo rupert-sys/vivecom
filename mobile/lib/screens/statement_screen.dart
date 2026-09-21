@@ -5,12 +5,16 @@ import '../services/api_client.dart';
 import '../services/statement_service.dart';
 import '../utils/dates.dart';
 import '../utils/labels.dart';
+import '../widgets/instalar_app.dart';
 
 class StatementScreen extends StatefulWidget {
   final String propertyId;
   final String token;
   final StatementService statementService;
   final VoidCallback onLogout;
+  // Bajar el APK (Android) o añadir la app a la pantalla de inicio (iPhone): solo en la versión web. Va aquí y no solo
+  // en el inicio de sesión porque la sesión se guarda: quien ya entró no vuelve a ver esa pantalla.
+  final Widget instalarApp;
 
   const StatementScreen({
     super.key,
@@ -18,6 +22,7 @@ class StatementScreen extends StatefulWidget {
     required this.token,
     required this.statementService,
     required this.onLogout,
+    this.instalarApp = const InstalarApp(),
   });
 
   @override
@@ -59,9 +64,7 @@ class _StatementScreenState extends State<StatementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Estado de cuenta'),
-        actions: [
-          IconButton(icon: const Icon(Icons.logout), tooltip: 'Cerrar sesión', onPressed: widget.onLogout),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.logout), tooltip: 'Cerrar sesión', onPressed: widget.onLogout)],
       ),
       body: RefreshIndicator(onRefresh: _cargar, child: _buildBody()),
     );
@@ -95,7 +98,9 @@ class _StatementScreenState extends State<StatementScreen> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             const Text('Tu vivienda tiene cuotas vencidas', style: TextStyle(fontWeight: FontWeight.bold)),
-            ...estado.restriccionesPorMora.map((r) => Padding(padding: const EdgeInsets.only(top: 4), child: Text('• $r'))),
+            ...estado.restriccionesPorMora.map(
+              (r) => Padding(padding: const EdgeInsets.only(top: 4), child: Text('• $r')),
+            ),
             const SizedBox(height: 4),
             const Text('Se levantan en cuanto te pongas al corriente.'),
             const Text('Si tienes una causa justificada, puedes pedir un acuerdo de pago en la pestaña Pago.'),
@@ -127,6 +132,7 @@ class _StatementScreenState extends State<StatementScreen> {
       children: [
         Text(estado.identificador, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
+        widget.instalarApp,
         if (estado.enMora) ...[_buildAvisoDeMora(estado), const SizedBox(height: 16)],
         if (estado.enAcuerdo) ...[_buildAvisoDeAcuerdo(), const SizedBox(height: 16)],
         Card(
@@ -166,5 +172,4 @@ class _StatementScreenState extends State<StatementScreen> {
       ],
     );
   }
-
 }
