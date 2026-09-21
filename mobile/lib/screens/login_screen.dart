@@ -2,12 +2,20 @@ import 'package:flutter/material.dart';
 
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../widgets/instalar_app.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
   final VoidCallback onLoginSuccess;
+  // Bajar el APK (Android) o añadir la app a la pantalla de inicio (iPhone): solo aparece en la versión web.
+  final Widget instalarApp;
 
-  const LoginScreen({super.key, required this.authService, required this.onLoginSuccess});
+  const LoginScreen({
+    super.key,
+    required this.authService,
+    required this.onLoginSuccess,
+    this.instalarApp = const InstalarApp(),
+  });
 
   @override
   State<LoginScreen> createState() => _LoginScreenState();
@@ -48,37 +56,42 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Vivecom')),
       body: Center(
-        child: ConstrainedBox(
-          constraints: const BoxConstraints(maxWidth: 360),
-          child: Padding(
-            padding: const EdgeInsets.all(24),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                if (_error != null)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 16),
-                    child: Text(_error!, style: const TextStyle(color: Colors.red)),
+        child: SingleChildScrollView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 360),
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  if (_error != null)
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: Text(_error!, style: const TextStyle(color: Colors.red)),
+                    ),
+                  TextField(
+                    key: const Key('email_field'),
+                    controller: _emailController,
+                    decoration: const InputDecoration(labelText: 'Email'),
+                    keyboardType: TextInputType.emailAddress,
                   ),
-                TextField(
-                  key: const Key('email_field'),
-                  controller: _emailController,
-                  decoration: const InputDecoration(labelText: 'Email'),
-                  keyboardType: TextInputType.emailAddress,
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  key: const Key('password_field'),
-                  controller: _passwordController,
-                  decoration: const InputDecoration(labelText: 'Contraseña'),
-                  obscureText: true,
-                ),
-                const SizedBox(height: 24),
-                _cargando
-                    ? const Center(child: CircularProgressIndicator())
-                    : ElevatedButton(onPressed: _iniciarSesion, child: const Text('Entrar')),
-              ],
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('password_field'),
+                    controller: _passwordController,
+                    decoration: const InputDecoration(labelText: 'Contraseña'),
+                    obscureText: true,
+                  ),
+                  const SizedBox(height: 24),
+                  _cargando
+                      ? const Center(child: CircularProgressIndicator())
+                      : ElevatedButton(onPressed: _iniciarSesion, child: const Text('Entrar')),
+                  const SizedBox(height: 24),
+                  widget.instalarApp,
+                ],
+              ),
             ),
           ),
         ),

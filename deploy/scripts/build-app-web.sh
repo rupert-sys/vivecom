@@ -6,7 +6,8 @@ set -eu
 cd "$(dirname "$0")/.."
 DOMAIN="${1:-$(grep '^DOMAIN=' .env | cut -d= -f2)}"
 [ -n "$DOMAIN" ] || { echo "Indica el dominio: ./scripts/build-app-web.sh mi-dominio.mx" >&2; exit 1; }
-(cd ../mobile && flutter build web --release --dart-define=API_BASE_URL="https://api.${DOMAIN}")
+# --pwa-strategy=none: sin el service worker de Flutter, que deja en cada teléfono una copia vieja hasta la visita siguiente.
+(cd ../mobile && flutter build web --release --pwa-strategy=none --dart-define=API_BASE_URL="https://api.${DOMAIN}")
 # Conserva el APK de Android (build-apk.sh) si ya existe: recompilar la web no debe borrarlo.
 [ -f app-dist/vivecom-android.apk ] && cp app-dist/vivecom-android.apk /tmp/vivecom-android.apk.keep || rm -f /tmp/vivecom-android.apk.keep
 rm -rf app-dist && mkdir -p app-dist

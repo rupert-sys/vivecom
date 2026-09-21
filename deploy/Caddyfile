@@ -12,7 +12,12 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 	}
+	# Los archivos de la app web (main.dart.js, flutter_bootstrap.js…) no llevan huella en el nombre: si Cloudflare o
+	# el navegador los guardan horas, tras publicar una versión nueva los usuarios siguen viendo la vieja.
+	# «no-cache» = guardar pero preguntar siempre al origen (ETag → 304, casi gratis).
 	@apk path *.apk
+	@resto not path *.apk
+	header @resto Cache-Control "no-cache"
 	header @apk Cache-Control "no-store"
 
 	@archivo path_regexp archivo \.[A-Za-z0-9]{1,8}$
