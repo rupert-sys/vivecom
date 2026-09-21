@@ -1,0 +1,26 @@
+# Sirve el panel (React) y la app web de residentes (Flutter) dentro de la red de Docker; el HTTPS lo pone
+# Cloudflare Tunnel. Cada sitio se distingue por su nombre de host. Ambos son SPA: cualquier ruta cae en index.html.
+{
+	auto_https off
+}
+
+(spa) {
+	encode gzip
+	try_files {path} /index.html
+	file_server
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+}
+
+http://app.{$DOMAIN} {
+	root * /srv/app
+	import spa
+}
+
+# panel.<dominio>, y cualquier otro host (p. ej. http://127.0.0.1:8081 al probar sin el túnel)
+:80 {
+	root * /srv/panel
+	import spa
+}

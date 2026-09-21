@@ -226,3 +226,16 @@ def test_en_produccion_el_disco_local_no_se_acepta(monkeypatch):
     monkeypatch.setattr(settings, "storage_s3_bucket", "")
     with pytest.raises(RuntimeError, match="STORAGE_S3_BUCKET"):
         file_storage.get_storage()
+
+
+def test_en_produccion_el_disco_local_solo_se_acepta_con_el_permiso_explicito(monkeypatch, tmp_path):
+    """Un despliegue en una sola máquina, con volumen persistente y respaldado, puede optar por el disco local."""
+    file_storage.set_storage(None)
+    monkeypatch.setattr(settings, "environment", "production")
+    monkeypatch.setattr(settings, "storage_backend", "local")
+    monkeypatch.setattr(settings, "storage_local_dir", str(tmp_path))
+    monkeypatch.setattr(settings, "storage_local_in_production", True)
+    try:
+        assert isinstance(file_storage.get_storage(), file_storage.LocalFileStorage)
+    finally:
+        file_storage.set_storage(None)

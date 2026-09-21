@@ -31,3 +31,9 @@ node_modules/
 
 # Archivos subidos en desarrollo (comprobantes) — STORAGE_BACKEND=local
 backend/storage/
+
+# Despliegue: respaldos, panel compilado y secretos locales
+deploy/backups/
+deploy/panel-dist/
+deploy/app-dist/
+deploy/.env

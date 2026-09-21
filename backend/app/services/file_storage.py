@@ -88,9 +88,10 @@ def get_storage() -> FileStorage:
                 raise RuntimeError("STORAGE_BACKEND=s3 requiere STORAGE_S3_BUCKET")
             _storage = S3FileStorage(settings.storage_s3_bucket, region=settings.storage_s3_region)
         else:
-            if settings.environment == "production":
+            if settings.environment == "production" and not settings.storage_local_in_production:
                 # Fail-closed, mismo criterio que el secreto del webhook SPEI (F2-21): en un
                 # contenedor el disco se borra al redesplegar y se perderían los comprobantes.
+                # Excepción explícita: STORAGE_LOCAL_IN_PRODUCTION=true (volumen persistente y respaldado).
                 raise RuntimeError("En producción los archivos deben ir a S3 (STORAGE_BACKEND=s3), no a disco local")
             _storage = LocalFileStorage(settings.storage_local_dir)
     return _storage

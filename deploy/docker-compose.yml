@@ -1,0 +1,98 @@
+# Vivecom — despliegue en una sola máquina (Mac de muestra, luego una PC dedicada, o un VPS).
+# Todo lo que hay que mover de una máquina a otra vive en estos volúmenes: `pgdata` (base de datos) y
+# `uploads` (comprobantes y fotos), más el archivo .env. Ver README.md, «Trasladar a la PC dedicada».
+#
+#   cp .env.example .env    # y llenarlo
+#   docker compose up -d --build
+#
+# El acceso público lo da Cloudflare Tunnel (perfil «tunnel»): no se abre ningún puerto en el router.
+
+x-backend: &backend
+  build: ../backend
+  restart: unless-stopped
+  env_file: .env
+  environment:
+    DATABASE_URL: postgresql+asyncpg://vivecom:${POSTGRES_PASSWORD}@db:5432/vivecom
+    REDIS_URL: redis://redis:6379/0
+    ENVIRONMENT: production
+    STORAGE_BACKEND: local
+    STORAGE_LOCAL_DIR: /data/uploads
+    # Un solo equipo con volumen persistente que backup.sh respalda: se acepta el disco local en producción.
+    STORAGE_LOCAL_IN_PRODUCTION: "true"
+    PUBLIC_BASE_URL: https://api.${DOMAIN}
+    CORS_ORIGINS: https://panel.${DOMAIN},https://app.${DOMAIN}
+  volumes:
+    - uploads:/data/uploads
+  depends_on:
+    db:
+      condition: service_healthy
+    redis:
+      condition: service_started
+
+services:
+  db:
+    image: postgres:16
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: vivecom
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: vivecom
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U vivecom -d vivecom"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redisdata:/data
+
+  backend:
+    <<: *backend
+    # Solo en localhost: para probar sin el túnel (curl http://127.0.0.1:8010/docs).
+    ports:
+      - "127.0.0.1:8010:8000"
+
+  # Los jobs diarios (cargos, recargos a las 00:01, seguimiento de acuerdos a las 00:00, recordatorios) los
+  # ejecuta este worker; el planificador (beat) solo los dispara. Sin los dos corriendo, nada de eso ocurre.
+  worker:
+    <<: *backend
+    command: ["celery", "-A", "app.workers.tasks", "worker", "--loglevel=info", "--concurrency=2"]
+
+  beat:
+    <<: *backend
+    command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info", "--schedule=/tmp/celerybeat-schedule"]
+
+  # Panel de administración (panel.<dominio>, deploy/panel-dist) y app web de los residentes para iPhone
+  # (app.<dominio>, deploy/app-dist). Se compilan con scripts/build-panel.sh y scripts/build-app-web.sh.
+  panel:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./panel-dist:/srv/panel:ro
+      - ./app-dist:/srv/app:ro
+    ports:
+      - "127.0.0.1:8081:80"
+
+  # Perfil «tunnel»: publica api.<dominio> y panel.<dominio> con HTTPS. Las rutas se configuran en el panel de
+  # Cloudflare (Zero Trust → Tunnels): api → http://backend:8000, panel y app → http://panel:80 (el nombre de host los distingue).
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    restart: unless-stopped
+    profiles: ["tunnel"]
+    command: ["tunnel", "--no-autoupdate", "run"]
+    environment:
+      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+
+volumes:
+  pgdata:
+  redisdata:
+  uploads:

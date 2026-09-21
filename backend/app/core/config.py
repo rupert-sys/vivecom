@@ -39,6 +39,10 @@ class Settings(BaseSettings):
     # contenedor tiene disco efímero, lo que se guarde ahí se pierde al redesplegar.
     storage_backend: str = "local"  # local | s3
     storage_local_dir: str = "./storage"
+    # En producción el disco local se rechaza (fail-closed, ver file_storage.get_storage). Un despliegue en UNA
+    # máquina con el directorio en un volumen persistente que además se respalda (deploy/) puede aceptarlo de
+    # forma explícita con STORAGE_LOCAL_IN_PRODUCTION=true. En un contenedor sin volumen, NO.
+    storage_local_in_production: bool = False
     storage_s3_bucket: str = ""
     storage_s3_region: str = "us-east-1"
     max_upload_bytes: int = 10 * 1024 * 1024  # 10 MB por archivo
