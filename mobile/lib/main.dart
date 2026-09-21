@@ -17,6 +17,7 @@ import 'services/receipt_service.dart';
 import 'services/reservation_service.dart';
 import 'services/statement_service.dart';
 import 'services/visit_service.dart';
+import 'widgets/oculta_teclado.dart';
 
 void main() {
   runApp(const VivecomApp());
@@ -78,6 +79,7 @@ class _VivecomAppState extends State<VivecomApp> {
     return MaterialApp(
       title: 'Vivecom',
       theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2F6F63))),
+      builder: (context, child) => OcultaTecladoAlTocarFuera(child: child),
       home: _buildHome(),
     );
   }

@@ -4,4 +4,7 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- Solo en desarrollo: Android 9+ bloquea HTTP en claro, y el backend local corre en http://<IP de la Mac>:8000.
+         El manifiesto de release no lo trae: producción va por HTTPS. -->
+    <application android:usesCleartextTraffic="true"/>
 </manifest>

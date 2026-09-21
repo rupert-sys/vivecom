@@ -121,6 +121,7 @@ class _ExpensesScreenState extends State<ExpensesScreen> {
 
   Widget _buildBody() {
     return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(16),
       children: [
         _buildFiltros(),

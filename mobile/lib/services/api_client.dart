@@ -4,8 +4,10 @@ import 'dart:typed_data';
 import 'package:http/http.dart' as http;
 
 // iOS Simulator comparte la red del host, así que localhost apunta al
-// backend corriendo en la máquina de desarrollo (uvicorn en :8000).
-const String apiBaseUrl = 'http://localhost:8000';
+// backend corriendo en la máquina de desarrollo (uvicorn en :8000). En un iPhone
+// físico localhost es el propio teléfono: se lanza con la IP de la Mac,
+// `flutter run --dart-define=API_BASE_URL=http://192.168.1.90:8000`.
+const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
 
 class ApiException implements Exception {
   final String message;

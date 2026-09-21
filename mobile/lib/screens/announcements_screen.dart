@@ -128,6 +128,7 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     }
     if (_error != null && _avisos == null) {
       return ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: [
           Padding(
             padding: const EdgeInsets.all(24),
@@ -139,10 +140,12 @@ class _AnnouncementsScreenState extends State<AnnouncementsScreen> {
     final avisos = _avisos!;
     if (avisos.isEmpty) {
       return ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: const [Padding(padding: EdgeInsets.all(24), child: Text('Todavía no hay avisos.'))],
       );
     }
     return ListView.separated(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       itemCount: avisos.length,
       separatorBuilder: (_, _) => const Divider(height: 1),
       itemBuilder: (context, indice) => _buildAviso(avisos[indice]),

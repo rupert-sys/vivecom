@@ -1,10 +1,47 @@
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+
 import 'package:flutter/material.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:share_plus/share_plus.dart';
 
 import '../models/visit.dart';
 import '../services/api_client.dart';
 import '../services/visit_service.dart';
 import '../utils/dates.dart';
+
+// Manda el código a la visita: la imagen del QR (lo que escanea el guardia) y un texto con el código por si
+// no se puede escanear. Se inyecta para poder probar la pantalla sin abrir la hoja de compartir del sistema.
+typedef CompartirCodigo = Future<void> Function({
+  required String codigo,
+  required Uint8List imagen,
+  required String texto,
+});
+
+const _nombreImagenQr = 'codigo-de-visita.png';
+
+Future<void> compartirConLaHojaDelSistema({required String codigo, required Uint8List imagen, required String texto}) {
+  return SharePlus.instance.share(
+    ShareParams(
+      text: texto,
+      subject: 'Código de visita',
+      files: [XFile.fromData(imagen, mimeType: 'image/png', name: _nombreImagenQr)],
+      fileNameOverrides: [_nombreImagenQr],
+    ),
+  );
+}
+
+/// El QR como PNG con fondo blanco y margen (una visita lo abre en el chat, en modo oscuro también).
+Future<Uint8List> imagenDelQr(String codigo, {double lado = 720, double margen = 60}) async {
+  final grabador = ui.PictureRecorder();
+  final lienzo = Canvas(grabador);
+  lienzo.drawRect(Rect.fromLTWH(0, 0, lado, lado), Paint()..color = Colors.white);
+  lienzo.translate(margen, margen);
+  QrPainter(data: codigo, version: QrVersions.auto).paint(lienzo, Size(lado - 2 * margen, lado - 2 * margen));
+  final imagen = await grabador.endRecording().toImage(lado.toInt(), lado.toInt());
+  final bytes = await imagen.toByteData(format: ui.ImageByteFormat.png);
+  return bytes!.buffer.asUint8List();
+}
 
 // Visitas y paquetes de la vivienda: el residente genera el código (QR de un
 // solo uso) que le da a su visita para entrar sin que el guardia tenga que
@@ -12,8 +49,14 @@ import '../utils/dates.dart';
 class VisitsScreen extends StatefulWidget {
   final String token;
   final VisitService visitService;
+  final CompartirCodigo compartir;
 
-  const VisitsScreen({super.key, required this.token, required this.visitService});
+  const VisitsScreen({
+    super.key,
+    required this.token,
+    required this.visitService,
+    this.compartir = compartirConLaHojaDelSistema,
+  });
 
   @override
   State<VisitsScreen> createState() => _VisitsScreenState();
@@ -29,6 +72,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
   VisitorQr? _recienGenerado;
   bool _generando = false;
   String? _errorGenerar;
+  bool _compartiendo = false;
 
   @override
   void initState() {
@@ -53,7 +97,9 @@ class _VisitsScreenState extends State<VisitsScreen> {
         _errorCodigos = null;
       });
     } catch (err) {
-      if (mounted) setState(() => _errorCodigos = err is ApiException ? err.message : 'No se pudieron cargar tus códigos.');
+      if (mounted) {
+        setState(() => _errorCodigos = err is ApiException ? err.message : 'No se pudieron cargar tus códigos.');
+      }
     }
   }
 
@@ -66,7 +112,9 @@ class _VisitsScreenState extends State<VisitsScreen> {
         _errorPaquetes = null;
       });
     } catch (err) {
-      if (mounted) setState(() => _errorPaquetes = err is ApiException ? err.message : 'No se pudieron cargar tus paquetes.');
+      if (mounted) {
+        setState(() => _errorPaquetes = err is ApiException ? err.message : 'No se pudieron cargar tus paquetes.');
+      }
     }
   }
 
@@ -117,6 +165,26 @@ class _VisitsScreenState extends State<VisitsScreen> {
     );
   }
 
+  Future<void> _compartir(VisitorQr codigo) async {
+    setState(() => _compartiendo = true);
+    try {
+      final imagen = await imagenDelQr(codigo.codigo);
+      await widget.compartir(
+        codigo: codigo.codigo,
+        imagen: imagen,
+        texto:
+            'Código de visita (sirve una sola vez): ${codigo.codigo}\n'
+            'Enséñalo en la caseta al llegar: el guardia escanea el QR y te deja pasar.',
+      );
+    } catch (_) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('No se pudo compartir el código.')));
+      }
+    } finally {
+      if (mounted) setState(() => _compartiendo = false);
+    }
+  }
+
   Widget _buildGenerador() {
     final codigo = _recienGenerado;
     return Card(
@@ -143,14 +211,28 @@ class _VisitsScreenState extends State<VisitsScreen> {
               ),
               const SizedBox(height: 8),
               Center(child: SelectableText(codigo.codigo, key: const Key('codigo_generado'))),
+              const SizedBox(height: 8),
+              Center(
+                child: OutlinedButton.icon(
+                  key: const Key('compartir_codigo'),
+                  onPressed: _compartiendo ? null : () => _compartir(codigo),
+                  icon: const Icon(Icons.share),
+                  label: Text(_compartiendo ? 'Preparando…' : 'Compartir código'),
+                ),
+              ),
               const SizedBox(height: 12),
             ],
             if (_errorGenerar != null)
-              Padding(padding: const EdgeInsets.only(bottom: 8), child: Text(_errorGenerar!, style: const TextStyle(color: Colors.red))),
+              Padding(
+                padding: const EdgeInsets.only(bottom: 8),
+                child: Text(_errorGenerar!, style: const TextStyle(color: Colors.red)),
+              ),
             ElevatedButton.icon(
               onPressed: _generando ? null : _generar,
               icon: const Icon(Icons.qr_code),
-              label: Text(_generando ? 'Generando…' : (codigo == null ? 'Generar código de visita' : 'Generar otro código')),
+              label: Text(
+                _generando ? 'Generando…' : (codigo == null ? 'Generar código de visita' : 'Generar otro código'),
+              ),
             ),
           ],
         ),
@@ -189,7 +271,10 @@ class _VisitsScreenState extends State<VisitsScreen> {
         .map(
           (p) => ListTile(
             key: Key('paquete_${p.id}'),
-            leading: Icon(p.recogido ? Icons.inventory_2_outlined : Icons.inventory_2, color: p.recogido ? Colors.grey : Colors.orange),
+            leading: Icon(
+              p.recogido ? Icons.inventory_2_outlined : Icons.inventory_2,
+              color: p.recogido ? Colors.grey : Colors.orange,
+            ),
             title: Text(p.recogido ? 'Recogido' : 'Por recoger en la caseta'),
             subtitle: Text(
               p.recogido

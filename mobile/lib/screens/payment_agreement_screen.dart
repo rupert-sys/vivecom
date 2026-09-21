@@ -161,6 +161,7 @@ class _PaymentAgreementScreenState extends State<PaymentAgreementScreen> {
     if (_cargando && _acuerdos == null) return const Center(child: CircularProgressIndicator());
     if (_errorLista != null && _acuerdos == null) {
       return ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         children: [
           Padding(
             padding: const EdgeInsets.all(24),
@@ -173,6 +174,7 @@ class _PaymentAgreementScreenState extends State<PaymentAgreementScreen> {
     final abierto = acuerdos.where((a) => a.abierto).firstOrNull;
     final anteriores = acuerdos.where((a) => !a.abierto).toList();
     return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
       padding: const EdgeInsets.all(16),
       children: [
         if (abierto != null) _buildAbierto(abierto) else _buildFormulario(),

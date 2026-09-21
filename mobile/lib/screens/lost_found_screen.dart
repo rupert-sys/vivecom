@@ -86,6 +86,7 @@ class _LostFoundScreenState extends State<LostFoundScreen> {
     return RefreshIndicator(
       onRefresh: _cargar,
       child: ListView(
+        keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
         padding: const EdgeInsets.all(16),
         children: [
           _buildFormularioPublicar(),

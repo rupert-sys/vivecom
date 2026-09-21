@@ -1,3 +1,5 @@
+import 'dart:typed_data';
+
 import 'package:app_residente/screens/visits_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/visit_service.dart';
@@ -12,13 +14,14 @@ const _codigoLibre =
     '{"id": "q2", "property_id": "p1", "codigo": "libre-2", "usado": false, "fecha_generado": "2026-09-18T10:00:00", "fecha_usado": null}';
 
 void main() {
-  Future<void> pumpVisitas(WidgetTester tester, http.Client client) async {
+  Future<void> pumpVisitas(WidgetTester tester, http.Client client, {CompartirCodigo? compartir}) async {
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
           body: VisitsScreen(
             token: 'un-token',
             visitService: VisitService(api: ApiClient(client: client)),
+            compartir: compartir ?? ({required codigo, required imagen, required texto}) async {},
           ),
         ),
       ),
@@ -127,5 +130,80 @@ void main() {
 
     expect(find.text('Esta acción es solo para residentes'), findsOneWidget);
     expect(find.byKey(const Key('qr_generado')), findsNothing);
+  });
+
+  MockClient conUnCodigoLibre() => MockClient((request) async {
+    if (request.url.path != '/visitor-qr') return http.Response('[]', 200);
+    return request.method == 'POST' ? http.Response(_codigoLibre, 201) : http.Response('[$_codigoLibre]', 200);
+  });
+
+  testWidgets('sin un código a la vista no hay nada que compartir', (tester) async {
+    await pumpVisitas(tester, MockClient((request) async => http.Response('[]', 200)));
+
+    expect(find.byKey(const Key('compartir_codigo')), findsNothing);
+  });
+
+  testWidgets('compartir manda la imagen PNG del QR y un texto con el código', (tester) async {
+    String? codigoCompartido, textoCompartido;
+    Uint8List? imagenCompartida;
+    await pumpVisitas(
+      tester,
+      conUnCodigoLibre(),
+      compartir: ({required codigo, required imagen, required texto}) async {
+        codigoCompartido = codigo;
+        imagenCompartida = imagen;
+        textoCompartido = texto;
+      },
+    );
+
+    await tester.tap(find.text('Generar código de visita'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('compartir_codigo')));
+    await tester.tap(find.byKey(const Key('compartir_codigo')));
+    // El PNG se codifica con el motor de imágenes: necesita tiempo real, no el reloj falso de la prueba.
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+    await tester.pumpAndSettle();
+
+    expect(codigoCompartido, 'libre-2');
+    expect(textoCompartido, contains('libre-2'));
+    expect(textoCompartido, contains('una sola vez'));
+    expect(imagenCompartida!.sublist(0, 8), [0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A]); // firma PNG
+  });
+
+  testWidgets('un código de la lista, al abrirlo, también se puede compartir', (tester) async {
+    var compartido = false;
+    await pumpVisitas(
+      tester,
+      conUnCodigoLibre(),
+      compartir: ({required codigo, required imagen, required texto}) async => compartido = codigo == 'libre-2',
+    );
+
+    await tester.tap(find.byKey(const Key('codigo_q2')));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('compartir_codigo')));
+    await tester.tap(find.byKey(const Key('compartir_codigo')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+    await tester.pumpAndSettle();
+
+    expect(compartido, isTrue);
+  });
+
+  testWidgets('si compartir falla, avisa y la pantalla sigue funcionando', (tester) async {
+    await pumpVisitas(
+      tester,
+      conUnCodigoLibre(),
+      compartir: ({required codigo, required imagen, required texto}) async =>
+          throw Exception('sin app para compartir'),
+    );
+
+    await tester.tap(find.text('Generar código de visita'));
+    await tester.pumpAndSettle();
+    await tester.ensureVisible(find.byKey(const Key('compartir_codigo')));
+    await tester.tap(find.byKey(const Key('compartir_codigo')));
+    await tester.runAsync(() => Future<void>.delayed(const Duration(milliseconds: 500)));
+    await tester.pumpAndSettle();
+
+    expect(find.text('No se pudo compartir el código.'), findsOneWidget);
+    expect(find.text('Compartir código'), findsOneWidget); // el botón vuelve a estar disponible
   });
 }

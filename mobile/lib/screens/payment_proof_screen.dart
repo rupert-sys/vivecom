@@ -176,6 +176,7 @@ class _PaymentProofScreenState extends State<PaymentProofScreen> {
       body: RefreshIndicator(
         onRefresh: _cargar,
         child: ListView(
+          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
           padding: const EdgeInsets.all(16),
           children: [
             _buildFormulario(),

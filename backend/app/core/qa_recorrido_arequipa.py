@@ -13,7 +13,7 @@ schemas de Postgres reales. Corre por HTTP contra un backend levantado (uvicorn 
 
     python -m app.core.qa_recorrido_arequipa
 
-Cada corrida crea un condominio nuevo (sufijo aleatorio) y lo deja en la base de desarrollo.
+Cada corrida crea un condominio nuevo (sufijo aleatorio, o el de RECORRIDO_SUFIJO para tener un login conocido) y lo deja en la base de desarrollo.
 
 A diferencia de un guion con `assert`, NO se detiene en la primera falla: cada verificación imprime ✓ o ✗
 y al final hay un resumen, para ver de una vez todo lo que no cumple el reglamento. Sale con código 1 si
@@ -24,6 +24,7 @@ lleva vencida cada cuota), así que el guion sirve cualquier día del mes.
 import hashlib
 import hmac
 import json
+import os
 import secrets
 import sys
 import uuid
@@ -113,7 +114,7 @@ def _descargar(_client: httpx.Client, url: str) -> httpx.Response:
 
 def main() -> int:
     hoy = datetime.now(TZ).date()
-    sufijo = str(secrets.randbelow(900000) + 100000)
+    sufijo = os.environ.get("RECORRIDO_SUFIJO") or str(secrets.randbelow(900000) + 100000)  # fijo para tener un login conocido
     clabe = sufijo.rjust(18, "8")
     pw = "Recorrido12345"
     correo = lambda rol: f"{rol}{sufijo}@recorrido.mx"  # noqa: E731

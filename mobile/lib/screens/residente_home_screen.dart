@@ -153,7 +153,11 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
       body: IndexedStack(index: _indiceSeleccionado, children: pantallas),
       bottomNavigationBar: NavigationBar(
         selectedIndex: _indiceSeleccionado,
-        onDestinationSelected: (indice) => setState(() => _indiceSeleccionado = indice),
+        onDestinationSelected: (indice) {
+          // Las pantallas viven en un IndexedStack y conservan su foco: sin esto el teclado se queda al cambiar de pestaña.
+          FocusManager.instance.primaryFocus?.unfocus();
+          setState(() => _indiceSeleccionado = indice);
+        },
         destinations: [
           NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: 'Estado de cuenta'),
           NavigationDestination(icon: Icon(Icons.payments), label: 'Pago'),
