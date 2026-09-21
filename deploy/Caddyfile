@@ -12,14 +12,6 @@
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
 	}
-	# Los archivos de la app web (main.dart.js, flutter_bootstrap.js…) no llevan huella en el nombre: si Cloudflare o
-	# el navegador los guardan horas, tras publicar una versión nueva los usuarios siguen viendo la vieja.
-	# «no-cache» = guardar pero preguntar siempre al origen (ETag → 304, casi gratis).
-	@apk path *.apk
-	@resto not path *.apk
-	header @resto Cache-Control "no-cache"
-	header @apk Cache-Control "no-store"
-
 	@archivo path_regexp archivo \.[A-Za-z0-9]{1,8}$
 	handle @archivo {
 		file_server
@@ -30,13 +22,21 @@
 	}
 }
 
+# App web de residentes (Flutter): main.dart.js, flutter_bootstrap.js, los fonts y el manifiesto NO llevan huella en el
+# nombre, y Cloudflare reescribe a 4 horas el plazo de los .js/.json/.otf aunque el origen pida max-age=0 o no-cache
+# (solo respeta no-store). Sin esto, tras publicar una versión los usuarios siguen viendo la anterior hasta 4 horas.
+# Se exceptúa /canvaskit/ (el motor gráfico, varios MB, versionado con Flutter) para no descargarlo en cada visita.
 http://app.{$DOMAIN} {
 	root * /srv/app
+	@sin_cache not path /canvaskit/*
+	header @sin_cache Cache-Control "no-store"
 	import spa
 }
 
-# panel.<dominio>, y cualquier otro host (p. ej. http://127.0.0.1:8081 al probar sin el túnel)
+# panel.<dominio>, y cualquier otro host (p. ej. http://127.0.0.1:8081 al probar sin el túnel). Los .js del panel llevan
+# huella (assets/index-<huella>.js), así que su caché no estorba; index.html no lo cachea Cloudflare.
 :80 {
 	root * /srv/panel
+	header Cache-Control "no-cache"
 	import spa
 }
