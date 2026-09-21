@@ -6,8 +6,9 @@ import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StatCard } from '../components/StatCard'
 import type { Amenity, EstadoReserva, Property, Reservation } from '../types'
+import { rolesDe } from '../permisos'
 
-const ROLES_CON_ACCESO = new Set(['admin', 'tesorero', 'comite_aprobador'])
+const ROLES_CON_ACCESO = new Set<string>(rolesDe('/reservations'))
 const ROLES_QUE_RECIBEN_CUOTA = new Set(['admin', 'tesorero'])
 
 const ETIQUETA_ESTADO: Record<EstadoReserva, string> = {

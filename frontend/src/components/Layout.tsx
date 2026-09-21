@@ -1,8 +1,15 @@
-import { Link, Outlet } from 'react-router-dom'
+import { Link, Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { inicioDe, puedeVer, seccionesDe } from '../permisos'
 
 export function Layout() {
   const { user, logout } = useAuth()
+  const { pathname } = useLocation()
+  const secciones = seccionesDe(user?.rol)
+  const inicio = inicioDe(user?.rol)
+
+  // Una dirección escrita a mano (o un marcador viejo) de una sección que no es de su rol lo devuelve a su inicio.
+  if (user && inicio && !puedeVer(user.rol, pathname)) return <Navigate to={inicio} replace />
 
   return (
     <div>
@@ -18,27 +25,16 @@ export function Layout() {
       >
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-4)' }}>
           <h1 style={{ fontSize: '1.25rem' }}>
-            <Link to="/properties" style={{ textDecoration: 'none', color: 'var(--ink)' }}>
+            <Link to={inicio ?? '/'} style={{ textDecoration: 'none', color: 'var(--ink)' }}>
               Vivecom — Panel Admin
             </Link>
           </h1>
           <nav style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
-            <Link to="/properties">Viviendas</Link>
-            <Link to="/users">Usuarios</Link>
-            <Link to="/fees">Cuotas</Link>
-            <Link to="/collection">Cobranza</Link>
-            <Link to="/payment-proofs">Comprobantes</Link>
-            <Link to="/payment-agreements">Acuerdos</Link>
-            <Link to="/clabe">CLABE</Link>
-            <Link to="/dashboard">Dashboard</Link>
-            <Link to="/expenses">Gastos</Link>
-            <Link to="/reports/export">Exportar</Link>
-            <Link to="/amenities">Amenidades</Link>
-            <Link to="/reservations">Reservaciones</Link>
-            <Link to="/security">Seguridad</Link>
-            <Link to="/announcements">Avisos</Link>
-            <Link to="/announcement-questions">Dudas</Link>
-            <Link to="/reglamento">Reglamento</Link>
+            {secciones.map((seccion) => (
+              <Link key={seccion.ruta} to={seccion.ruta}>
+                {seccion.etiqueta}
+              </Link>
+            ))}
           </nav>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-3)' }}>
@@ -47,7 +43,13 @@ export function Layout() {
         </div>
       </header>
       <main style={{ padding: 'var(--space-4)', maxWidth: 960, margin: '0 auto' }}>
-        <Outlet />
+        {secciones.length === 0 ? (
+          <p>
+            Tu cuenta ({user?.rol}) no tiene secciones en el panel de administración. Usa la app de Vivecom.
+          </p>
+        ) : (
+          <Outlet />
+        )}
       </main>
     </div>
   )

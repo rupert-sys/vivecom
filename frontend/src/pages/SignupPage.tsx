@@ -15,7 +15,7 @@ export function SignupPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (user !== null) return <Navigate to="/properties" replace />
+  if (user !== null) return <Navigate to="/" replace />
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -31,7 +31,7 @@ export function SignupPage() {
       // Auto-login tras el registro — el admin ya tiene cuenta y contraseña
       // válidas, no tiene sentido pedirle que las vuelva a escribir en /login.
       await login(email, password)
-      navigate('/properties')
+      navigate('/')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo crear el condominio.')
     } finally {

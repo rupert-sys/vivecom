@@ -1,4 +1,4 @@
-import { Navigate, Route, Routes } from 'react-router-dom'
+import { Route, Routes } from 'react-router-dom'
 import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
@@ -20,6 +20,7 @@ import { PaymentProofsPage } from './pages/PaymentProofsPage'
 import { PaymentAgreementsPage } from './pages/PaymentAgreementsPage'
 import { AnnouncementQuestionsPage } from './pages/AnnouncementQuestionsPage'
 import { RequireAuth } from './auth/RequireAuth'
+import { Inicio } from './auth/Inicio'
 
 export default function App() {
   return (
@@ -51,7 +52,8 @@ export default function App() {
         <Route path="/reservations" element={<ReservationsPage />} />
         <Route path="/reglamento" element={<ReglamentoPage />} />
       </Route>
-      <Route path="*" element={<Navigate to="/properties" replace />} />
+      <Route path="/sin-secciones" element={<RequireAuth><Layout /></RequireAuth>} />
+      <Route path="*" element={<Inicio />} />
     </Routes>
   )
 }

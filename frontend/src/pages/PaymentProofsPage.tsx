@@ -4,8 +4,9 @@ import { listProperties } from '../api/properties'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { EstadoComprobante, PaymentProof, Property } from '../types'
+import { rolesDe } from '../permisos'
 
-const ROLES_CON_ACCESO = new Set(['admin', 'tesorero'])
+const ROLES_CON_ACCESO = new Set<string>(rolesDe('/payment-proofs'))
 
 const ETIQUETA: Record<EstadoComprobante, string> = { pendiente: 'Pendiente', aceptado: 'Aceptado', rechazado: 'Rechazado' }
 const COLOR: Record<EstadoComprobante, string> = {

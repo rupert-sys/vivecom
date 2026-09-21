@@ -5,9 +5,10 @@ import { listProperties } from '../api/properties'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { AccessLogEntry, Incident, Property, TipoIncidencia, VisitorParking } from '../types'
+import { rolesDe } from '../permisos'
 
 const ROLES_ACCESOS = new Set(['admin', 'guardia'])
-const ROLES_INCIDENCIAS = new Set(['admin', 'guardia', 'comite_lectura', 'comite_aprobador'])
+const ROLES_INCIDENCIAS = new Set<string>(rolesDe('/security'))
 
 const ETIQUETA_TIPO_INCIDENCIA: Record<TipoIncidencia, string> = {
   seguridad: 'Seguridad',

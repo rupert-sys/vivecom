@@ -12,8 +12,9 @@ import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StatCard } from '../components/StatCard'
 import type { EstadoAcuerdo, PaymentAgreement, Property } from '../types'
+import { rolesDe } from '../permisos'
 
-const ROLES_QUE_VEN = new Set(['admin', 'comite_aprobador', 'comite_lectura', 'tesorero'])
+const ROLES_QUE_VEN = new Set<string>(rolesDe('/payment-agreements'))
 // Art. 9 VII: "el comité tendrá la facultad de tomar el acuerdo". El administrador también decide, para
 // condominios sin comité configurado. Tesorería y el comité de solo lectura dan seguimiento pero no deciden.
 const ROLES_QUE_DECIDEN = new Set(['admin', 'comite_aprobador'])

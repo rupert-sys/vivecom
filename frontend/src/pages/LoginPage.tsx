@@ -11,7 +11,7 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
 
-  if (user !== null) return <Navigate to="/properties" replace />
+  if (user !== null) return <Navigate to="/" replace />
 
   async function handleSubmit(event: FormEvent) {
     event.preventDefault()
@@ -19,7 +19,7 @@ export function LoginPage() {
     setSubmitting(true)
     try {
       await login(email, password)
-      navigate('/properties')
+      navigate('/')
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo iniciar sesión.')
     } finally {

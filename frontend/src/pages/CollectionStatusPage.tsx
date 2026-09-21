@@ -5,8 +5,9 @@ import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StatCard } from '../components/StatCard'
 import type { CollectionStatus, EstatusCobranza } from '../types'
+import { rolesDe } from '../permisos'
 
-const ROLES_CON_ACCESO = new Set(['admin', 'tesorero'])
+const ROLES_CON_ACCESO = new Set<string>(rolesDe('/collection'))
 
 const ETIQUETA: Record<EstatusCobranza, string> = {
   moroso: 'Moroso',

@@ -4,8 +4,9 @@ import { listProperties } from '../api/properties'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { CollectionsSummary, Property } from '../types'
+import { rolesDe } from '../permisos'
 
-const ROLES_CON_ACCESO = new Set(['admin', 'tesorero'])
+const ROLES_CON_ACCESO = new Set<string>(rolesDe('/dashboard'))
 
 export function DashboardPage() {
   const { user } = useAuth()

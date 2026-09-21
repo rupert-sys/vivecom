@@ -4,8 +4,9 @@ import { listProperties } from '../api/properties'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { Property } from '../types'
+import { rolesDe } from '../permisos'
 
-const ROLES_CON_ACCESO = new Set(['admin', 'tesorero'])
+const ROLES_CON_ACCESO = new Set<string>(rolesDe('/reports/export'))
 
 export function ReportsExportPage() {
   const { user } = useAuth()

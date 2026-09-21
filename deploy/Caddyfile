@@ -1,16 +1,27 @@
 # Sirve el panel (React) y la app web de residentes (Flutter) dentro de la red de Docker; el HTTPS lo pone
-# Cloudflare Tunnel. Cada sitio se distingue por su nombre de host. Ambos son SPA: cualquier ruta cae en index.html.
+# Cloudflare Tunnel. Cada sitio se distingue por su nombre de host. Ambos son SPA: una ruta SIN extensión cae en
+# index.html; un archivo (algo.js, algo.apk) que no existe da 404 y NO la página de la app (Cloudflare cachea por
+# extensión: un comodín con código 200 quedó guardado como si fuera el APK).
 {
 	auto_https off
 }
 
 (spa) {
 	encode gzip
-	try_files {path} /index.html
-	file_server
 	header {
 		X-Content-Type-Options nosniff
 		Referrer-Policy strict-origin-when-cross-origin
+	}
+	@apk path *.apk
+	header @apk Cache-Control "no-store"
+
+	@archivo path_regexp archivo \.[A-Za-z0-9]{1,8}$
+	handle @archivo {
+		file_server
+	}
+	handle {
+		try_files {path} /index.html
+		file_server
 	}
 }
 

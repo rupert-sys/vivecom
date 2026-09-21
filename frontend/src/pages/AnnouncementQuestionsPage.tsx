@@ -3,8 +3,9 @@ import { answerQuestion, listAnsweredQuestions, listPendingQuestions, updateQues
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { AnnouncementQuestion } from '../types'
+import { rolesDe } from '../permisos'
 
-const ROLES_QUE_VEN = new Set(['admin', 'comite_lectura', 'comite_aprobador'])
+const ROLES_QUE_VEN = new Set<string>(rolesDe('/announcement-questions'))
 // El comité de solo lectura ve las dudas pero no responde.
 const ROLES_QUE_RESPONDEN = new Set(['admin', 'comite_aprobador'])
 
