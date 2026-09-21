@@ -24,6 +24,7 @@ export function Layout() {
           </h1>
           <nav style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap' }}>
             <Link to="/properties">Viviendas</Link>
+            <Link to="/users">Usuarios</Link>
             <Link to="/fees">Cuotas</Link>
             <Link to="/collection">Cobranza</Link>
             <Link to="/payment-proofs">Comprobantes</Link>

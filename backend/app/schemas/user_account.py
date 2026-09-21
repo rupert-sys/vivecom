@@ -19,3 +19,12 @@ class UserAccountRead(BaseModel):
     email: str
     rol: Rol
     property_id: uuid.UUID | None
+
+
+class UserAccountUpdate(BaseModel):
+    """Todos los campos son opcionales: solo cambia lo que se manda. property_id: null explícito la quita."""
+
+    email: EmailStr | None = None
+    password: str | None = Field(default=None, min_length=8)
+    rol: Rol | None = None
+    property_id: uuid.UUID | None = None

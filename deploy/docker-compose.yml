@@ -82,15 +82,16 @@ services:
     ports:
       - "127.0.0.1:8081:80"
 
-  # Perfil «tunnel»: publica api.<dominio> y panel.<dominio> con HTTPS. Las rutas se configuran en el panel de
-  # Cloudflare (Zero Trust → Tunnels): api → http://backend:8000, panel y app → http://panel:80 (el nombre de host los distingue).
+  # Perfil «tunnel»: publica api.<dominio>, panel.<dominio> y app.<dominio> con HTTPS. Usa el túnel creado con la CLI
+  # (deploy/cloudflared/: certificado, credenciales del túnel y config.yml con las rutas; nada de eso va al
+  # repositorio). Ver README.md, «Cloudflare».
   cloudflared:
     image: cloudflare/cloudflared:latest
     restart: unless-stopped
     profiles: ["tunnel"]
-    command: ["tunnel", "--no-autoupdate", "run"]
-    environment:
-      TUNNEL_TOKEN: ${CLOUDFLARE_TUNNEL_TOKEN}
+    command: ["tunnel", "--no-autoupdate", "--config", "/etc/cloudflared/config.yml", "run"]
+    volumes:
+      - ./cloudflared:/etc/cloudflared:ro
 
 volumes:
   pgdata:

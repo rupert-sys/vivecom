@@ -3,6 +3,7 @@ import { Layout } from './components/Layout'
 import { LoginPage } from './pages/LoginPage'
 import { SignupPage } from './pages/SignupPage'
 import { PropertiesPage } from './pages/PropertiesPage'
+import { UsersPage } from './pages/UsersPage'
 import { PropertyDetailPage } from './pages/PropertyDetailPage'
 import { FeesPage } from './pages/FeesPage'
 import { ClabePage } from './pages/ClabePage'
@@ -33,6 +34,7 @@ export default function App() {
         }
       >
         <Route path="/properties" element={<PropertiesPage />} />
+        <Route path="/users" element={<UsersPage />} />
         <Route path="/properties/:propertyId" element={<PropertyDetailPage />} />
         <Route path="/fees" element={<FeesPage />} />
         <Route path="/clabe" element={<ClabePage />} />

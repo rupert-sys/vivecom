@@ -1,14 +1,16 @@
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import select
+from sqlalchemy import delete, func, select, update
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_tenant_db, require_roles
 from app.core.security import hash_password
+from app.models.property import Property
 from app.models.user import Rol, UserAccount
 from app.models.user_lookup import UserLookup
-from app.schemas.user_account import UserAccountCreate, UserAccountRead
+from app.schemas.user_account import UserAccountCreate, UserAccountRead, UserAccountUpdate
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -65,3 +67,80 @@ async def list_users(rol: Rol | None = None, db: AsyncSession = Depends(get_tena
         query = query.where(UserAccount.rol == rol)
     result = await db.execute(query)
     return result.scalars().all()
+
+
+async def _es_el_ultimo_admin(db: AsyncSession, user: UserAccount) -> bool:
+    """Sin ningún admin nadie podría volver a administrar el condominio ni dar de alta cuentas."""
+    if user.rol != Rol.admin:
+        return False
+    total = (await db.execute(select(func.count()).select_from(UserAccount).where(UserAccount.rol == Rol.admin))).scalar_one()
+    return total <= 1
+
+
+@router.patch("/{user_id}", response_model=UserAccountRead, dependencies=admin_only)
+async def update_user(
+    user_id: uuid.UUID,
+    payload: UserAccountUpdate,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
+    """
+    Edita una cuenta: correo, contraseña, rol o vivienda. Solo cambia lo que se manda. Cambiar la contraseña NO
+    cierra las sesiones ya abiertas (el token es sin estado y dura hasta 12 horas).
+    """
+    user = await db.get(UserAccount, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cuenta no encontrada")
+    cambios = payload.model_fields_set
+
+    if payload.email is not None and payload.email != user.email:
+        # user_lookup es global (todos los condominios): un correo solo puede vivir en una cuenta de todo Vivecom.
+        ocupado = (await db.execute(select(UserLookup).where(UserLookup.email == payload.email))).scalar_one_or_none()
+        if ocupado is not None:
+            raise HTTPException(status.HTTP_409_CONFLICT, "Ya existe una cuenta con ese email")
+        user.email = payload.email
+        await db.execute(update(UserLookup).where(UserLookup.user_id == user.id).values(email=payload.email))
+
+    if payload.password is not None:
+        user.password_hash = hash_password(payload.password)
+
+    if payload.rol is not None and payload.rol != user.rol:
+        if str(user.id) == current_user.user_id:
+            raise HTTPException(status.HTTP_409_CONFLICT, "No puedes cambiar tu propio rol")
+        if await _es_el_ultimo_admin(db, user):
+            raise HTTPException(status.HTTP_409_CONFLICT, "Es el único administrador: no se puede cambiar su rol")
+        user.rol = payload.rol
+
+    if "property_id" in cambios:
+        if payload.property_id is not None and await db.get(Property, payload.property_id) is None:
+            raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
+        user.property_id = payload.property_id
+
+    if ("rol" in cambios or "property_id" in cambios) and user.rol == Rol.residente and user.property_id is None:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "Un residente necesita una vivienda")
+
+    await db.commit()
+    return user
+
+
+@router.delete("/{user_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=admin_only)
+async def delete_user(
+    user_id: uuid.UUID,
+    current_user: CurrentUser = Depends(get_current_user),
+    db: AsyncSession = Depends(get_tenant_db),
+):
+    """Da de baja una cuenta (deja de poder iniciar sesión). Un token ya emitido sigue valiendo hasta que expire."""
+    user = await db.get(UserAccount, user_id)
+    if user is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Cuenta no encontrada")
+    if str(user.id) == current_user.user_id:
+        raise HTTPException(status.HTTP_409_CONFLICT, "No puedes eliminar tu propia cuenta")
+    if await _es_el_ultimo_admin(db, user):
+        raise HTTPException(status.HTTP_409_CONFLICT, "Es el único administrador: no se puede eliminar")
+    try:
+        await db.execute(delete(UserLookup).where(UserLookup.user_id == user.id))
+        await db.delete(user)
+        await db.commit()
+    except IntegrityError:
+        await db.rollback()
+        raise HTTPException(status.HTTP_409_CONFLICT, "La cuenta tiene registros asociados y no se puede eliminar") from None

@@ -37,3 +37,5 @@ deploy/backups/
 deploy/panel-dist/
 deploy/app-dist/
 deploy/.env
+deploy/cloudflared/
+deploy/credenciales-muestra.md

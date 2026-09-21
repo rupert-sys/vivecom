@@ -4,26 +4,34 @@ Sirve para la **muestra** (tu Mac) y para la **PC dedicada** que la reemplaza: e
 dos volúmenes de Docker (`pgdata`, `uploads`) y en el archivo `.env`; lo demás sale del repositorio.
 
 ```
-Internet ── Cloudflare (HTTPS) ── túnel ── api.vivecom.mx    → backend   (FastAPI)
-                                        ├─ panel.vivecom.mx  → panel     (Caddy, panel de administración)
-                                        └─ app.vivecom.mx    → panel     (Caddy, app web de residentes para iPhone)
+Internet ── Cloudflare (HTTPS) ── túnel ── api.vivecom.com.mx → backend   (FastAPI)
+                                        ├─ panel.vivecom.com.mx → panel     (Caddy, panel de administración)
+                                        └─ app.vivecom.com.mx → panel     (Caddy, app web de residentes para iPhone)
                        db (Postgres 16) · redis · worker + beat (Celery: cargos, recargos, seguimiento de acuerdos)
 ```
 
 Nada se abre en el router: el túnel sale desde tu máquina hacia Cloudflare.
 
 ## 1. Cloudflare (una vez)
-1. Agregar `vivecom.mx` a Cloudflare (plan Free) y cambiar los servidores de nombres en el registrador. Esperar a «Active».
-2. Zero Trust → Networks → Tunnels → crear un túnel «Cloudflared» y copiar su **token**.
-3. En el túnel, tres *Public hostnames* (tipo HTTP): `api.vivecom.mx` → `backend:8000`; `panel.vivecom.mx` → `panel:80`;
-   `app.vivecom.mx` → `panel:80`.
+El dominio (aquí `vivecom.com.mx`) debe estar en Cloudflare. El túnel se crea con la CLI y **una autorización tuya en el
+navegador**: no hay que pegar tokens ni contraseñas en ningún lado.
+```bash
+cd deploy && mkdir -p cloudflared && chmod 777 cloudflared
+cf() { docker run --rm -v "$PWD/cloudflared:/home/nonroot/.cloudflared" cloudflare/cloudflared:latest "$@"; }
+cf tunnel login                                   # imprime un enlace: abrirlo, elegir el dominio y «Authorize»
+cf tunnel create vivecom                          # deja el <ID>.json de credenciales en cloudflared/
+for h in api panel app; do cf tunnel route dns vivecom $h.vivecom.com.mx; done
+cp cloudflared.config.example.yml cloudflared/config.yml     # poner el ID del túnel y el dominio
+```
+`deploy/cloudflared/` (certificado, credenciales y `config.yml`) NO se sube al repositorio. Para mudarse de máquina se
+copia esa carpeta junto con el `.env`: el mismo túnel funciona en la PC nueva sin tocar el DNS.
 
 ## 2. Preparar la máquina
 Requisitos: Docker (Desktop en Mac/Windows, Engine en Linux) y, para compilar la app web, Flutter.
 ```bash
 cd deploy
-cp .env.example .env        # llenar: DOMAIN=vivecom.mx, POSTGRES_PASSWORD, JWT_SECRET, STP_WEBHOOK_SECRET, CLOUDFLARE_TUNNEL_TOKEN
-./scripts/build-panel.sh    # panel-dist/  (usa Docker, compila para https://api.vivecom.mx)
+cp .env.example .env        # llenar: DOMAIN=vivecom.com.mx, POSTGRES_PASSWORD, JWT_SECRET, STP_WEBHOOK_SECRET
+./scripts/build-panel.sh    # panel-dist/  (usa Docker, compila para https://api.<DOMAIN>)
 ./scripts/build-app-web.sh  # app-dist/    (usa Flutter)
 docker compose --profile tunnel up -d --build
 ```
@@ -31,13 +39,20 @@ Al arrancar, el backend crea las tablas de control si la base es nueva y migra l
 (`app/core/init_db.py` + `migrate_schema --all`). Probar sin el túnel: `curl http://127.0.0.1:8010/docs`.
 
 Primer condominio: `POST /signup` (nombre, correo y contraseña del administrador, CLABE). El administrador da de alta a
-los demás usuarios desde el panel.
+los demás usuarios, y los edita o da de baja, desde el panel (Usuarios).
+
+**Condominio de muestra** (10 usuarios inventados y editables, reglamento de Arequipa, viviendas con y sin adeudo):
+```bash
+cd ../backend && python -m app.core.seed_muestra --api http://127.0.0.1:8010 --salida ../deploy/credenciales-muestra.md
+```
+Las contraseñas quedan en `deploy/credenciales-muestra.md` (no se sube al repositorio).
 
 ## 3. Que la máquina no se apague
 - **Mac:** Ajustes → Batería/Energía → «Evitar que el Mac entre en reposo automáticamente cuando la pantalla está apagada»,
   conectado a la corriente. Desactivar las actualizaciones que reinician solas (o programarlas). Docker Desktop → Settings →
   «Start Docker Desktop when you sign in». Los contenedores llevan `restart: unless-stopped`: vuelven solos.
 - **No usarla de máquina de desarrollo mientras sirve a usuarios:** compilar apps o correr Docker/Xcode a la vez la satura.
+- Mientras dure la muestra, `caffeinate -i -s -m &` evita el reposo (solo mientras el proceso viva y con corriente conectada).
 
 ## 4. Respaldos (obligatorio)
 ```bash

@@ -183,6 +183,7 @@ export interface UserAccount {
   id: string
   email: string
   rol: Rol
+  property_id?: string | null
 }
 
 export interface Amenity {

@@ -1,0 +1,11 @@
+# Plantilla del túnel (copiar a cloudflared/config.yml y poner el ID que devuelve «tunnel create»). Ver README.md.
+tunnel: <ID-DEL-TUNEL>
+credentials-file: /etc/cloudflared/<ID-DEL-TUNEL>.json
+ingress:
+  - hostname: api.<DOMINIO>
+    service: http://backend:8000
+  - hostname: panel.<DOMINIO>
+    service: http://panel:80
+  - hostname: app.<DOMINIO>
+    service: http://panel:80
+  - service: http_status:404
