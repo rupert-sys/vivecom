@@ -11,7 +11,7 @@ import type { PaymentAgreement, Property } from '../types'
 
 vi.mock('../auth/AuthContext', () => ({ useAuth: vi.fn() }))
 
-const casa: Property = { id: 'p1', identificador: 'Casa 4', referencia_pago: '0000004', saldo_a_favor: 0 }
+const casa: Property = { id: 'p1', identificador: 'Casa 4', referencia_pago: '0000004', saldo_a_favor: 0, residente_principal: null, residente_principal_rol: null, total_residentes: 0 }
 
 function acuerdo(extra: Partial<PaymentAgreement> = {}): PaymentAgreement {
   return {

@@ -10,8 +10,8 @@ import type { Property, UserAccount } from '../types'
 
 vi.mock('../auth/AuthContext', () => ({ useAuth: vi.fn() }))
 
-const casa1: Property = { id: 'p1', identificador: 'Casa 1', referencia_pago: '1111111', saldo_a_favor: 0 }
-const casa2: Property = { id: 'p2', identificador: 'Casa 2', referencia_pago: '2222222', saldo_a_favor: 0 }
+const casa1: Property = { id: 'p1', identificador: 'Casa 1', referencia_pago: '1111111', saldo_a_favor: 0, residente_principal: null, residente_principal_rol: null, total_residentes: 0 }
+const casa2: Property = { id: 'p2', identificador: 'Casa 2', referencia_pago: '2222222', saldo_a_favor: 0, residente_principal: null, residente_principal_rol: null, total_residentes: 0 }
 const admin: UserAccount = { id: 'u1', email: 'admin@condo.mx', rol: 'admin', property_id: null }
 const vecina: UserAccount = { id: 'u2', email: 'vecina@condo.mx', rol: 'residente', property_id: 'p1' }
 

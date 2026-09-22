@@ -10,6 +10,7 @@ from app.models.user import Rol
 from app.schemas.property import PropertyCreate, PropertyRead, PropertyUpdate
 from app.schemas.statement import AccountStatement
 from app.services.payment_reference import generate_payment_reference
+from app.services.residents_summary_service import residentes_principales
 from app.services.reglamento_service import acuerdos_vigentes, get_reglamento, hoy_local, vivienda_en_mora
 from app.services.statement_service import get_account_statement
 
@@ -31,11 +32,21 @@ async def create_property(payload: PropertyCreate, db: AsyncSession = Depends(ge
     return prop
 
 
+def _con_residente_principal(prop: Property, resumen: dict) -> PropertyRead:
+    nombre, rol, total = resumen.get(prop.id, (None, None, 0))
+    return PropertyRead(
+        id=prop.id, identificador=prop.identificador, referencia_pago=prop.referencia_pago,
+        saldo_a_favor=prop.saldo_a_favor, residente_principal=nombre, residente_principal_rol=rol,
+        total_residentes=total,
+    )
+
+
 @router.get("", response_model=list[PropertyRead])
 async def list_properties(db: AsyncSession = Depends(get_tenant_db)):
     # Lectura abierta a cualquier rol autenticado del tenant (admin, tesorero, guardia, etc.)
-    result = await db.execute(select(Property).order_by(Property.identificador))
-    return result.scalars().all()
+    propiedades = (await db.execute(select(Property).order_by(Property.identificador))).scalars().all()
+    resumen = await residentes_principales(db, [p.id for p in propiedades])
+    return [_con_residente_principal(p, resumen) for p in propiedades]
 
 
 @router.get("/{property_id}", response_model=PropertyRead)
@@ -56,7 +67,8 @@ async def get_property(
     prop = await db.get(Property, property_id)
     if prop is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
-    return prop
+    resumen = await residentes_principales(db, [prop.id])
+    return _con_residente_principal(prop, resumen)
 
 
 @router.get("/{property_id}/statement", response_model=AccountStatement)

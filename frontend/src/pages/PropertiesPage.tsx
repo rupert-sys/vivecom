@@ -3,8 +3,15 @@ import { Link } from 'react-router-dom'
 import { createProperty, deleteProperty, listProperties } from '../api/properties'
 import { downloadImportTemplate, importResidents, type ResidentImportResult } from '../api/residentImport'
 import { ApiError } from '../api/client'
+import { StatCard } from '../components/StatCard'
 import { useAuth } from '../auth/AuthContext'
 import type { Property } from '../types'
+
+function resumenDeOcupacion(properties: Property[]) {
+  const propietario = properties.filter((p) => p.residente_principal_rol === 'propietario').length
+  const inquilino = properties.filter((p) => p.residente_principal_rol === 'inquilino').length
+  return { total: properties.length, propietario, inquilino, sinResidente: properties.length - propietario - inquilino }
+}
 
 export function PropertiesPage() {
   const { user } = useAuth()
@@ -168,10 +175,35 @@ export function PropertiesPage() {
       ) : properties.length === 0 ? (
         <p>Todavía no hay viviendas registradas.</p>
       ) : (
-        <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+        <>
+          {(() => {
+            const resumen = resumenDeOcupacion(properties)
+            return (
+              <div
+                role="group"
+                aria-label="Resumen de ocupación"
+                style={{ display: 'flex', gap: 'var(--space-3)', flexWrap: 'wrap', margin: 'var(--space-3) 0' }}
+              >
+                <StatCard label="Viviendas">{resumen.total}</StatCard>
+                <StatCard label="De propietario" color="var(--teal-strong)">
+                  {resumen.propietario}
+                </StatCard>
+                <StatCard label="Rentadas" color="var(--dustblue)">
+                  {resumen.inquilino}
+                </StatCard>
+                {resumen.sinResidente > 0 && (
+                  <StatCard label="Sin residente" color="var(--ink-faint)">
+                    {resumen.sinResidente}
+                  </StatCard>
+                )}
+              </div>
+            )
+          })()}
+          <table style={{ width: '100%' }}>
           <thead>
-            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+            <tr>
               <th>Identificador</th>
+              <th>Residente</th>
               <th>Referencia de pago</th>
               <th>Saldo a favor</th>
               {isAdmin && <th />}
@@ -179,9 +211,24 @@ export function PropertiesPage() {
           </thead>
           <tbody>
             {properties.map((p) => (
-              <tr key={p.id} style={{ borderBottom: '1px solid var(--border)' }}>
+              <tr key={p.id}>
                 <td>
                   <Link to={`/properties/${p.id}`}>{p.identificador}</Link>
+                </td>
+                <td>
+                  {p.residente_principal ? (
+                    <span style={{ display: 'flex', alignItems: 'center', gap: 'var(--space-2)' }}>
+                      {p.residente_principal}
+                      <span className={`chip ${p.residente_principal_rol === 'propietario' ? 'chip-teal' : 'chip-blue'}`}>
+                        {p.residente_principal_rol === 'propietario' ? 'Propietario' : 'Inquilino'}
+                      </span>
+                      {p.total_residentes > 1 && (
+                        <span className="chip chip-neutral">+{p.total_residentes - 1}</span>
+                      )}
+                    </span>
+                  ) : (
+                    <span style={{ color: 'var(--ink-faint)' }}>Sin residente</span>
+                  )}
                 </td>
                 <td className="mono">{p.referencia_pago}</td>
                 <td className="mono">${p.saldo_a_favor.toFixed(2)}</td>
@@ -196,6 +243,7 @@ export function PropertiesPage() {
             ))}
           </tbody>
         </table>
+        </>
       )}
     </div>
   )

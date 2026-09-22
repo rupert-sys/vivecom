@@ -10,7 +10,7 @@ import type { Property } from '../types'
 
 vi.mock('../auth/AuthContext', () => ({ useAuth: vi.fn() }))
 
-const properties: Property[] = [{ id: 'p1', identificador: 'Casa 1', referencia_pago: '0000001', saldo_a_favor: 0 }]
+const properties: Property[] = [{ id: 'p1', identificador: 'Casa 1', referencia_pago: '0000001', saldo_a_favor: 0, residente_principal: null, residente_principal_rol: null, total_residentes: 0 }]
 
 function mockUser(rol: string | null) {
   vi.mocked(useAuth).mockReturnValue({

@@ -27,7 +27,7 @@ const incidentes: Incident[] = [
   },
 ]
 
-const propiedades: Property[] = [{ id: 'p1', identificador: 'Casa 1', referencia_pago: '0000001', saldo_a_favor: 0 }]
+const propiedades: Property[] = [{ id: 'p1', identificador: 'Casa 1', referencia_pago: '0000001', saldo_a_favor: 0, residente_principal: null, residente_principal_rol: null, total_residentes: 0 }]
 
 const accesos: AccessLogEntry[] = [
   { id: 'a1', property_id: 'p1', tipo: 'visitante', hora_entrada: '2026-09-01T09:00:00', hora_salida: '2026-09-01T10:00:00', placas: [], nombre_visitante: 'Ana López', acompanantes: 2, identificacion: 'INE', autorizado_por: 'telefono' },

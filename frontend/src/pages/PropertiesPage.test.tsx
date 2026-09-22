@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -16,6 +16,9 @@ const property: Property = {
   identificador: 'Casa 1',
   referencia_pago: '1234567',
   saldo_a_favor: 0,
+  residente_principal: 'Mariana Ortega Salazar',
+  residente_principal_rol: 'propietario',
+  total_residentes: 1,
 }
 
 function mockUser(rol: string) {
@@ -82,6 +85,46 @@ describe('PropertiesPage', () => {
     renderPage()
 
     expect(await screen.findByText(/no se pudieron cargar las viviendas/i)).toBeInTheDocument()
+  })
+})
+
+describe('PropertiesPage: resumen de ocupación', () => {
+  beforeEach(() => {
+    vi.restoreAllMocks()
+    mockUser('admin')
+  })
+
+  it('cuenta cuántas viviendas hay, cuántas son de propietario y cuántas rentadas', async () => {
+    const casaInquilino: Property = { ...property, id: 'prop-2', identificador: 'Casa 2', residente_principal: 'Luis Peña', residente_principal_rol: 'inquilino' }
+    const casaSinResidente: Property = { ...property, id: 'prop-3', identificador: 'Casa 3', residente_principal: null, residente_principal_rol: null, total_residentes: 0 }
+    vi.spyOn(propertiesApi, 'listProperties').mockResolvedValue([property, casaInquilino, casaSinResidente])
+
+    renderPage()
+    await screen.findByText('Casa 1')
+    const resumen = within(screen.getByRole('group', { name: 'Resumen de ocupación' }))
+
+    expect(resumen.getByText('Viviendas').nextSibling).toHaveTextContent('3')
+    expect(resumen.getByText('De propietario').nextSibling).toHaveTextContent('1')
+    expect(resumen.getByText('Rentadas').nextSibling).toHaveTextContent('1')
+    expect(resumen.getByText('Sin residente').nextSibling).toHaveTextContent('1')
+  })
+
+  it('sin viviendas sin residente, no muestra esa tarjeta', async () => {
+    vi.spyOn(propertiesApi, 'listProperties').mockResolvedValue([property])
+
+    renderPage()
+    await screen.findByText('Casa 1')
+
+    expect(screen.queryByText('Sin residente')).not.toBeInTheDocument()
+  })
+
+  it('sin viviendas, no muestra el resumen', async () => {
+    vi.spyOn(propertiesApi, 'listProperties').mockResolvedValue([])
+
+    renderPage()
+    await screen.findByText(/todavía no hay viviendas/i)
+
+    expect(screen.queryByRole('group', { name: 'Resumen de ocupación' })).not.toBeInTheDocument()
   })
 })
 
@@ -200,7 +243,10 @@ describe('PropertiesPage: importar Excel de condóminos', () => {
   })
 
   it('tras importar, la lista de viviendas se refresca', async () => {
-    const nuevaCasa: Property = { id: 'prop-2', identificador: 'Casa 2', referencia_pago: '7654321', saldo_a_favor: 0 }
+    const nuevaCasa: Property = {
+      id: 'prop-2', identificador: 'Casa 2', referencia_pago: '7654321', saldo_a_favor: 0,
+      residente_principal: null, residente_principal_rol: null, total_residentes: 0,
+    }
     const listar = vi.spyOn(propertiesApi, 'listProperties').mockResolvedValueOnce([property]).mockResolvedValueOnce([property, nuevaCasa])
     vi.spyOn(residentImportApi, 'importResidents').mockResolvedValue({
       total_filas: 1, viviendas_creadas: 1, residentes_creados: 1, residentes_actualizados: 0,
