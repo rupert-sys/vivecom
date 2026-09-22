@@ -95,20 +95,48 @@ def test_reintentar_el_mismo_archivo_no_duplica_nada(client):
     assert len(client.get("/residents").json()) == 1
 
 
-def test_el_mismo_correo_en_dos_filas_actualiza_al_residente_en_vez_de_duplicarlo(client):
+def test_el_mismo_correo_con_el_mismo_nombre_en_dos_filas_solo_actualiza_el_telefono(client):
+    """Mismo correo Y mismo nombre en dos filas: es la misma persona (p. ej. tiene dos viviendas) — se liga a
+    ambas y se queda con el teléfono más reciente, sin duplicar al residente."""
     r = _importar(
         client,
         [
-            ["Mariana Ortega", "5555550101", "mariana@condo.mx", "propietario", "Casa 1"],
-            ["Mariana Ortega Salazar", "5555550199", "mariana@condo.mx", "propietario", "Casa 2"],  # se mudó / dato más nuevo
+            ["Mariana Ortega Salazar", "5555550101", "mariana@condo.mx", "propietario", "Casa 1"],
+            ["Mariana Ortega Salazar", "5555550199", "mariana@condo.mx", "propietario", "Casa 2"],  # cambió de teléfono
         ],
     )
     body = r.json()
-    assert (body["residentes_creados"], body["residentes_actualizados"]) == (1, 1)
+    assert (body["residentes_creados"], body["residentes_actualizados"], body["vinculos_creados"]) == (1, 1, 2)
     _como("admin")
     residentes = client.get("/residents").json()
     assert len(residentes) == 1
     assert (residentes[0]["nombre"], residentes[0]["telefono"]) == ("Mariana Ortega Salazar", "5555550199")
+
+
+def test_el_mismo_correo_con_otro_nombre_es_un_error_y_no_fusiona_a_las_personas(client):
+    """
+    Bug real: la plantilla trae un correo de ejemplo (mariana@example.com) y, si no se corrige fila por fila, un
+    condominio entero terminaba "perteneciendo" a un solo residente inventado, mal fusionado con cada nombre de la
+    última fila procesada. Un correo compartido por nombres distintos ya no se fusiona: se reporta como error.
+    """
+    primera = _importar(client, [["Mariana Ortega Salazar", "5555550101", "mariana@example.com", "propietario", "Casa 1"]])
+    assert primera.json()["residentes_creados"] == 1
+
+    r = _importar(
+        client,
+        [
+            ["Luis Suárez Díaz", "5555550101", "mariana@example.com", "propietario", "Casa 2"],
+            ["Ruth Velázquez", "5555550101", "mariana@example.com", "propietario", "Casa 3"],
+        ],
+    )
+    body = r.json()
+    assert (body["viviendas_creadas"], body["residentes_creados"], body["vinculos_creados"]) == (0, 0, 0)
+    assert len(body["filas_con_error"]) == 2
+    assert 'ya está registrado a nombre de "Mariana Ortega Salazar"' in body["filas_con_error"][0]["motivo"]
+
+    _como("admin")
+    assert [r["nombre"] for r in client.get("/residents").json()] == ["Mariana Ortega Salazar"]  # nadie se fusionó
+    assert {p["identificador"] for p in client.get("/properties").json()} == {"Casa 1"}  # Casa 2 y 3 NO se crearon
 
 
 def test_si_cambia_el_rol_en_una_reimportacion_se_actualiza_el_vinculo(client):

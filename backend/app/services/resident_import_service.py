@@ -7,6 +7,11 @@ app es una decisión aparte, deliberada, que el administrador sigue haciendo des
 No se detiene en la primera fila mal capturada: procesa las que sí puede y regresa cuáles fallaron y por qué, para
 que el administrador corrija solo esas en el Excel y lo vuelva a subir — reintentable: una vivienda o un residente
 que ya existían no se duplican, se completan.
+
+Un correo solo identifica a la MISMA persona si además el nombre coincide (ver el bloque de identidad más abajo):
+sin esta exigencia, varias filas con un correo repetido por accidente (p. ej. el de ejemplo de la plantilla, sin
+corregir) se fusionaban en un solo residente inventado, "dueño" de todas esas viviendas — bug real encontrado en
+producción. Un choque de correo con otro nombre se reporta como fila con error, nunca se fusiona en automático.
 """
 
 import io
@@ -136,6 +141,31 @@ async def importar_condominos(db: AsyncSession, contenido: bytes) -> ResidentImp
                 )
                 continue
 
+        # La identidad se resuelve ANTES de crear la vivienda: si el correo ya es de alguien más, la fila es un
+        # error y no debe dejar una vivienda huérfana a medias (sin residente) que el admin tenga que notar aparte.
+        clave_nombre_telefono = (_normalizar(nombre), telefono)
+        residente = None
+        if correo:
+            existente = residentes_por_correo.get(correo)
+            if existente is not None:
+                if _normalizar(existente.nombre) == _normalizar(nombre):
+                    residente = existente
+                else:
+                    # Bug real (F1-4x): varias filas con el correo de ejemplo de la plantilla, sin corregirlo, se
+                    # fusionaban en un solo residente que terminaba "ligado" a decenas de viviendas ajenas. Un
+                    # correo solo identifica a la MISMA persona si además el nombre coincide; si no, es un choque
+                    # que hay que corregir a mano, no algo que se pueda adivinar y fusionar en automático.
+                    resultado.filas_con_error.append(ResidentImportError(
+                        fila=numero_de_fila,
+                        motivo=(
+                            f'El correo "{correo}" ya está registrado a nombre de "{existente.nombre}". Si es la '
+                            "misma persona, usa exactamente ese nombre; si es otra, corrige el correo."
+                        ),
+                    ))
+                    continue
+        else:
+            residente = residentes_por_nombre_y_telefono.get(clave_nombre_telefono)
+
         vivienda = viviendas.get(identificador)
         if vivienda is None:
             vivienda = Property(identificador=identificador, referencia_pago=await generate_payment_reference(identificador, db))
@@ -146,8 +176,6 @@ async def importar_condominos(db: AsyncSession, contenido: bytes) -> ResidentImp
             viviendas[identificador] = vivienda
             resultado.viviendas_creadas += 1
 
-        clave_nombre_telefono = (_normalizar(nombre), telefono)
-        residente = residentes_por_correo.get(correo) if correo else residentes_por_nombre_y_telefono.get(clave_nombre_telefono)
         if residente is None:
             residente = Resident(nombre=nombre, telefono=telefono, email=correo)
             db.add(residente)
@@ -156,10 +184,10 @@ async def importar_condominos(db: AsyncSession, contenido: bytes) -> ResidentImp
                 residentes_por_correo[correo] = residente
             residentes_por_nombre_y_telefono[clave_nombre_telefono] = residente
             resultado.residentes_creados += 1
-        elif residente.nombre != nombre or residente.telefono != telefono:
-            # El Excel es la fuente de verdad de un condominio recién dado de alta: si ya existía (mismo correo en
-            # dos filas, o una importación previa), se completa con lo más reciente en vez de dejarlo como antes.
-            residente.nombre, residente.telefono = nombre, telefono
+        elif residente.telefono != telefono:
+            # El nombre ya coincidía (si venía por correo, se exigió arriba; si venía por nombre+teléfono, es la
+            # propia clave de búsqueda) — lo único que puede traer de más nuevo esta fila es el teléfono.
+            residente.telefono = telefono
             residentes_por_nombre_y_telefono[clave_nombre_telefono] = residente
             resultado.residentes_actualizados += 1
 
