@@ -1,6 +1,7 @@
 import uuid
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, File, HTTPException, UploadFile, status
+from fastapi.responses import Response
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -9,6 +10,8 @@ from app.models.property import Property
 from app.models.resident import Resident, ResidentProperty
 from app.models.user import Rol
 from app.schemas.resident import LinkResidentToProperty, ResidentCreate, ResidentRead, ResidentUpdate
+from app.schemas.resident_import import ResidentImportResult
+from app.services.resident_import_service import construir_plantilla, importar_condominos
 
 router = APIRouter(tags=["residents"])
 
@@ -34,6 +37,35 @@ async def create_resident(payload: ResidentCreate, db: AsyncSession = Depends(ge
 async def list_residents(db: AsyncSession = Depends(get_tenant_db)):
     result = await db.execute(select(Resident).order_by(Resident.nombre))
     return result.scalars().all()
+
+
+_XLSX_MEDIA_TYPE = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+
+
+@router.get("/residents/import-template", dependencies=admin_only)
+async def download_import_template():
+    """Excel de ejemplo con los encabezados exactos que reconoce /residents/import."""
+    return Response(
+        content=construir_plantilla(),
+        media_type=_XLSX_MEDIA_TYPE,
+        headers={"Content-Disposition": 'attachment; filename="plantilla-condominos.xlsx"'},
+    )
+
+
+@router.post("/residents/import", response_model=ResidentImportResult, dependencies=admin_only)
+async def import_residents(archivo: UploadFile = File(...), db: AsyncSession = Depends(get_tenant_db)):
+    """
+    Sube un Excel (nombre, teléfono, correo, propietario o inquilino, número de casa) y crea o completa las
+    viviendas, los residentes y quién vive en cuál — ver resident_import_service.py para las reglas exactas.
+    """
+    if not archivo.filename or not archivo.filename.lower().endswith((".xlsx", ".xlsm")):
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, "El archivo debe ser un Excel (.xlsx)")
+    contenido = await archivo.read()
+    try:
+        return await importar_condominos(db, contenido)
+    except ValueError as exc:
+        raise HTTPException(status.HTTP_422_UNPROCESSABLE_ENTITY, str(exc)) from None
+
 
 
 @router.get("/residents/{resident_id}", response_model=ResidentRead, dependencies=staff_only)
