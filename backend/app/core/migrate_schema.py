@@ -12,6 +12,13 @@ reventaría con "column does not exist"). Este módulo cierra ese hueco:
 - Las columnas nuevas se agregan con ALTER TABLE ... ADD COLUMN IF NOT EXISTS
   (Postgres), listadas explícitamente en COLUMNAS_NUEVAS. Un tenant nuevo no lo
   necesita: provision_tenant() ya crea todo con create_all.
+- Los valores nuevos de un Enum de Python que SQLAlchemy mapea a un ENUM nativo
+  de Postgres se agregan con ALTER TYPE ... ADD VALUE IF NOT EXISTS, listados
+  en VALORES_ENUM_NUEVOS. Esto NO es automático: a diferencia de una columna,
+  el tipo ENUM se crea una sola vez al aprovisionar el tenant, y crecer el
+  Enum de Python no lo actualiza en los tenants ya creados — el INSERT/UPDATE
+  revienta con "invalid input value for enum" en Postgres real. SQLite (tests)
+  no tiene ENUM nativo, así que este hueco es invisible en pytest.
 
 Uso:
     python -m app.core.migrate_schema --all            # todos los tenants
@@ -19,7 +26,9 @@ Uso:
 
 Al agregar una columna a un modelo de tenant que ya existía en producción,
 agrégala también aquí — tests/test_migrate_schema.py verifica que cada entrada
-corresponda a una columna real del modelo.
+corresponda a una columna real del modelo. Lo mismo si agregas un valor a un
+Enum de Python que ya estaba mapeado a un ENUM nativo de Postgres: agrégalo a
+VALORES_ENUM_NUEVOS.
 """
 
 import argparse
@@ -79,6 +88,16 @@ COLUMNAS_NUEVAS: list[tuple[str, str, str]] = [
     # Acuerdos de pago (la tabla payment_agreement la crea create_all).
     ("reglamento_config", "prorroga_max_meses", "INTEGER NOT NULL DEFAULT 3"),
     ("payment_agreement", "pagos_previos", "JSON"),
+    ("expense", "recurrencia", "VARCHAR NOT NULL DEFAULT 'unica'"),
+]
+
+# (nombre del tipo ENUM nativo en Postgres, valor nuevo). Ver nota arriba: sin
+# esto, un tenant ya aprovisionado se queda con el ENUM viejo aunque el modelo
+# de Python ya tenga el valor nuevo.
+VALORES_ENUM_NUEVOS: list[tuple[str, str]] = [
+    # Fee.Periodicidad: pago único/extraordinario y semanal (ver docstring del modelo).
+    ("periodicidad", "unica"),
+    ("periodicidad", "semanal"),
 ]
 
 # Cambios a columnas que ya existían (idempotentes en Postgres).
@@ -104,7 +123,12 @@ def sentencias_para(schema_name: str) -> list[str]:
     if not _PATRON_SCHEMA.match(schema_name):
         raise ValueError(f"Nombre de schema inválido: {schema_name!r}")
     q = f'"{schema_name}"'
+    # Los valores de ENUM van primero: si alguna columna nueva llegara a usar uno
+    # de estos valores como default, el tipo ya tiene que existir con ese valor.
     sentencias = [
+        f"ALTER TYPE {q}.{tipo} ADD VALUE IF NOT EXISTS '{valor}'" for tipo, valor in VALORES_ENUM_NUEVOS
+    ]
+    sentencias += [
         f"ALTER TABLE {q}.{tabla} ADD COLUMN IF NOT EXISTS {columna} {definicion.format(schema=q)}"
         for tabla, columna, definicion in COLUMNAS_NUEVAS
     ]

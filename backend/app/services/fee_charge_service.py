@@ -12,7 +12,7 @@ from datetime import date
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
-from app.models.fee import Fee
+from app.models.fee import Fee, Periodicidad
 from app.models.fee_charge import EstadoCargo, FeeCharge
 from app.models.property import Property
 from app.services.payment_reconciliation_service import TOLERANCIA_CENTAVOS
@@ -42,57 +42,77 @@ def _meses_desde(inicio: date, periodo: date) -> int:
 
 
 async def get_active_fee(db: AsyncSession, periodo: date) -> Fee | None:
-    """La configuración de cuota vigente para ese periodo: la más reciente
-    con activa_desde <= periodo."""
+    """La configuración de cuota RECURRENTE vigente para ese periodo: la más reciente (mensual o bimestral) con
+    activa_desde <= periodo. Un pago único nunca se cuenta aquí (ver Periodicidad.unica): si se contara, en
+    cuanto pasara su fecha reemplazaría en silencio a la cuota mensual real para todos los periodos siguientes."""
     result = await db.execute(
-        select(Fee).where(Fee.activa_desde <= periodo).order_by(Fee.activa_desde.desc()).limit(1)
+        select(Fee)
+        .where(Fee.activa_desde <= periodo, Fee.periodicidad != Periodicidad.unica)
+        .order_by(Fee.activa_desde.desc())
+        .limit(1)
     )
     return result.scalar_one_or_none()
 
 
+async def get_unique_fees_for_period(db: AsyncSession, periodo: date) -> list[Fee]:
+    """Cuotas de pago único (extraordinarias, de proyecto) que aplican EXACTAMENTE a este periodo."""
+    result = await db.execute(
+        select(Fee).where(Fee.periodicidad == Periodicidad.unica, Fee.activa_desde == periodo)
+    )
+    return list(result.scalars().all())
+
+
 def fee_applies_to_period(fee: Fee, periodo: date) -> bool:
     """
-    Mensual: aplica todos los meses. Bimestral: aplica cada 2 meses contados
-    desde activa_desde (para no generar cargo en el mes intermedio).
+    Mensual: aplica todos los meses. Bimestral: aplica cada 2 meses contados desde activa_desde (para no generar
+    cargo en el mes intermedio). Semanal: se genera con la misma cadencia que mensual (ver Periodicidad.semanal:
+    facturar de verdad cada semana no está implementado todavía).
     """
-    if fee.periodicidad.value == "mensual":
+    if fee.periodicidad.value in ("mensual", "semanal"):
         return True
     return _meses_desde(fee.activa_desde, periodo) % 2 == 0
 
 
 async def generate_charges_for_period(db: AsyncSession, periodo: date) -> list[FeeCharge]:
     """
-    Genera (de forma idempotente) un FeeCharge por vivienda para el periodo
-    dado, usando la configuración de cuota vigente. Si ya existe un cargo
-    para una vivienda en ese periodo, no se duplica.
+    Genera (de forma idempotente) un FeeCharge por vivienda para el periodo dado, por cada cuota que le aplique:
+    la recurrente vigente (mensual/bimestral) y cualquier cuota de pago único (extraordinaria, de proyecto) cuyo
+    periodo sea este mismo — pueden coexistir, así que la idempotencia se controla por (vivienda, cuota), no solo
+    por vivienda: una vivienda puede tener más de un cargo el mismo periodo si hay más de una cuota vigente.
     """
     async with _locks_por_periodo[periodo]:
-        fee = await get_active_fee(db, periodo)
-        if fee is None or not fee_applies_to_period(fee, periodo):
+        recurrente = await get_active_fee(db, periodo)
+        fees_a_generar = [f for f in [recurrente] if f is not None and fee_applies_to_period(f, periodo)]
+        fees_a_generar += await get_unique_fees_for_period(db, periodo)
+        if not fees_a_generar:
             return []
 
         properties_result = await db.execute(select(Property))
         properties = properties_result.scalars().all()
 
-        existing_result = await db.execute(select(FeeCharge.property_id).where(FeeCharge.periodo == periodo))
-        ya_tienen_cargo = {row for row in existing_result.scalars().all()}
+        existing_result = await db.execute(
+            select(FeeCharge.property_id, FeeCharge.fee_id).where(FeeCharge.periodo == periodo)
+        )
+        ya_tienen_cargo = set(existing_result.all())
 
         nuevos_cargos = []
-        for prop in properties:
-            if prop.id in ya_tienen_cargo:
-                continue
-            charge = FeeCharge(property_id=prop.id, fee_id=fee.id, periodo=periodo, monto_base=fee.monto)
+        for fee in fees_a_generar:
+            for prop in properties:
+                if (prop.id, fee.id) in ya_tienen_cargo:
+                    continue
+                charge = FeeCharge(property_id=prop.id, fee_id=fee.id, periodo=periodo, monto_base=fee.monto)
 
-            # Saldo a favor (F1-09): si la vivienda tiene crédito suficiente para
-            # cubrir este cargo completo, se salda de inmediato con ese crédito
-            # en vez de esperar un nuevo depósito.
-            saldo = float(prop.saldo_a_favor)
-            if saldo + TOLERANCIA_CENTAVOS >= float(fee.monto):
-                charge.estado = EstadoCargo.pagado
-                prop.saldo_a_favor = saldo - float(fee.monto)
+                # Saldo a favor (F1-09): si la vivienda tiene crédito suficiente para
+                # cubrir este cargo completo, se salda de inmediato con ese crédito
+                # en vez de esperar un nuevo depósito.
+                saldo = float(prop.saldo_a_favor)
+                if saldo + TOLERANCIA_CENTAVOS >= float(fee.monto):
+                    charge.estado = EstadoCargo.pagado
+                    prop.saldo_a_favor = saldo - float(fee.monto)
 
-            db.add(charge)
-            nuevos_cargos.append(charge)
+                db.add(charge)
+                nuevos_cargos.append(charge)
+                ya_tienen_cargo.add((prop.id, fee.id))
 
         if nuevos_cargos:
             await db.commit()

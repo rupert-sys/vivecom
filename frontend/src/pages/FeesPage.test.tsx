@@ -170,4 +170,127 @@ describe('FeesPage', () => {
     await screen.findByText('10%')
     expect(screen.queryByRole('link', { name: /cambiar en reglamento/i })).not.toBeInTheDocument()
   })
+
+  it('un admin puede eliminar una cuota, con confirmación', async () => {
+    mockUser('admin')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
+    const deleteSpy = vi.spyOn(feesApi, 'deleteFee').mockResolvedValue()
+    const confirmar = vi.spyOn(window, 'confirm').mockReturnValueOnce(false).mockReturnValueOnce(true)
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+    await screen.findByText('$1500.00')
+
+    await user.click(screen.getByRole('button', { name: /eliminar/i }))
+    expect(deleteSpy).not.toHaveBeenCalled()
+
+    await user.click(screen.getByRole('button', { name: /eliminar/i }))
+    await waitFor(() => expect(deleteSpy).toHaveBeenCalledWith('fee-1'))
+    expect(confirmar).toHaveBeenCalledTimes(2)
+  })
+
+  it('si la cuota ya generó cargos, muestra el motivo del backend en vez de eliminarla', async () => {
+    mockUser('admin')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
+    const { ApiError } = await import('../api/client')
+    vi.spyOn(feesApi, 'deleteFee').mockRejectedValue(new ApiError(409, 'Esta cuota ya generó cargos: no se puede eliminar, solo editar.'))
+    vi.spyOn(window, 'confirm').mockReturnValue(true)
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+    await screen.findByText('$1500.00')
+
+    await user.click(screen.getByRole('button', { name: /eliminar/i }))
+
+    expect(await screen.findByText(/ya generó cargos/i)).toBeInTheDocument()
+    expect(screen.getByText('$1500.00')).toBeInTheDocument() // sigue en la lista
+  })
+
+  it('un pago único pide el periodo al que aplica, no una fecha de "activa desde"', async () => {
+    mockUser('admin')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
+    const createSpy = vi.spyOn(feesApi, 'createFee').mockResolvedValue({ ...fee, periodicidad: 'unica' })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+    await screen.findByText(/todavía no hay ninguna cuota/i)
+
+    await user.selectOptions(screen.getByDisplayValue('Mensual'), 'unica')
+    expect(screen.getByText(/genera un cargo una sola vez/i)).toBeInTheDocument()
+
+    await user.type(screen.getByPlaceholderText('Monto'), '5000')
+    await user.type(screen.getByLabelText('Periodo'), '2026-12-01')
+    await user.click(screen.getByRole('button', { name: /agregar cuota/i }))
+
+    await waitFor(() =>
+      expect(createSpy).toHaveBeenCalledWith({ monto: 5000, periodicidad: 'unica', activa_desde: '2026-12-01' }),
+    )
+  })
+
+  it('la tabla muestra "Pago único" para una cuota con esa periodicidad', async () => {
+    mockUser('tesorero')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([{ ...fee, periodicidad: 'unica' }])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Pago único')).toBeInTheDocument()
+  })
+
+  it('se puede elegir y crear una cuota con periodicidad semanal', async () => {
+    mockUser('admin')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
+    const createSpy = vi.spyOn(feesApi, 'createFee').mockResolvedValue({ ...fee, periodicidad: 'semanal' })
+    const user = userEvent.setup()
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+    await screen.findByText(/todavía no hay ninguna cuota/i)
+
+    await user.selectOptions(screen.getByDisplayValue('Mensual'), 'semanal')
+    await user.type(screen.getByPlaceholderText('Monto'), '200')
+    await user.type(screen.getByLabelText('Activa desde'), '2026-09-01')
+    await user.click(screen.getByRole('button', { name: /agregar cuota/i }))
+
+    await waitFor(() =>
+      expect(createSpy).toHaveBeenCalledWith({ monto: 200, periodicidad: 'semanal', activa_desde: '2026-09-01' }),
+    )
+  })
+
+  it('la tabla muestra "Semanal" para una cuota con esa periodicidad', async () => {
+    mockUser('tesorero')
+    vi.spyOn(feesApi, 'listFees').mockResolvedValue([{ ...fee, periodicidad: 'semanal' }])
+    vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
+
+    render(
+      <MemoryRouter>
+        <FeesPage />
+      </MemoryRouter>,
+    )
+
+    expect(await screen.findByText('Semanal')).toBeInTheDocument()
+  })
 })

@@ -1,11 +1,29 @@
 import { useEffect, useState, type FormEvent } from 'react'
-import { createFee, listFees, updateFee } from '../api/fees'
+import { createFee, deleteFee, listFees, updateFee } from '../api/fees'
 import { getReglamento } from '../api/reglamento'
 import { Link } from 'react-router-dom'
 import { formatoPorcentaje } from '../utils/reglamento'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import type { Fee, Periodicidad, Reglamento } from '../types'
+
+const ETIQUETA_PERIODICIDAD: Record<Periodicidad, string> = {
+  mensual: 'Mensual',
+  bimestral: 'Bimestral',
+  semanal: 'Semanal',
+  unica: 'Pago único',
+}
+
+function SelectorDePeriodicidad({ value, onChange }: { value: Periodicidad; onChange: (p: Periodicidad) => void }) {
+  return (
+    <select value={value} onChange={(e) => onChange(e.target.value as Periodicidad)}>
+      <option value="mensual">Mensual</option>
+      <option value="bimestral">Bimestral</option>
+      <option value="semanal">Semanal</option>
+      <option value="unica">Pago único (extraordinaria, de proyecto…)</option>
+    </select>
+  )
+}
 
 export function FeesPage() {
   const { user } = useAuth()
@@ -81,6 +99,16 @@ export function FeesPage() {
     }
   }
 
+  async function handleDelete(feeId: string) {
+    if (!window.confirm('¿Eliminar esta cuota? Esta acción no se puede deshacer.')) return
+    try {
+      await deleteFee(feeId)
+      await reload()
+    } catch (err) {
+      setError(err instanceof ApiError ? err.message : 'No se pudo eliminar la cuota.')
+    }
+  }
+
   return (
     <div>
       <h2>Configuración de cuotas</h2>
@@ -97,7 +125,7 @@ export function FeesPage() {
       )}
 
       {isAdmin && (
-        <form onSubmit={handleCreate} style={{ display: 'flex', gap: 'var(--space-2)', margin: 'var(--space-3) 0', flexWrap: 'wrap' }}>
+        <form onSubmit={handleCreate} style={{ display: 'flex', gap: 'var(--space-2)', margin: 'var(--space-3) 0', flexWrap: 'wrap', alignItems: 'center' }}>
           <input
             type="number"
             step="0.01"
@@ -106,13 +134,10 @@ export function FeesPage() {
             onChange={(e) => setMonto(e.target.value)}
             required
           />
-          <select value={periodicidad} onChange={(e) => setPeriodicidad(e.target.value as Periodicidad)}>
-            <option value="mensual">Mensual</option>
-            <option value="bimestral">Bimestral</option>
-          </select>
+          <SelectorDePeriodicidad value={periodicidad} onChange={setPeriodicidad} />
           <input
             type="date"
-            aria-label="Activa desde"
+            aria-label={periodicidad === 'unica' ? 'Periodo' : 'Activa desde'}
             value={activaDesde}
             onChange={(e) => setActivaDesde(e.target.value)}
             required
@@ -120,6 +145,11 @@ export function FeesPage() {
           <button type="submit" disabled={creating}>
             {creating ? 'Creando…' : 'Agregar cuota'}
           </button>
+          {periodicidad === 'unica' && (
+            <p style={{ margin: 0, width: '100%', fontSize: '0.85rem', color: 'var(--ink-faint)' }}>
+              Un pago único genera un cargo una sola vez, en el mes que elijas — no reemplaza a la cuota mensual.
+            </p>
+          )}
         </form>
       )}
 
@@ -153,13 +183,10 @@ export function FeesPage() {
                         onChange={(e) => setEditMonto(e.target.value)}
                         required
                       />
-                      <select value={editPeriodicidad} onChange={(e) => setEditPeriodicidad(e.target.value as Periodicidad)}>
-                        <option value="mensual">Mensual</option>
-                        <option value="bimestral">Bimestral</option>
-                      </select>
+                      <SelectorDePeriodicidad value={editPeriodicidad} onChange={setEditPeriodicidad} />
                       <input
                         type="date"
-                        aria-label="Activa desde"
+                        aria-label={editPeriodicidad === 'unica' ? 'Periodo' : 'Activa desde'}
                         value={editActivaDesde}
                         onChange={(e) => setEditActivaDesde(e.target.value)}
                         required
@@ -174,11 +201,14 @@ export function FeesPage() {
               ) : (
                 <tr key={fee.id} style={{ borderBottom: '1px solid var(--border)' }}>
                   <td className="mono">${fee.monto.toFixed(2)}</td>
-                  <td>{fee.periodicidad === 'mensual' ? 'Mensual' : 'Bimestral'}</td>
+                  <td>{ETIQUETA_PERIODICIDAD[fee.periodicidad]}</td>
                   <td className="mono">{fee.activa_desde}</td>
                   {isAdmin && (
                     <td>
-                      <button onClick={() => startEdit(fee)}>Editar</button>
+                      <button onClick={() => startEdit(fee)}>Editar</button>{' '}
+                      <button onClick={() => handleDelete(fee.id)} style={{ color: 'var(--brick)' }}>
+                        Eliminar
+                      </button>
                     </td>
                   )}
                 </tr>

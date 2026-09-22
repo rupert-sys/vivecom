@@ -18,3 +18,7 @@ export function createFee(payload: FeeInput): Promise<Fee> {
 export function updateFee(id: string, payload: Partial<FeeInput>): Promise<Fee> {
   return apiFetch<Fee>(`/fees/${id}`, { method: 'PATCH', body: payload })
 }
+
+export function deleteFee(id: string): Promise<void> {
+  return apiFetch<void>(`/fees/${id}`, { method: 'DELETE' })
+}

@@ -3,6 +3,9 @@ export interface Property {
   identificador: string
   referencia_pago: string
   saldo_a_favor: number
+  residente_principal: string | null
+  residente_principal_rol: 'propietario' | 'inquilino' | null
+  total_residentes: number
 }
 
 export type RolOcupacion = 'propietario' | 'inquilino'
@@ -14,7 +17,9 @@ export interface Resident {
   email: string | null
 }
 
-export type Periodicidad = 'mensual' | 'bimestral'
+// semanal: se guarda y se lista tal cual, pero facturar de verdad cada semana no está implementado — el
+// backend factura con la misma cadencia que "mensual" (ver Periodicidad.semanal en el modelo).
+export type Periodicidad = 'mensual' | 'bimestral' | 'semanal' | 'unica'
 
 export interface Fee {
   id: string
@@ -122,6 +127,8 @@ export interface PaymentProof {
 
 export type TipoGasto = 'operativo' | 'programado' | 'extraordinario'
 export type TipoComprobante = 'remision' | 'factura'
+// Solo clasifica el gasto para reportar/filtrar — no genera automáticamente los gastos futuros de uno recurrente.
+export type RecurrenciaGasto = 'unica' | 'semanal' | 'mensual'
 
 export interface Cotizacion {
   proveedor: string
@@ -140,6 +147,7 @@ export interface Expense {
   acta_referencia: string | null
   cotizaciones: Cotizacion[] | null
   tipo_comprobante: TipoComprobante | null
+  recurrencia: RecurrenciaGasto
 }
 
 export interface TotalPorConcepto {
@@ -158,6 +166,7 @@ export interface FinancialSummary {
   por_cobrar: number
   gastos_por_tipo: TotalPorConcepto[]
   gastos_por_categoria: TotalPorConcepto[]
+  gastos_por_mes: TotalPorConcepto[] // concepto = "YYYY-MM", en orden cronológico
 }
 
 export type PeriodicidadPresupuesto = 'mensual' | 'anual'

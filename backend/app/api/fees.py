@@ -9,6 +9,7 @@ from app.api.deps import get_tenant_db, require_roles
 from app.core.business_rules import RECARGO_DIA_DEL_MES, RECARGO_PORCENTAJE
 from app.core.config import settings
 from app.models.fee import Fee
+from app.models.fee_charge import FeeCharge
 from app.models.user import Rol
 from app.schemas.fee import FeeCreate, FeeRead, FeeUpdate
 from app.services.fee_charge_service import apply_late_surcharges, generate_charges_for_period
@@ -70,6 +71,26 @@ async def update_fee(fee_id: uuid.UUID, payload: FeeUpdate, db: AsyncSession = D
         setattr(fee, field, value)
     await db.commit()
     return fee
+
+
+@router.delete("/{fee_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=admin_only)
+async def delete_fee(fee_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
+    """
+    Solo se puede eliminar una cuota que todavía no generó ningún cargo (se dio de alta por error, o su fecha
+    aún no llega): borrarla después rompería el histórico de FeeCharge, que queda ligado a ella (fee_id).
+    """
+    fee = await db.get(Fee, fee_id)
+    if fee is None:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, "Configuración de cuota no encontrada")
+    tiene_cargos = (
+        await db.execute(select(FeeCharge.id).where(FeeCharge.fee_id == fee_id).limit(1))
+    ).scalar_one_or_none()
+    if tiene_cargos is not None:
+        raise HTTPException(
+            status.HTTP_409_CONFLICT, "Esta cuota ya generó cargos: no se puede eliminar, solo editar."
+        )
+    await db.delete(fee)
+    await db.commit()
 
 
 @router.post("/generate-charges", dependencies=admin_only)

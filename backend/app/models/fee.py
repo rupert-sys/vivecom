@@ -11,6 +11,16 @@ from app.core.database_base import TenantBase
 class Periodicidad(str, enum.Enum):
     mensual = "mensual"
     bimestral = "bimestral"
+    # Se puede elegir, pero hoy se GENERA con la misma cadencia que "mensual" (ver fee_charge_service): facturar
+    # de verdad cada semana necesitaría que periodo/FeeCharge dejen de ser "un mes" y que el cálculo de recargo
+    # (denominado en meses, reglamento Art. 9) cambie de unidad — no se implementó, marcado explícitamente.
+    semanal = "semanal"
+    # Pago único (p. ej. una cuota extraordinaria o de proyecto): NO participa en la selección de "la cuota
+    # recurrente vigente" (ver fee_charge_service.get_active_fee) — si lo hiciera, en cuanto pasara su fecha
+    # reemplazaría en silencio a la cuota mensual real para todos los periodos siguientes. En vez de eso, genera
+    # exactamente un cargo, para el periodo que sea igual a `activa_desde` (aquí significa "el periodo al que
+    # aplica", no "a partir de cuándo" como en las periodicidades recurrentes).
+    unica = "unica"
 
 
 class Fee(TenantBase):
