@@ -76,3 +76,31 @@ def test_get_unknown_expense_404(client):
 
     response = client.get(f"/expenses/{uuid.uuid4()}")
     assert response.status_code == 404
+
+
+def test_un_gasto_sin_recurrencia_se_registra_como_unica(client):
+    creado = client.post(
+        "/expenses",
+        json={"categoria": "Mantenimiento", "monto": 500.00, "comprobante_url": "https://x/a.pdf", "fecha": "2026-09-10"},
+    ).json()
+    assert creado["recurrencia"] == "unica"
+
+
+def test_un_gasto_se_puede_marcar_como_recurrente(client):
+    creado = client.post(
+        "/expenses",
+        json={
+            "categoria": "Vigilancia", "monto": 15000.00, "comprobante_url": "https://x/a.pdf",
+            "fecha": "2026-09-10", "recurrencia": "mensual",
+        },
+    ).json()
+    assert creado["recurrencia"] == "mensual"
+
+
+def test_se_puede_filtrar_la_lista_por_recurrencia(client):
+    client.post("/expenses", json={"categoria": "Vigilancia", "monto": 15000.00, "comprobante_url": "https://x/a.pdf", "fecha": "2026-09-10", "recurrencia": "mensual"})
+    client.post("/expenses", json={"categoria": "Jardinería", "monto": 800.00, "comprobante_url": "https://x/b.pdf", "fecha": "2026-09-10", "recurrencia": "semanal"})
+    client.post("/expenses", json={"categoria": "Mantenimiento", "monto": 500.00, "comprobante_url": "https://x/c.pdf", "fecha": "2026-09-10"})
+
+    mensuales = client.get("/expenses", params={"recurrencia": "mensual"}).json()
+    assert [g["categoria"] for g in mensuales] == ["Vigilancia"]

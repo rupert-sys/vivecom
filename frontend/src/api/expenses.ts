@@ -1,5 +1,5 @@
 import { apiFetch } from './client'
-import type { Expense, FinancialSummary, TipoComprobante, TipoGasto } from '../types'
+import type { Expense, FinancialSummary, RecurrenciaGasto, TipoComprobante, TipoGasto } from '../types'
 
 export interface ExpenseInput {
   categoria: string
@@ -13,6 +13,7 @@ export interface ExpenseInput {
   acta_referencia?: string
   cotizaciones?: { proveedor: string; monto: number; archivo_id?: string }[]
   tipo_comprobante?: TipoComprobante
+  recurrencia?: RecurrenciaGasto
 }
 
 export function listExpenses(): Promise<Expense[]> {

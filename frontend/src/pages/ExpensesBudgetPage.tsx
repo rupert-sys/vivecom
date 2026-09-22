@@ -11,6 +11,7 @@ import type {
   Expense,
   FinancialSummary,
   PeriodicidadPresupuesto,
+  RecurrenciaGasto,
   Reglamento,
   TipoComprobante,
   TipoGasto,
@@ -21,6 +22,28 @@ const ETIQUETA_TIPO: Record<TipoGasto, string> = {
   programado: 'Programado',
   extraordinario: 'Extraordinario',
 }
+
+const ETIQUETA_RECURRENCIA: Record<RecurrenciaGasto, string> = {
+  unica: 'Una vez',
+  semanal: 'Semanal',
+  mensual: 'Mensual',
+}
+
+// Categorías sugeridas (el gasto acepta cualquier texto vía "Otra…"): las más comunes en la administración de un
+// condominio mexicano, para que la mayoría de los gastos no requieran capturar el nombre a mano cada vez.
+const CATEGORIAS_SUGERIDAS = [
+  'Mantenimiento',
+  'Vigilancia',
+  'Jardinería',
+  'Recolección de basura',
+  'Limpieza de áreas comunes',
+  'Administración',
+  'Agua, luz y gas (áreas comunes)',
+  'Elevadores y equipos',
+  'Seguros',
+  'Proyectos y obra',
+]
+const OTRA_CATEGORIA = '__otra__'
 
 interface CotizacionForm {
   proveedor: string
@@ -41,13 +64,16 @@ export function ExpensesBudgetPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const [categoria, setCategoria] = useState('')
+  const [categoriaSeleccionada, setCategoriaSeleccionada] = useState<string>(CATEGORIAS_SUGERIDAS[0])
+  const [categoriaOtra, setCategoriaOtra] = useState('')
+  const categoria = categoriaSeleccionada === OTRA_CATEGORIA ? categoriaOtra.trim() : categoriaSeleccionada
   const [monto, setMonto] = useState('')
   const [fecha, setFecha] = useState('')
   const [comprobanteUrl, setComprobanteUrl] = useState('')
   const [comprobanteArchivo, setComprobanteArchivo] = useState<File | null>(null)
   const [creandoGasto, setCreandoGasto] = useState(false)
   const [tipo, setTipo] = useState<TipoGasto>('operativo')
+  const [recurrencia, setRecurrencia] = useState<RecurrenciaGasto>('unica')
   const [tipoComprobante, setTipoComprobante] = useState<TipoComprobante | ''>('')
   const [aprobadoAsamblea, setAprobadoAsamblea] = useState(false)
   const [acta, setActa] = useState('')
@@ -108,6 +134,10 @@ export function ExpensesBudgetPage() {
       setError('Adjunta el comprobante del gasto (foto o PDF), o pega su enlace.')
       return
     }
+    if (categoria === '') {
+      setError('Escribe el nombre de la categoría.')
+      return
+    }
     setCreandoGasto(true)
     try {
       // Los archivos se suben primero; el gasto solo lleva sus identificadores.
@@ -127,6 +157,7 @@ export function ExpensesBudgetPage() {
         fecha,
         ...(comprobanteSubido ? { comprobante_archivo_id: comprobanteSubido.id } : { comprobante_url: comprobanteUrl.trim() }),
         tipo,
+        recurrencia,
         ...(tipoComprobante ? { tipo_comprobante: tipoComprobante } : {}),
         ...(requiereSustento
           ? {
@@ -136,12 +167,14 @@ export function ExpensesBudgetPage() {
             }
           : {}),
       })
-      setCategoria('')
+      setCategoriaSeleccionada(CATEGORIAS_SUGERIDAS[0])
+      setCategoriaOtra('')
       setMonto('')
       setFecha('')
       setComprobanteUrl('')
       setComprobanteArchivo(null)
       setTipo('operativo')
+      setRecurrencia('unica')
       setTipoComprobante('')
       setAprobadoAsamblea(false)
       setActa('')
@@ -211,33 +244,80 @@ export function ExpensesBudgetPage() {
             </StatCard>
             <StatCard label="Cuotas por cobrar">{money(resumen.por_cobrar)}</StatCard>
           </div>
-          {resumen.gastos_por_categoria.length > 0 && (
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: 'var(--space-4)' }}>
-              <thead>
-                <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
-                  <th>Gasto por categoría</th>
-                  <th>Movimientos</th>
-                  <th>Total</th>
-                </tr>
-              </thead>
-              <tbody>
-                {resumen.gastos_por_categoria.map((c) => (
-                  <tr key={c.concepto} style={{ borderBottom: '1px solid var(--border)' }}>
-                    <td>{c.concepto}</td>
-                    <td className="mono">{c.cantidad}</td>
-                    <td className="mono">{money(c.total)}</td>
+          <div style={{ display: 'flex', gap: 'var(--space-4)', flexWrap: 'wrap', marginBottom: 'var(--space-4)' }}>
+            {resumen.gastos_por_categoria.length > 0 && (
+              <table style={{ borderCollapse: 'collapse', flex: 1, minWidth: 280 }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                    <th>Gasto por categoría</th>
+                    <th>Movimientos</th>
+                    <th>Total</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
+                </thead>
+                <tbody>
+                  {resumen.gastos_por_categoria.map((c) => (
+                    <tr key={c.concepto} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td>{c.concepto}</td>
+                      <td className="mono">{c.cantidad}</td>
+                      <td className="mono">{money(c.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+            {resumen.gastos_por_mes.length > 0 && (
+              <table style={{ borderCollapse: 'collapse', flex: 1, minWidth: 280 }}>
+                <thead>
+                  <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                    <th>Gasto por mes</th>
+                    <th>Movimientos</th>
+                    <th>Total</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {resumen.gastos_por_mes.map((m) => (
+                    <tr key={m.concepto} style={{ borderBottom: '1px solid var(--border)' }}>
+                      <td>{m.concepto}</td>
+                      <td className="mono">{m.cantidad}</td>
+                      <td className="mono">{money(m.total)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
         </>
       )}
 
       <h3>Gastos</h3>
       {isAdmin && (
         <form onSubmit={handleCreateExpense} style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', margin: 'var(--space-3) 0' }}>
-          <input placeholder="Categoría del gasto" value={categoria} onChange={(e) => setCategoria(e.target.value)} required />
+          <select
+            aria-label="Categoría del gasto"
+            value={categoriaSeleccionada}
+            onChange={(e) => setCategoriaSeleccionada(e.target.value)}
+          >
+            {CATEGORIAS_SUGERIDAS.map((c) => (
+              <option key={c} value={c}>
+                {c}
+              </option>
+            ))}
+            <option value={OTRA_CATEGORIA}>Otra…</option>
+          </select>
+          {categoriaSeleccionada === OTRA_CATEGORIA && (
+            <input
+              placeholder="Nombre de la categoría"
+              aria-label="Nombre de la categoría"
+              value={categoriaOtra}
+              onChange={(e) => setCategoriaOtra(e.target.value)}
+              required
+            />
+          )}
+          <select aria-label="Recurrencia" value={recurrencia} onChange={(e) => setRecurrencia(e.target.value as RecurrenciaGasto)}>
+            <option value="unica">Una vez</option>
+            <option value="semanal">Semanal</option>
+            <option value="mensual">Mensual</option>
+          </select>
           <input type="number" step="0.01" placeholder="Monto" value={monto} onChange={(e) => setMonto(e.target.value)} required />
           <input type="date" aria-label="Fecha del gasto" value={fecha} onChange={(e) => setFecha(e.target.value)} required />
           <label style={{ display: 'flex', flexDirection: 'column', gap: 4, flexBasis: '100%' }}>
@@ -348,6 +428,7 @@ export function ExpensesBudgetPage() {
               <th>Fecha</th>
               <th>Categoría</th>
               <th>Tipo</th>
+              <th>Recurrencia</th>
               <th>Monto</th>
               <th>Comprobante</th>
               <th>Sustento</th>
@@ -359,6 +440,13 @@ export function ExpensesBudgetPage() {
                 <td className="mono">{gasto.fecha}</td>
                 <td>{gasto.categoria}</td>
                 <td>{ETIQUETA_TIPO[gasto.tipo] ?? gasto.tipo}</td>
+                <td>
+                  {gasto.recurrencia === 'unica' ? (
+                    <span style={{ color: 'var(--ink-faint)' }}>—</span>
+                  ) : (
+                    <span className="chip chip-blue">{ETIQUETA_RECURRENCIA[gasto.recurrencia]}</span>
+                  )}
+                </td>
                 <td className="mono">${gasto.monto.toFixed(2)}</td>
                 <td>
                   <a href={gasto.comprobante_url} target="_blank" rel="noreferrer">

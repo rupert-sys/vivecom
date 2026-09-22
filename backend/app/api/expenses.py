@@ -77,7 +77,7 @@ async def create_expense(
         categoria=payload.categoria, monto=payload.monto, comprobante_url=comprobante,
         fecha=payload.fecha, tipo=payload.tipo, aprobado_en_asamblea=payload.aprobado_en_asamblea,
         acta_referencia=payload.acta_referencia, tipo_comprobante=payload.tipo_comprobante,
-        cotizaciones=cotizaciones or None,
+        cotizaciones=cotizaciones or None, recurrencia=payload.recurrencia,
     )
     db.add(expense)
     await db.commit()
@@ -102,6 +102,7 @@ async def list_expenses(
     hasta: date | None = None,
     categoria: str | None = None,
     tipo: str | None = None,
+    recurrencia: str | None = None,
     current_user: CurrentUser = Depends(get_current_user),
     db: AsyncSession = Depends(get_tenant_db),
 ):
@@ -118,6 +119,8 @@ async def list_expenses(
         query = query.where(Expense.categoria == categoria)
     if tipo is not None:
         query = query.where(Expense.tipo == tipo)
+    if recurrencia is not None:
+        query = query.where(Expense.recurrencia == recurrencia)
     result = await db.execute(query)
     return [_a_lectura(gasto, current_user.schema_name) for gasto in result.scalars().all()]
 

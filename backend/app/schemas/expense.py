@@ -6,6 +6,8 @@ from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 TipoGasto = Literal["operativo", "programado", "extraordinario"]
 TipoComprobante = Literal["remision", "factura"]
+# Solo clasifica el gasto para reportar/filtrar — NO genera automáticamente los gastos futuros de uno recurrente.
+Recurrencia = Literal["unica", "semanal", "mensual"]
 
 
 class Cotizacion(BaseModel):
@@ -31,6 +33,7 @@ class ExpenseCreate(BaseModel):
     acta_referencia: str | None = None
     cotizaciones: list[Cotizacion] = []
     tipo_comprobante: TipoComprobante | None = None
+    recurrencia: Recurrencia = "unica"
 
     @model_validator(mode="after")
     def _exige_comprobante(self):
@@ -52,6 +55,7 @@ class ExpenseRead(BaseModel):
     acta_referencia: str | None = None
     cotizaciones: list[Cotizacion] | None = None
     tipo_comprobante: str | None = None
+    recurrencia: str = "unica"
 
 
 class TotalPorConcepto(BaseModel):
@@ -75,3 +79,4 @@ class FinancialSummary(BaseModel):
     por_cobrar: float  # cuotas generadas y aún sin pagar en el rango
     gastos_por_tipo: list[TotalPorConcepto]
     gastos_por_categoria: list[TotalPorConcepto]
+    gastos_por_mes: list[TotalPorConcepto]  # concepto = "YYYY-MM", ordenado cronológicamente (no de mayor a menor)

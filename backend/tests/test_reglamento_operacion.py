@@ -169,6 +169,19 @@ def test_resumen_con_mas_gastos_que_ingresos_da_saldo_en_contra(client):
     assert client.get("/expenses/summary").json()["saldo"] == -500.0
 
 
+def test_resumen_agrupa_los_gastos_por_mes_en_orden_cronologico(client):
+    client.post("/expenses", json=_gasto(monto=100, fecha="2026-09-05"))
+    client.post("/expenses", json=_gasto(monto=50, fecha="2026-09-20"))  # mismo mes, se suma
+    client.post("/expenses", json=_gasto(monto=300, fecha="2026-01-10"))  # mes distinto, más viejo
+
+    gastos_por_mes = client.get("/expenses/summary").json()["gastos_por_mes"]
+
+    assert gastos_por_mes == [
+        {"concepto": "2026-01", "total": 300.0, "cantidad": 1},
+        {"concepto": "2026-09", "total": 150.0, "cantidad": 2},
+    ]
+
+
 def test_resumen_respeta_el_rango_de_fechas(client):
     client.post("/expenses", json=_gasto(monto=100, fecha="2026-01-10"))
     client.post("/expenses", json=_gasto(monto=300, fecha="2026-06-10"))

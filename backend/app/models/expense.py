@@ -35,3 +35,7 @@ class Expense(TenantBase):
     # remision | factura — el reglamento pide "remisiones o facturas a nombre
     # del condominio" (Art. 8 VIII).
     tipo_comprobante: Mapped[str | None] = mapped_column(String, nullable=True)
+    # unica | semanal | mensual — clasifica el gasto como recurrente o no (p. ej. la nómina de vigilancia se
+    # repite cada mes). Es solo una etiqueta para reportar y filtrar: NO genera automáticamente los gastos
+    # futuros — cada uno se sigue registrando a mano cuando ocurre.
+    recurrencia: Mapped[str] = mapped_column(String, default="unica")

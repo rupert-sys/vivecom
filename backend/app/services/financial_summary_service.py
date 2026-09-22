@@ -58,20 +58,20 @@ async def get_financial_summary(db: AsyncSession, desde: date | None, hasta: dat
         por_cobrar=round(por_cobrar, 2),
         gastos_por_tipo=_agrupar(gastos, lambda g: g.tipo or "operativo"),
         gastos_por_categoria=_agrupar(gastos, lambda g: g.categoria),
+        gastos_por_mes=_agrupar(gastos, lambda g: g.fecha.strftime("%Y-%m"), orden_cronologico=True),
     )
 
 
-def _agrupar(gastos, clave) -> list[TotalPorConcepto]:
+def _agrupar(gastos, clave, orden_cronologico: bool = False) -> list[TotalPorConcepto]:
     acumulado: dict[str, list[float]] = {}
     for gasto in gastos:
         total_y_cantidad = acumulado.setdefault(clave(gasto), [0.0, 0])
         total_y_cantidad[0] += float(gasto.monto)
         total_y_cantidad[1] += 1
-    return sorted(
-        (TotalPorConcepto(concepto=k, total=round(v[0], 2), cantidad=int(v[1])) for k, v in acumulado.items()),
-        key=lambda t: t.total,
-        reverse=True,
-    )
+    filas = [TotalPorConcepto(concepto=k, total=round(v[0], 2), cantidad=int(v[1])) for k, v in acumulado.items()]
+    if orden_cronologico:
+        return sorted(filas, key=lambda t: t.concepto)  # "YYYY-MM" ordena cronológicamente como texto
+    return sorted(filas, key=lambda t: t.total, reverse=True)
 
 
 async def get_collection_status(db: AsyncSession, periodo: date) -> EstatusCobranza:

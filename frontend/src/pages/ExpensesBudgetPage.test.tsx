@@ -23,6 +23,7 @@ const gasto: Expense = {
   acta_referencia: null,
   cotizaciones: null,
   tipo_comprobante: null,
+  recurrencia: 'unica',
 }
 
 // monto_real deliberadamente distinto del monto del gasto de arriba, para
@@ -48,6 +49,7 @@ const resumen: FinancialSummary = {
     { concepto: 'Limpieza', total: 4000, cantidad: 2 },
     { concepto: 'Portería', total: 321.25, cantidad: 1 },
   ],
+  gastos_por_mes: [{ concepto: '2026-09', total: 4321.25, cantidad: 3 }],
 }
 
 const reglamento: Reglamento = {
@@ -105,7 +107,7 @@ describe('ExpensesBudgetPage', () => {
     render(<ExpensesBudgetPage />)
 
     await screen.findByText('$3200.00')
-    expect(screen.queryByPlaceholderText('Categoría del gasto')).not.toBeInTheDocument()
+    expect(screen.queryByLabelText('Categoría del gasto')).not.toBeInTheDocument()
     expect(screen.queryByPlaceholderText('Monto planeado')).not.toBeInTheDocument()
   })
 
@@ -119,7 +121,7 @@ describe('ExpensesBudgetPage', () => {
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
 
-    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Jardinería')
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Jardinería')
     await user.type(screen.getByPlaceholderText('Monto'), '3200')
     await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
     await user.type(screen.getByPlaceholderText('URL del comprobante'), 'https://ejemplo.com/c.pdf')
@@ -132,6 +134,7 @@ describe('ExpensesBudgetPage', () => {
         fecha: '2026-09-05',
         comprobante_url: 'https://ejemplo.com/c.pdf',
         tipo: 'operativo',
+        recurrencia: 'unica',
       }),
     )
   })
@@ -204,6 +207,8 @@ describe('ExpensesBudgetPage', () => {
     expect(screen.getByText('$111.11')).toBeInTheDocument()
     expect(screen.getByText('Limpieza')).toBeInTheDocument()
     expect(screen.getByText('Portería')).toBeInTheDocument()
+    expect(screen.getByText('Gasto por mes')).toBeInTheDocument()
+    expect(screen.getByText('2026-09')).toBeInTheDocument()
   })
 
   it('con más gastos que ingresos el saldo se muestra en contra y en positivo', async () => {
@@ -299,7 +304,8 @@ describe('ExpensesBudgetPage', () => {
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
-    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Portón')
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Otra…')
+    await user.type(screen.getByLabelText('Nombre de la categoría'), 'Portón')
     await user.type(screen.getByPlaceholderText('Monto'), '45000')
     await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
     await user.type(screen.getByPlaceholderText('URL del comprobante'), 'https://ejemplo.com/f.pdf')
@@ -321,6 +327,7 @@ describe('ExpensesBudgetPage', () => {
       fecha: '2026-09-05',
       comprobante_url: 'https://ejemplo.com/f.pdf',
       tipo: 'extraordinario',
+      recurrencia: 'unica',
       tipo_comprobante: 'factura',
       aprobado_en_asamblea: true,
       acta_referencia: 'Asamblea 18-ene-2026',
@@ -342,7 +349,8 @@ describe('ExpensesBudgetPage', () => {
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
-    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Portón')
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Otra…')
+    await user.type(screen.getByLabelText('Nombre de la categoría'), 'Portón')
     await user.type(screen.getByPlaceholderText('Monto'), '45000')
     await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
     await user.type(screen.getByPlaceholderText('URL del comprobante'), 'https://ejemplo.com/f.pdf')
@@ -364,7 +372,7 @@ describe('ExpensesBudgetPage', () => {
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
-    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Jardinería')
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Jardinería')
     await user.type(screen.getByPlaceholderText('Monto'), '3200')
     await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
     const archivo = new File(['%PDF-1.7'], 'factura.pdf', { type: 'application/pdf' })
@@ -379,6 +387,7 @@ describe('ExpensesBudgetPage', () => {
       fecha: '2026-09-05',
       comprobante_archivo_id: 'arch-1',
       tipo: 'operativo',
+      recurrencia: 'unica',
     })
   })
 
@@ -391,7 +400,7 @@ describe('ExpensesBudgetPage', () => {
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
-    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Jardinería')
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Jardinería')
     await user.type(screen.getByPlaceholderText('Monto'), '3200')
     await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
     await user.click(screen.getByRole('button', { name: /registrar gasto/i }))
@@ -417,7 +426,8 @@ describe('ExpensesBudgetPage', () => {
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
-    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Portón')
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Otra…')
+    await user.type(screen.getByLabelText('Nombre de la categoría'), 'Portón')
     await user.type(screen.getByPlaceholderText('Monto'), '45000')
     await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
     await user.type(screen.getByLabelText(/o pega el enlace/i), 'https://ejemplo.com/f.pdf')
@@ -448,7 +458,7 @@ describe('ExpensesBudgetPage', () => {
 
     render(<ExpensesBudgetPage />)
     await screen.findByText(/todavía no hay gastos/i)
-    await user.type(screen.getByPlaceholderText('Categoría del gasto'), 'Jardinería')
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Jardinería')
     await user.type(screen.getByPlaceholderText('Monto'), '3200')
     await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
     await user.upload(screen.getByLabelText(/comprobante \(foto o pdf/i), new File(['x'], 'x.exe', { type: 'application/octet-stream' }))
@@ -456,5 +466,58 @@ describe('ExpensesBudgetPage', () => {
 
     expect(await screen.findByText(/solo se aceptan fotos/i)).toBeInTheDocument()
     expect(createSpy).not.toHaveBeenCalled()
+  })
+
+  it('ofrece categorías sugeridas y "Otra…" para escribir una distinta', async () => {
+    mockUser('admin')
+    vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
+    vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
+
+    render(<ExpensesBudgetPage />)
+    await screen.findByText(/todavía no hay gastos/i)
+    const selector = screen.getByLabelText('Categoría del gasto') as HTMLSelectElement
+
+    expect(selector).toHaveDisplayValue('Mantenimiento')
+    for (const sugerida of ['Vigilancia', 'Jardinería', 'Recolección de basura']) {
+      expect(screen.getByRole('option', { name: sugerida })).toBeInTheDocument()
+    }
+    expect(screen.queryByLabelText('Nombre de la categoría')).not.toBeInTheDocument()
+  })
+
+  it('un gasto se puede marcar como recurrente (semanal o mensual)', async () => {
+    mockUser('admin')
+    vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
+    vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
+    const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
+    const user = userEvent.setup({ delay: null })
+
+    render(<ExpensesBudgetPage />)
+    await screen.findByText(/todavía no hay gastos/i)
+    await user.selectOptions(screen.getByLabelText('Categoría del gasto'), 'Vigilancia')
+    await user.selectOptions(screen.getByLabelText('Recurrencia'), 'mensual')
+    await user.type(screen.getByPlaceholderText('Monto'), '15000')
+    await user.type(screen.getByLabelText('Fecha del gasto'), '2026-09-05')
+    await user.type(screen.getByPlaceholderText('URL del comprobante'), 'https://ejemplo.com/c.pdf')
+    await user.click(screen.getByRole('button', { name: /registrar gasto/i }))
+
+    await waitFor(() =>
+      expect(createSpy).toHaveBeenCalledWith(
+        expect.objectContaining({ categoria: 'Vigilancia', recurrencia: 'mensual' }),
+      ),
+    )
+  })
+
+  it('la tabla de gastos muestra la recurrencia (o nada, si es de una sola vez)', async () => {
+    mockUser('tesorero')
+    vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([
+      gasto,
+      { ...gasto, id: 'g2', categoria: 'Vigilancia', recurrencia: 'mensual' },
+    ])
+    vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
+
+    render(<ExpensesBudgetPage />)
+
+    await screen.findByText('Vigilancia')
+    expect(screen.getByText('Mensual')).toBeInTheDocument()
   })
 })
