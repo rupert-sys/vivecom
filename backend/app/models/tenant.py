@@ -26,3 +26,7 @@ class Tenant(ControlBase):
     clabe_destino: Mapped[str] = mapped_column(String(18), unique=True)
     precio_por_vivienda: Mapped[float] = mapped_column(Numeric(10, 2), default=25.00)
     schema_name: Mapped[str] = mapped_column(String, unique=True)
+    # Logo del condominio (opcional): los bytes viven en el almacenamiento (file_storage.py, misma llave
+    # fija por tenant, así que un re-subido pisa al anterior en vez de acumular huérfanos); aquí solo se
+    # guarda el tipo, para saber si hay logo y con qué Content-Type servirlo (ver GET /tenant/logo).
+    logo_content_type: Mapped[str | None] = mapped_column(String, nullable=True)

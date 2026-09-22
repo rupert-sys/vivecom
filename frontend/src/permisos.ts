@@ -19,6 +19,7 @@ export interface Seccion {
 export const SECCIONES: readonly Seccion[] = [
   { ruta: '/properties', etiqueta: 'Viviendas', roles: ['admin', 'tesorero'] },
   { ruta: '/users', etiqueta: 'Usuarios', roles: ['admin'] },
+  { ruta: '/organizacion', etiqueta: 'Organización', roles: ['admin'] },
   { ruta: '/fees', etiqueta: 'Cuotas', roles: ['admin', 'tesorero'] },
   { ruta: '/collection', etiqueta: 'Cobranza', roles: ['admin', 'tesorero'] },
   { ruta: '/payment-proofs', etiqueta: 'Comprobantes', roles: ['admin', 'tesorero'] },

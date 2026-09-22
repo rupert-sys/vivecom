@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from app.core.validators import validar_clabe
 
@@ -39,3 +39,15 @@ class ClabeChangeLogRead(BaseModel):
     clabe_nueva: str
     cambiado_por: uuid.UUID
     fecha: datetime
+
+
+class TenantConfigRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    nombre: str
+    tiene_logo: bool
+
+
+class TenantNombreUpdate(BaseModel):
+    nombre: str = Field(min_length=1, max_length=200)

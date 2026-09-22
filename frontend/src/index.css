@@ -4,31 +4,223 @@
   box-sizing: border-box;
 }
 
+html {
+  -webkit-font-smoothing: antialiased;
+}
+
 body {
   margin: 0;
   background: var(--paper);
   color: var(--ink);
   font-family: var(--font-body);
+  font-size: 15px;
+  line-height: 1.5;
 }
 
 h1, h2, h3 {
   font-family: var(--font-heading);
-  margin: 0;
+  color: var(--ink);
+  margin: 0 0 var(--space-3);
+  line-height: 1.25;
 }
+
+h2 { font-size: 1.5rem; font-weight: 600; }
+h3 { font-size: 1.15rem; font-weight: 600; }
+
+p { margin: 0 0 var(--space-2); }
 
 .mono {
   font-family: var(--font-mono);
-}
-
-button {
-  font-family: inherit;
-  cursor: pointer;
-}
-
-input, select {
-  font-family: inherit;
+  font-variant-numeric: tabular-nums;
 }
 
 a {
   color: var(--dustblue);
 }
+
+/* ---------- Formularios ---------- */
+
+button {
+  font-family: inherit;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--ink);
+  padding: 9px 16px;
+  transition: background-color 0.12s ease, border-color 0.12s ease, box-shadow 0.12s ease, opacity 0.12s ease;
+}
+
+button:hover:not(:disabled) {
+  border-color: var(--ink-faint);
+  background: var(--surface-2);
+}
+
+button:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+button:focus-visible,
+input:focus-visible,
+select:focus-visible,
+a:focus-visible {
+  outline: none;
+  box-shadow: var(--focus-ring);
+}
+
+/* Acción principal: type="submit" cubre la gran mayoría (Entrar, Guardar, Crear, Importar…); .btn-primary lo
+   fuerza donde hace falta (p. ej. un botón fuera de un <form>). */
+button[type='submit'],
+.btn-primary {
+  background: var(--teal);
+  border-color: var(--teal);
+  color: #fff;
+}
+
+button[type='submit']:hover:not(:disabled),
+.btn-primary:hover:not(:disabled) {
+  background: var(--teal-strong);
+  border-color: var(--teal-strong);
+}
+
+/* Un botón cuyo texto ya es rojo (var(--brick), la convención de "eliminar" en todo el panel) se queda como
+   botón claro con borde y texto en alerta — no como botón sólido, para no leerse como un error del propio botón. */
+button[style*='brick'] {
+  border-color: var(--brick-tint);
+  background: var(--surface);
+}
+
+button[style*='brick']:hover:not(:disabled) {
+  background: var(--brick-tint);
+  border-color: var(--brick);
+}
+
+.btn-text {
+  border: none;
+  background: none;
+  padding: 0;
+  font-weight: 500;
+  color: var(--dustblue);
+}
+
+.btn-text:hover:not(:disabled) {
+  background: none;
+  text-decoration: underline;
+}
+
+input, select, textarea {
+  font-family: inherit;
+  font-size: 0.9rem;
+  color: var(--ink);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 8px 10px;
+}
+
+input::placeholder, textarea::placeholder {
+  color: var(--ink-faint);
+}
+
+input:disabled, select:disabled, textarea:disabled {
+  background: var(--surface-2);
+  color: var(--ink-faint);
+}
+
+label {
+  font-size: 0.85rem;
+  color: var(--ink-soft);
+}
+
+/* ---------- Tarjetas y contenedores ---------- */
+
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-sm);
+}
+
+details {
+  background: var(--surface);
+  border: 1px solid var(--border-soft);
+  border-radius: var(--radius);
+  padding: var(--space-3);
+}
+
+details[open] { padding-bottom: var(--space-4); }
+
+details summary {
+  cursor: pointer;
+  font-weight: 600;
+  color: var(--ink);
+  list-style: none;
+}
+
+details summary::-webkit-details-marker { display: none; }
+
+details summary::before {
+  content: '▸';
+  display: inline-block;
+  margin-right: var(--space-2);
+  color: var(--teal);
+  transition: transform 0.12s ease;
+}
+
+details[open] summary::before {
+  transform: rotate(90deg);
+}
+
+/* ---------- Tablas ---------- */
+
+table {
+  border-collapse: collapse;
+}
+
+th {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  text-align: left;
+  padding: 10px var(--space-3);
+  border-bottom: 1px solid var(--border);
+}
+
+td {
+  padding: 12px var(--space-3);
+  border-bottom: 1px solid var(--border-soft);
+  vertical-align: middle;
+}
+
+tbody tr {
+  transition: background-color 0.1s ease;
+}
+
+tbody tr:hover {
+  background: var(--surface-2);
+}
+
+/* ---------- Chips ---------- */
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.chip-teal { background: var(--teal-tint); color: var(--teal-strong); }
+.chip-amber { background: var(--amber-tint); color: var(--amber); }
+.chip-brick { background: var(--brick-tint); color: var(--brick-strong); }
+.chip-blue { background: var(--dustblue-tint); color: var(--dustblue); }
+.chip-neutral { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--border-soft); }

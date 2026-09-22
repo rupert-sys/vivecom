@@ -13,6 +13,7 @@ Uso:  python -m app.core.init_db
 
 import asyncio
 
+from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from app.core.config import settings
@@ -23,6 +24,11 @@ from app.models import clabe_change_log, tenant, user_lookup, vivecom_staff  # n
 async def init_control_schema(engine: AsyncEngine) -> None:
     async with engine.begin() as conn:
         await conn.run_sync(ControlBase.metadata.create_all)
+        # create_all no agrega columnas a una tabla que YA existe (mismo límite que migrate_schema.py, pero aquí
+        # para el schema de control, que es uno solo — no hay "por tenant" que recorrer). ADD COLUMN IF NOT EXISTS
+        # es sintaxis de Postgres: las pruebas usan SQLite y no la necesitan (create_all ya crea la columna ahí).
+        if engine.dialect.name != "sqlite":
+            await conn.execute(text("ALTER TABLE public.tenant ADD COLUMN IF NOT EXISTS logo_content_type VARCHAR"))
 
 
 async def main() -> None:
