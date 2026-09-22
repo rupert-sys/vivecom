@@ -13,6 +13,7 @@ import '../services/property_service.dart';
 import '../services/receipt_service.dart';
 import '../services/reservation_service.dart';
 import '../services/statement_service.dart';
+import '../services/tenant_service.dart';
 import '../services/visit_service.dart';
 import 'clabe_screen.dart';
 import 'community_screen.dart';
@@ -30,6 +31,7 @@ class ResidenteHomeScreen extends StatefulWidget {
   final String propertyId;
   final String token;
   final StatementService statementService;
+  final TenantService tenantService;
   final ClabeService clabeService;
   final PropertyService propertyService;
   final FeeService feeService;
@@ -50,6 +52,7 @@ class ResidenteHomeScreen extends StatefulWidget {
     required this.propertyId,
     required this.token,
     required this.statementService,
+    required this.tenantService,
     required this.clabeService,
     required this.propertyService,
     required this.feeService,
@@ -110,6 +113,7 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         propertyId: widget.propertyId,
         token: widget.token,
         statementService: widget.statementService,
+        tenantService: widget.tenantService,
         onLogout: widget.onLogout,
       ),
       PaymentScreen(

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 
+import 'theme.dart';
+
 import 'screens/login_screen.dart';
 import 'screens/residente_home_screen.dart';
 import 'services/amenity_service.dart';
@@ -16,6 +18,7 @@ import 'services/property_service.dart';
 import 'services/receipt_service.dart';
 import 'services/reservation_service.dart';
 import 'services/statement_service.dart';
+import 'services/tenant_service.dart';
 import 'services/visit_service.dart';
 import 'widgets/oculta_teclado.dart';
 
@@ -33,6 +36,7 @@ class VivecomApp extends StatefulWidget {
 class _VivecomAppState extends State<VivecomApp> {
   final AuthService _authService = AuthService();
   final StatementService _statementService = StatementService();
+  final TenantService _tenantService = TenantService();
   final ClabeService _clabeService = ClabeService();
   final PropertyService _propertyService = PropertyService();
   final FeeService _feeService = FeeService();
@@ -78,7 +82,7 @@ class _VivecomAppState extends State<VivecomApp> {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Vivecom',
-      theme: ThemeData(colorScheme: ColorScheme.fromSeed(seedColor: const Color(0xFF2F6F63))),
+      theme: temaVivecom,
       builder: (context, child) => OcultaTecladoAlTocarFuera(child: child),
       home: _buildHome(),
     );
@@ -122,6 +126,7 @@ class _VivecomAppState extends State<VivecomApp> {
       propertyId: usuario.propertyId!,
       token: token,
       statementService: _statementService,
+      tenantService: _tenantService,
       clabeService: _clabeService,
       propertyService: _propertyService,
       feeService: _feeService,

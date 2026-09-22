@@ -1,6 +1,7 @@
 import 'package:app_residente/screens/statement_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/statement_service.dart';
+import 'package:app_residente/services/tenant_service.dart';
 import 'package:app_residente/widgets/anadir_a_inicio.dart';
 import 'package:app_residente/widgets/descarga_apk.dart';
 import 'package:app_residente/widgets/instalar_app.dart';
@@ -37,13 +38,22 @@ const _fixtureEstadoDeCuenta = '''
 ''';
 
 void main() {
-  Future<void> pumpStatement(WidgetTester tester, StatementService service, {VoidCallback? onLogout}) async {
+  TenantService tenantServiceSinNombre() =>
+      TenantService(api: ApiClient(client: MockClient((r) async => http.Response('not found', 404))));
+
+  Future<void> pumpStatement(
+    WidgetTester tester,
+    StatementService service, {
+    VoidCallback? onLogout,
+    TenantService? tenantService,
+  }) async {
     await tester.pumpWidget(
       MaterialApp(
         home: StatementScreen(
           propertyId: 'p1',
           token: 'un-token',
           statementService: service,
+          tenantService: tenantService ?? tenantServiceSinNombre(),
           onLogout: onLogout ?? () {},
         ),
       ),
@@ -182,6 +192,7 @@ void main() {
           propertyId: 'p1',
           token: 'un-token',
           statementService: service,
+          tenantService: tenantServiceSinNombre(),
           onLogout: () {},
           instalarApp: InstalarApp(
             apk: DescargarApk(visible: true, abrir: (url) async => abierta = url),
@@ -210,4 +221,39 @@ void main() {
       expect(find.byKey(const Key('tarjeta_atajo')), findsNothing);
     },
   );
+
+  testWidgets('muestra el nombre del condominio arriba de la vivienda', (tester) async {
+    final service = StatementService(
+      api: ApiClient(client: MockClient((request) async => http.Response(_fixtureEstadoDeCuenta, 200))),
+    );
+    final tenantService = TenantService(
+      api: ApiClient(
+        client: MockClient(
+          (r) async => http.Response('{"id": "t1", "nombre": "Residencial Las Jacarandas", "tiene_logo": false}', 200),
+        ),
+      ),
+    );
+
+    await pumpStatement(tester, service, tenantService: tenantService);
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('nombre_condominio')), findsOneWidget);
+    expect(find.text('Residencial Las Jacarandas'), findsOneWidget);
+    expect(find.text('Casa 1'), findsOneWidget); // la vivienda, ya mostrada, sigue ahí
+  });
+
+  testWidgets('si no se puede obtener el nombre del condominio, el estado de cuenta se ve completo igual', (
+    tester,
+  ) async {
+    final service = StatementService(
+      api: ApiClient(client: MockClient((request) async => http.Response(_fixtureEstadoDeCuenta, 200))),
+    );
+
+    await pumpStatement(tester, service); // tenantServiceSinNombre(): /tenant da 404
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('nombre_condominio')), findsNothing);
+    expect(find.text('Casa 1'), findsOneWidget);
+    expect(find.textContaining('500.00'), findsWidgets);
+  });
 }

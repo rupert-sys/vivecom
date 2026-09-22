@@ -13,6 +13,7 @@ import 'package:app_residente/services/property_service.dart';
 import 'package:app_residente/services/receipt_service.dart';
 import 'package:app_residente/services/reservation_service.dart';
 import 'package:app_residente/services/statement_service.dart';
+import 'package:app_residente/services/tenant_service.dart';
 import 'package:app_residente/services/visit_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -73,6 +74,7 @@ void main() {
           propertyId: 'p1',
           token: 'un-token',
           statementService: StatementService(api: ApiClient(client: mockClient)),
+          tenantService: TenantService(api: ApiClient(client: mockClient)),
           clabeService: ClabeService(api: ApiClient(client: mockClient)),
           propertyService: PropertyService(api: ApiClient(client: mockClient)),
           feeService: FeeService(api: ApiClient(client: mockClient)),
@@ -150,6 +152,7 @@ void main() {
           propertyId: 'p1',
           token: 'un-token',
           statementService: StatementService(api: api),
+          tenantService: TenantService(api: api),
           clabeService: ClabeService(api: api),
           propertyService: PropertyService(api: api),
           feeService: FeeService(api: api),
@@ -207,6 +210,7 @@ void main() {
           propertyId: 'p1',
           token: 'un-token',
           statementService: StatementService(api: api),
+          tenantService: TenantService(api: api),
           clabeService: ClabeService(api: api),
           propertyService: PropertyService(api: api),
           feeService: FeeService(api: api),

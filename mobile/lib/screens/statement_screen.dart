@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../models/account_statement.dart';
+import '../services/tenant_service.dart';
 import '../services/api_client.dart';
 import '../services/statement_service.dart';
 import '../utils/dates.dart';
@@ -11,6 +12,7 @@ class StatementScreen extends StatefulWidget {
   final String propertyId;
   final String token;
   final StatementService statementService;
+  final TenantService tenantService;
   final VoidCallback onLogout;
   // Bajar el APK (Android) o añadir la app a la pantalla de inicio (iPhone): solo en la versión web. Va aquí y no solo
   // en el inicio de sesión porque la sesión se guarda: quien ya entró no vuelve a ver esa pantalla.
@@ -21,6 +23,7 @@ class StatementScreen extends StatefulWidget {
     required this.propertyId,
     required this.token,
     required this.statementService,
+    required this.tenantService,
     required this.onLogout,
     this.instalarApp = const InstalarApp(),
   });
@@ -33,11 +36,24 @@ class _StatementScreenState extends State<StatementScreen> {
   AccountStatement? _estado;
   String? _error;
   bool _cargando = true;
+  // Nombre del condominio: es solo contexto ("¿de cuál condominio es esta cuenta?"), así que si falla no bloquea
+  // ni se le avisa al residente — el estado de cuenta se ve completo de todos modos.
+  String? _nombreCondominio;
 
   @override
   void initState() {
     super.initState();
     _cargar();
+    _cargarNombreCondominio();
+  }
+
+  Future<void> _cargarNombreCondominio() async {
+    try {
+      final config = await widget.tenantService.obtenerConfiguracion(widget.token);
+      if (mounted) setState(() => _nombreCondominio = config.nombre);
+    } catch (_) {
+      // Sin indicador de error: es solo contexto, ver el comentario del campo.
+    }
   }
 
   Future<void> _cargar() async {
@@ -130,6 +146,13 @@ class _StatementScreenState extends State<StatementScreen> {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
+        if (_nombreCondominio != null)
+          Text(
+            _nombreCondominio!,
+            key: const Key('nombre_condominio'),
+            style: Theme.of(context).textTheme.labelLarge
+                ?.copyWith(color: Theme.of(context).colorScheme.onSurfaceVariant),
+          ),
         Text(estado.identificador, style: Theme.of(context).textTheme.titleLarge),
         const SizedBox(height: 16),
         widget.instalarApp,
