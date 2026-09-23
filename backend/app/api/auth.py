@@ -46,6 +46,13 @@ async def login(payload: LoginRequest, control_db: AsyncSession = Depends(contro
             verify_password(payload.password, _DUMMY_PASSWORD_HASH)
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas")
 
+        # Cuenta de vivienda creada en bloque por /signup, sin activar todavía (ver UserAccount.activada): su
+        # password_hash es un centinela que ningún password real produce — antes de comparar contra él, un
+        # mensaje claro es mejor que "credenciales inválidas" (el residente no escribió mal su contraseña, es
+        # que todavía no puso ninguna). No es una cuenta secreta: el administrador ya conoce esta vivienda.
+        if not user.activada:
+            raise HTTPException(status.HTTP_403_FORBIDDEN, "Esta cuenta todavía no se activó: complete el registro en la app.")
+
         if not verify_password(payload.password, user.password_hash):
             raise HTTPException(status.HTTP_401_UNAUTHORIZED, "Credenciales inválidas")
 
@@ -55,5 +62,6 @@ async def login(payload: LoginRequest, control_db: AsyncSession = Depends(contro
             schema_name=tenant.schema_name,
             rol=user.rol.value,
             property_id=str(user.property_id) if user.property_id else None,
+            debe_cambiar_password=user.debe_cambiar_password,
         )
         return TokenResponse(access_token=token)

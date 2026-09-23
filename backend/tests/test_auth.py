@@ -107,6 +107,83 @@ def test_login_with_nonexistent_email_is_rejected_with_the_same_message(client):
     assert response.json()["detail"] == "Credenciales inválidas"
 
 
+async def _seed_login_sin_activar(client):
+    """Cuenta de vivienda creada en bloque por /signup, sin reclamar todavía (ver UserAccount.activada)."""
+    from tests.conftest import TEST_TENANT_ID
+
+    await _crear_tablas(client)
+    user_id = uuid.uuid4()
+    async with client.db_session_factory() as db:
+        db.add(
+            Tenant(
+                id=uuid.UUID(TEST_TENANT_ID), nombre="Condominio de prueba", clabe_destino="012180001547896321",
+                precio_por_vivienda=25.00, schema_name="test",
+            )
+        )
+        db.add(UserLookup(email="casa1@arequipa.com.mx", tenant_id=uuid.UUID(TEST_TENANT_ID), user_id=user_id))
+        db.add(
+            UserAccount(
+                id=user_id, email="casa1@arequipa.com.mx", password_hash=hash_password("lo-que-sea"),
+                rol="residente", activada=False,
+            )
+        )
+        await db.commit()
+
+
+def test_login_a_una_cuenta_sin_activar_da_un_mensaje_claro(client):
+    asyncio.run(_seed_login_sin_activar(client))
+    fake_tenant_session = _preparar_login(client)
+
+    with patch.object(auth_module, "tenant_session", fake_tenant_session):
+        response = client.post("/auth/login", json={"email": "casa1@arequipa.com.mx", "password": "lo-que-sea"})
+
+    assert response.status_code == 403
+    assert "no se activó" in response.json()["detail"]
+
+
+def test_login_incluye_debe_cambiar_password_en_el_token(client):
+    """
+    Alta por /signup: el admin nace con debe_cambiar_password=True (contraseña temporal = nombre del
+    condominio) — el panel lo lee del JWT para forzar la pantalla de cambio en el primer login.
+    """
+    import base64
+    import json
+
+    from tests.conftest import TEST_TENANT_ID
+
+    asyncio.run(_crear_tablas(client))
+    user_id = uuid.uuid4()
+
+    async def _seed():
+        async with client.db_session_factory() as db:
+            db.add(
+                Tenant(
+                    id=uuid.UUID(TEST_TENANT_ID), nombre="Condominio de prueba", clabe_destino="012180001547896321",
+                    precio_por_vivienda=25.00, schema_name="test",
+                )
+            )
+            db.add(UserLookup(email=TEST_EMAIL, tenant_id=uuid.UUID(TEST_TENANT_ID), user_id=user_id))
+            db.add(
+                UserAccount(
+                    id=user_id, email=TEST_EMAIL, password_hash=hash_password(TEST_PASSWORD), rol="admin",
+                    debe_cambiar_password=True,
+                )
+            )
+            await db.commit()
+
+    asyncio.run(_seed())
+    fake_tenant_session = _preparar_login(client)
+
+    with patch.object(auth_module, "tenant_session", fake_tenant_session):
+        response = client.post("/auth/login", json={"email": TEST_EMAIL, "password": TEST_PASSWORD})
+
+    token = response.json()["access_token"]
+    payload_b64 = token.split(".")[1]
+    payload_b64 += "=" * (-len(payload_b64) % 4)  # padding que JWT omite y base64 exige
+    payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+    assert payload["debe_cambiar_password"] is True
+
+
 def test_a_nonexistent_email_still_runs_a_bcrypt_verification(client):
     """
     F2-21: antes, un email inexistente respondía 401 de inmediato SIN correr

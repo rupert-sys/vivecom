@@ -10,7 +10,7 @@ describe('permisos del panel', () => {
 
   it('tesorería solo ve lo de cobranza y finanzas', () => {
     expect(etiquetas('tesorero')).toEqual([
-      'Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Dashboard', 'Gastos', 'Exportar', 'Reservaciones', 'Reglamento',
+      'Dashboard', 'Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Gastos', 'Exportar', 'Reservaciones', 'Reglamento',
     ])
   })
 
@@ -44,8 +44,8 @@ describe('permisos del panel', () => {
   })
 
   it('cada rol entra a la pantalla que más usa, y esa pantalla es una que puede ver', () => {
-    expect(inicioDe('admin')).toBe('/properties')
-    expect(inicioDe('tesorero')).toBe('/collection')
+    expect(inicioDe('admin')).toBe('/dashboard')
+    expect(inicioDe('tesorero')).toBe('/dashboard')
     expect(inicioDe('comite_aprobador')).toBe('/payment-agreements')
     expect(inicioDe('comite_lectura')).toBe('/payment-agreements')
     expect(inicioDe('guardia')).toBe('/security')

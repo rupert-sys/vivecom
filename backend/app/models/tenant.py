@@ -23,7 +23,11 @@ class Tenant(ControlBase):
     # una base ya existente con duplicados (mismo límite que
     # migrate_add_tables.py: solo crea tablas, no altera columnas ni
     # restricciones de tablas ya existentes).
-    clabe_destino: Mapped[str] = mapped_column(String(18), unique=True)
+    # nullable=True: /signup (landing de bienvenida) ya no la pide — un condominio
+    # nuevo no puede recibir SPEI hasta que el admin la configure desde /clabe
+    # (PATCH /tenant/clabe, que ya maneja clabe_anterior=None como "se está
+    # configurando por primera vez", no como un cambio real).
+    clabe_destino: Mapped[str | None] = mapped_column(String(18), unique=True, nullable=True)
     precio_por_vivienda: Mapped[float] = mapped_column(Numeric(10, 2), default=25.00)
     schema_name: Mapped[str] = mapped_column(String, unique=True)
     # Logo del condominio (opcional): los bytes viven en el almacenamiento (file_storage.py, misma llave

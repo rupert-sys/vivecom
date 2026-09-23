@@ -29,6 +29,9 @@ async def init_control_schema(engine: AsyncEngine) -> None:
         # es sintaxis de Postgres: las pruebas usan SQLite y no la necesitan (create_all ya crea la columna ahí).
         if engine.dialect.name != "sqlite":
             await conn.execute(text("ALTER TABLE public.tenant ADD COLUMN IF NOT EXISTS logo_content_type VARCHAR"))
+            # /signup (landing de bienvenida) ya no pide la CLABE al dar de alta un condominio — ver Tenant.clabe_destino.
+            await conn.execute(text("ALTER TABLE public.tenant ALTER COLUMN clabe_destino DROP NOT NULL"))
+            await conn.execute(text("ALTER TABLE public.clabe_change_log ALTER COLUMN clabe_anterior DROP NOT NULL"))
 
 
 async def main() -> None:

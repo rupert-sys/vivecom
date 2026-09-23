@@ -22,12 +22,21 @@ import { PaymentAgreementsPage } from './pages/PaymentAgreementsPage'
 import { AnnouncementQuestionsPage } from './pages/AnnouncementQuestionsPage'
 import { RequireAuth } from './auth/RequireAuth'
 import { Inicio } from './auth/Inicio'
+import { CambiarPasswordObligatorioPage } from './pages/CambiarPasswordObligatorioPage'
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route path="/signup" element={<SignupPage />} />
+      <Route
+        path="/cambiar-password"
+        element={
+          <RequireAuth>
+            <CambiarPasswordObligatorioPage />
+          </RequireAuth>
+        }
+      />
       <Route
         element={
           <RequireAuth>

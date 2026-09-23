@@ -48,7 +48,7 @@ describe('Layout: el menú muestra solo lo que el rol puede usar', () => {
   it('tesorería no ve Usuarios, CLABE, Avisos, Amenidades, Seguridad ni Dudas', () => {
     mockUser('tesorero')
     renderEn('/collection')
-    expect(menu()).toEqual(['Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Dashboard', 'Gastos', 'Exportar', 'Reservaciones', 'Reglamento'])
+    expect(menu()).toEqual(['Dashboard', 'Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Gastos', 'Exportar', 'Reservaciones', 'Reglamento'])
   })
 
   it('el comité aprobador ve solo lo suyo', () => {
@@ -67,7 +67,7 @@ describe('Layout: el menú muestra solo lo que el rol puede usar', () => {
     mockUser('tesorero')
     renderEn('/users')
     expect(screen.queryByText('Contenido de Usuarios')).not.toBeInTheDocument()
-    expect(screen.getByText('Contenido de Cobranza')).toBeInTheDocument()
+    expect(screen.getByText('Contenido de Dashboard')).toBeInTheDocument()
   })
 
   it('una dirección con parámetros de una sección permitida sí se muestra', () => {

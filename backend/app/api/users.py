@@ -47,6 +47,8 @@ async def create_user(
         password_hash=hash_password(payload.password),
         rol=payload.rol,
         property_id=payload.property_id,
+        nombre=payload.nombre,
+        telefono=payload.telefono,
     )
     db.add(user)
     await db.flush()  # necesitamos user.id antes de insertar en user_lookup
@@ -103,6 +105,12 @@ async def update_user(
 
     if payload.password is not None:
         user.password_hash = hash_password(payload.password)
+        user.debe_cambiar_password = False  # el admin acaba de fijar una contraseña real: la temporal ya no aplica
+
+    if payload.nombre is not None:
+        user.nombre = payload.nombre
+    if payload.telefono is not None:
+        user.telefono = payload.telefono
 
     if payload.rol is not None and payload.rol != user.rol:
         if str(user.id) == current_user.user_id:

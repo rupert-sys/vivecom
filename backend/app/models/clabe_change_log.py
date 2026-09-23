@@ -18,7 +18,8 @@ class ClabeChangeLog(ControlBase):
 
     id: Mapped[uuid.UUID] = mapped_column(primary_key=True, default=uuid.uuid4)
     tenant_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("tenant.id"))
-    clabe_anterior: Mapped[str] = mapped_column(String(18))
+    # None cuando esta entrada es la PRIMERA vez que el tenant configura su CLABE (nació sin una: ver Tenant.clabe_destino).
+    clabe_anterior: Mapped[str | None] = mapped_column(String(18), nullable=True)
     clabe_nueva: Mapped[str] = mapped_column(String(18))
     cambiado_por: Mapped[uuid.UUID] = mapped_column()  # user_account.id (vive en otro schema, sin FK cruzada)
     fecha: Mapped[datetime] = mapped_column(DateTime)

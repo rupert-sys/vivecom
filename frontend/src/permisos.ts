@@ -15,8 +15,9 @@ export interface Seccion {
   roles: readonly Rol[]
 }
 
-// El orden es el del menú.
+// El orden es el del menú. Dashboard va primero: es la pantalla inicial de admin/tesorero (ver INICIO abajo).
 export const SECCIONES: readonly Seccion[] = [
+  { ruta: '/dashboard', etiqueta: 'Dashboard', roles: ['admin', 'tesorero'] },
   { ruta: '/properties', etiqueta: 'Viviendas', roles: ['admin', 'tesorero'] },
   { ruta: '/users', etiqueta: 'Usuarios', roles: ['admin'] },
   { ruta: '/organizacion', etiqueta: 'Organización', roles: ['admin'] },
@@ -25,7 +26,6 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: '/payment-proofs', etiqueta: 'Comprobantes', roles: ['admin', 'tesorero'] },
   { ruta: '/payment-agreements', etiqueta: 'Acuerdos', roles: ['admin', 'tesorero', 'comite_aprobador', 'comite_lectura'] },
   { ruta: '/clabe', etiqueta: 'CLABE', roles: ['admin'] },
-  { ruta: '/dashboard', etiqueta: 'Dashboard', roles: ['admin', 'tesorero'] },
   { ruta: '/expenses', etiqueta: 'Gastos', roles: ['admin', 'tesorero', 'comite_aprobador', 'comite_lectura'] },
   { ruta: '/reports/export', etiqueta: 'Exportar', roles: ['admin', 'tesorero'] },
   { ruta: '/amenities', etiqueta: 'Amenidades', roles: ['admin'] },
@@ -36,10 +36,10 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: '/reglamento', etiqueta: 'Reglamento', roles: ['admin', 'tesorero', 'comite_aprobador', 'comite_lectura'] },
 ]
 
-// Primera pantalla de cada rol al entrar (la que más usa). Sin entrada: la primera sección que pueda ver.
+// Primera pantalla de cada rol al entrar. Sin entrada: la primera sección que pueda ver.
 const INICIO: Partial<Record<Rol, string>> = {
-  admin: '/properties',
-  tesorero: '/collection',
+  admin: '/dashboard',
+  tesorero: '/dashboard',
   comite_aprobador: '/payment-agreements',
   comite_lectura: '/payment-agreements',
   guardia: '/security',

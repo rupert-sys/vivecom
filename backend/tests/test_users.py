@@ -184,6 +184,42 @@ def test_una_contrasena_corta_al_editar_se_rechaza(client):
     assert client.patch(f"/users/{creado['id']}", json={"password": "corta"}).status_code == 422
 
 
+@pytest.mark.asyncio
+async def test_cambiar_la_contrasena_apaga_debe_cambiar_password(client):
+    """
+    Alta por /signup: el admin nace con debe_cambiar_password=True (contraseña temporal = nombre del
+    condominio, ver provisioning.py) — en cuanto fija una contraseña real vía PATCH /users/{id}, esa bandera
+    debe apagarse; si no, el panel seguiría pidiéndole cambiarla para siempre.
+    """
+    from app.models.user import UserAccount
+
+    creado = _crear(client, "temporal@condo.mx")
+    async with client.db_session_factory() as db:
+        user = await db.get(UserAccount, uuid.UUID(creado["id"]))
+        user.debe_cambiar_password = True
+        await db.commit()
+
+    assert client.patch(f"/users/{creado['id']}", json={"password": "clave-definitiva-1"}).status_code == 200
+
+    async with client.db_session_factory() as db:
+        user = await db.get(UserAccount, uuid.UUID(creado["id"]))
+    assert user.debe_cambiar_password is False
+
+
+def test_crear_usuario_acepta_nombre_y_telefono(client):
+    response = client.post(
+        "/users",
+        json={
+            "email": "conNombre@condo.mx", "password": "clave-123456", "rol": "tesorero",
+            "nombre": "Patricia Gómez", "telefono": "5555555555",
+        },
+    )
+    assert response.status_code == 201
+    body = response.json()
+    assert body["nombre"] == "Patricia Gómez"
+    assert body["telefono"] == "5555555555"
+
+
 def test_cambiar_el_rol_y_la_vivienda(client):
     casa = client.post("/properties", json={"identificador": "Casa 9"}).json()
     creado = _crear(client, "vecino@condo.mx", "tesorero")

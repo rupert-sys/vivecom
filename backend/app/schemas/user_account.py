@@ -10,6 +10,8 @@ class UserAccountCreate(BaseModel):
     password: str = Field(min_length=8)
     rol: Rol
     property_id: uuid.UUID | None = None
+    nombre: str | None = None
+    telefono: str | None = None
 
 
 class UserAccountRead(BaseModel):
@@ -19,6 +21,9 @@ class UserAccountRead(BaseModel):
     email: str
     rol: Rol
     property_id: uuid.UUID | None
+    nombre: str | None = None
+    telefono: str | None = None
+    activada: bool = True
 
 
 class UserAccountUpdate(BaseModel):
@@ -28,3 +33,5 @@ class UserAccountUpdate(BaseModel):
     password: str | None = Field(default=None, min_length=8)
     rol: Rol | None = None
     property_id: uuid.UUID | None = None
+    nombre: str | None = None
+    telefono: str | None = None

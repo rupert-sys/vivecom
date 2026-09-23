@@ -11,7 +11,7 @@ class TenantClabeRead(BaseModel):
 
     id: uuid.UUID
     nombre: str
-    clabe_destino: str
+    clabe_destino: str | None  # None: el condominio (alta por /signup) todavía no la configuró.
 
 
 class ClabeChangeRequest(BaseModel):
@@ -35,7 +35,7 @@ class ClabeChangeLogRead(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
-    clabe_anterior: str
+    clabe_anterior: str | None
     clabe_nueva: str
     cambiado_por: uuid.UUID
     fecha: datetime

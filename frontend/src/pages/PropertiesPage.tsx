@@ -1,6 +1,6 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Link } from 'react-router-dom'
-import { createProperty, deleteProperty, listProperties } from '../api/properties'
+import { createProperty, listProperties } from '../api/properties'
 import { downloadImportTemplate, importResidents, type ResidentImportResult } from '../api/residentImport'
 import { ApiError } from '../api/client'
 import { StatCard } from '../components/StatCard'
@@ -81,16 +81,6 @@ export function PropertiesPage() {
       setErrorImportacion(err instanceof ApiError ? err.message : 'No se pudo importar el archivo.')
     } finally {
       setImportando(false)
-    }
-  }
-
-  async function handleDelete(id: string) {
-    if (!window.confirm('¿Eliminar esta vivienda? Esta acción no se puede deshacer.')) return
-    try {
-      await deleteProperty(id)
-      await reload()
-    } catch (err) {
-      setError(err instanceof ApiError ? err.message : 'No se pudo eliminar la vivienda.')
     }
   }
 
@@ -206,7 +196,6 @@ export function PropertiesPage() {
               <th>Residente</th>
               <th>Referencia de pago</th>
               <th>Saldo a favor</th>
-              {isAdmin && <th />}
             </tr>
           </thead>
           <tbody>
@@ -232,13 +221,6 @@ export function PropertiesPage() {
                 </td>
                 <td className="mono">{p.referencia_pago}</td>
                 <td className="mono">${p.saldo_a_favor.toFixed(2)}</td>
-                {isAdmin && (
-                  <td>
-                    <button onClick={() => handleDelete(p.id)} style={{ color: 'var(--brick)' }}>
-                      Eliminar
-                    </button>
-                  </td>
-                )}
               </tr>
             ))}
           </tbody>

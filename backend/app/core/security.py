@@ -17,11 +17,20 @@ def verify_password(plain: str, hashed: str) -> bool:
     return pwd_context.verify(plain, hashed)
 
 
-def create_access_token(*, subject: str, tenant_id: str, schema_name: str, rol: str, property_id: str | None) -> str:
+def create_access_token(
+    *, subject: str, tenant_id: str, schema_name: str, rol: str, property_id: str | None,
+    debe_cambiar_password: bool = False,
+) -> str:
     """
     El JWT lleva todo lo necesario para resolver el tenant y el rol sin volver a
     consultar la base de datos de control en cada request: tenant_id, schema_name
     (para fijar el search_path) y rol (para autorización).
+
+    debe_cambiar_password: el panel/app lo leen para forzar la pantalla de cambio
+    de contraseña antes que cualquier otra cosa (alta por /signup: la contraseña
+    inicial del admin es el nombre del condominio, temporal por diseño) — es una
+    señal solo de UI, igual que rol/property_id (ver decodeToken en el frontend):
+    el backend nunca la usa para bloquear otros endpoints.
     """
     now = datetime.now(timezone.utc)
     payload: dict[str, Any] = {
@@ -30,6 +39,7 @@ def create_access_token(*, subject: str, tenant_id: str, schema_name: str, rol: 
         "schema": schema_name,
         "rol": rol,
         "property_id": property_id,
+        "debe_cambiar_password": debe_cambiar_password,
         "iat": now,
         "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
     }

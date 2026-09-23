@@ -13,10 +13,6 @@ export function updateProperty(id: string, identificador: string): Promise<Prope
   return apiFetch<Property>(`/properties/${id}`, { method: 'PATCH', body: { identificador } })
 }
 
-export function deleteProperty(id: string): Promise<void> {
-  return apiFetch<void>(`/properties/${id}`, { method: 'DELETE' })
-}
-
 export function listPropertyResidents(propertyId: string): Promise<Resident[]> {
   return apiFetch<Resident[]>(`/properties/${propertyId}/residents`)
 }

@@ -10,6 +10,10 @@ export interface JwtPayload {
   schema: string
   rol: string
   property_id: string | null
+  // Alta por /signup: contraseña inicial = nombre del condominio, temporal — el panel fuerza cambiarla
+  // antes de dejar hacer cualquier otra cosa (ver RequiereCambiarPassword). Opcional (no obligatorio en
+  // decodeToken/las pruebas existentes): un token viejo, de antes de este campo, simplemente no lo trae.
+  debe_cambiar_password?: boolean
   exp: number
 }
 

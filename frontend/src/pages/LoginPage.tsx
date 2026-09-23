@@ -1,11 +1,14 @@
 import { useState, type FormEvent } from 'react'
-import { Link, Navigate, useNavigate } from 'react-router-dom'
+import { Link, Navigate, useLocation, useNavigate } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
 import { ApiError } from '../api/client'
 
 export function LoginPage() {
   const { user, login } = useAuth()
   const navigate = useNavigate()
+  // Mensaje de una sola vez desde otra pantalla (ej. cambiaste tu contraseña temporal y hay que volver a
+  // entrar — ver CambiarPasswordObligatorioPage): viaja en el state de la navegación, no en la URL.
+  const mensaje = (useLocation().state as { mensaje?: string } | null)?.mensaje
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
@@ -50,6 +53,7 @@ export function LoginPage() {
         }}
       >
         <h2>Vivecom</h2>
+        {mensaje && <p style={{ color: 'var(--teal)', margin: 0 }}>{mensaje}</p>}
         <label>
           Email
           <input

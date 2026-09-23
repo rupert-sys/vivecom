@@ -89,6 +89,11 @@ COLUMNAS_NUEVAS: list[tuple[str, str, str]] = [
     ("reglamento_config", "prorroga_max_meses", "INTEGER NOT NULL DEFAULT 3"),
     ("payment_agreement", "pagos_previos", "JSON"),
     ("expense", "recurrencia", "VARCHAR NOT NULL DEFAULT 'unica'"),
+    # Landing de bienvenida (/signup ampliado): alta en bloque de viviendas + cuentas de residente sin activar.
+    ("user_account", "debe_cambiar_password", "BOOLEAN NOT NULL DEFAULT FALSE"),
+    ("user_account", "activada", "BOOLEAN NOT NULL DEFAULT TRUE"),
+    ("user_account", "nombre", "VARCHAR"),
+    ("user_account", "telefono", "VARCHAR"),
 ]
 
 # (nombre del tipo ENUM nativo en Postgres, valor nuevo). Ver nota arriba: sin

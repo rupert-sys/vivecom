@@ -122,10 +122,8 @@ async def update_property(property_id: uuid.UUID, payload: PropertyUpdate, db: A
     return prop
 
 
-@router.delete("/{property_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=admin_only)
-async def delete_property(property_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
-    prop = await db.get(Property, property_id)
-    if prop is None:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, "Vivienda no encontrada")
-    await db.delete(prop)
-    await db.commit()
+# No hay DELETE /properties/{id} (decisión explícita de producto): una vivienda nunca se borra, solo se
+# modifican sus datos o los de su(s) residente(s) — es la unidad sobre la que cuelga todo el historial
+# financiero (FeeCharge, Payment) y de accesos, y borrarla dejaría ese historial huérfano o forzaría un borrado
+# en cascada que se llevaría cobros ya hechos. Si una vivienda deja de existir en la realidad (fusión de dos
+# lotes, etc.) se resuelve a mano por soporte, no desde el panel.
