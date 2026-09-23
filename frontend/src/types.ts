@@ -101,11 +101,19 @@ export interface PropertyCollectionsSummary {
   pendiente: number
 }
 
+// Siempre trae "Mantenimiento", "Amenidades" y "Proyecto", en ese orden, aunque alguno esté en 0.
+export interface OrigenCollectionsSummary {
+  concepto: string
+  cobrado: number
+  pendiente: number
+}
+
 export interface CollectionsSummary {
   periodo: string | null
   cobrado_total: number
   pendiente_total: number
   por_vivienda: PropertyCollectionsSummary[]
+  por_origen: OrigenCollectionsSummary[]
 }
 
 export type EstadoComprobante = 'pendiente' | 'aceptado' | 'rechazado'

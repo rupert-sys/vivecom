@@ -11,11 +11,21 @@ class PropertyCollectionsSummary(BaseModel):
     pendiente: float
 
 
+class OrigenCollectionsSummary(BaseModel):
+    # "Mantenimiento" (cuotas mensual/bimestral/semanal), "Proyecto" (cuotas
+    # "unica" — pago único/extraordinario) o "Amenidades" (cuota de uso de
+    # una reservación). Siempre las 3, en este orden, aunque alguna esté en 0.
+    concepto: str
+    cobrado: float
+    pendiente: float
+
+
 class CollectionsSummary(BaseModel):
     periodo: date | None
     cobrado_total: float
     pendiente_total: float
     por_vivienda: list[PropertyCollectionsSummary]
+    por_origen: list[OrigenCollectionsSummary]
 
 
 class EstatusVivienda(BaseModel):

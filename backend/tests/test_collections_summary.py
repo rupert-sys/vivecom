@@ -7,6 +7,7 @@ crudas a Excel).
 """
 
 import uuid
+from datetime import datetime, timedelta, timezone
 
 import pytest
 from sqlalchemy import select
@@ -21,11 +22,11 @@ def _tenant_id() -> str:
     return app.dependency_overrides[get_current_user]().tenant_id
 
 
-def _como(rol: str):
+def _como(rol: str, property_id: str | None = None):
     tenant_id = _tenant_id()
 
     def override():
-        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=property_id)
 
     app.dependency_overrides[get_current_user] = override
 
@@ -106,3 +107,63 @@ def test_summary_requiere_rol_tesorero_o_admin(client):
     _como("guardia")
     response = client.get("/reports/collections-summary")
     assert response.status_code == 403
+
+
+def _por_concepto(body, concepto: str) -> dict:
+    return next(fila for fila in body["por_origen"] if fila["concepto"] == concepto)
+
+
+def test_por_origen_separa_mantenimiento_de_proyecto(client):
+    casa1 = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
+    client.post("/fees", json={"monto": 5000.00, "periodicidad": "unica", "activa_desde": "2026-09-01"})
+    client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
+
+    response = client.get("/reports/collections-summary", params={"periodo": "2026-09-01"})
+    body = response.json()
+
+    mantenimiento = _por_concepto(body, "Mantenimiento")
+    proyecto = _por_concepto(body, "Proyecto")
+    amenidades = _por_concepto(body, "Amenidades")
+    assert (mantenimiento["cobrado"], mantenimiento["pendiente"]) == (0.0, 1500.0)
+    assert (proyecto["cobrado"], proyecto["pendiente"]) == (0.0, 5000.0)
+    assert (amenidades["cobrado"], amenidades["pendiente"]) == (0.0, 0.0)  # sin ninguna reservación
+    assert casa1["identificador"] == "Casa 1"
+
+
+def test_por_origen_incluye_la_cuota_de_amenidades_pagada_y_pendiente(client):
+    casa1 = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como("admin")
+    amenidad = client.post("/amenities", json={"nombre": "Salón", "periodo_limite_horas": 24, "cuota": 300}).json()
+    _como("residente", property_id=casa1["id"])
+    inicio = (datetime.now(timezone.utc) + timedelta(days=5)).replace(tzinfo=None, microsecond=0)
+    reserva_pagada = client.post(
+        "/reservations",
+        json={"amenity_id": amenidad["id"], "fecha_inicio": inicio.isoformat(), "fecha_fin": (inicio + timedelta(hours=1)).isoformat()},
+    ).json()
+    reserva_pendiente = client.post(
+        "/reservations",
+        json={
+            "amenity_id": amenidad["id"],
+            "fecha_inicio": (inicio + timedelta(hours=2)).isoformat(),
+            "fecha_fin": (inicio + timedelta(hours=3)).isoformat(),
+        },
+    ).json()
+    _como("tesorero")
+    client.post(f"/reservations/{reserva_pagada['id']}/cuota-pagada")
+
+    response = client.get("/reports/collections-summary")
+    amenidades = _por_concepto(response.json(), "Amenidades")
+
+    assert amenidades["cobrado"] == 300.0
+    assert amenidades["pendiente"] == 300.0
+    assert reserva_pendiente["estado"] == "pendiente"
+
+
+def test_por_origen_siempre_trae_los_3_conceptos_aunque_esten_en_cero(client):
+    client.post("/properties", json={"identificador": "Casa 1"})
+
+    response = client.get("/reports/collections-summary")
+    conceptos = {fila["concepto"] for fila in response.json()["por_origen"]}
+
+    assert conceptos == {"Mantenimiento", "Amenidades", "Proyecto"}
