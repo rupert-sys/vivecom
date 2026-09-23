@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
 import '../widgets/instalar_app.dart';
+import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
@@ -88,7 +89,23 @@ class _LoginScreenState extends State<LoginScreen> {
                   _cargando
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(onPressed: _iniciarSesion, child: const Text('Entrar')),
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 12),
+                  TextButton(
+                    key: const Key('ir_a_registro'),
+                    onPressed: () => Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => RegistroScreen(
+                          authService: widget.authService,
+                          onRegistroExitoso: () {
+                            Navigator.of(context).pop();
+                            widget.onLoginSuccess();
+                          },
+                        ),
+                      ),
+                    ),
+                    child: const Text('¿Tu vivienda no tiene cuenta todavía? Regístrate'),
+                  ),
+                  const SizedBox(height: 12),
                   widget.instalarApp,
                 ],
               ),

@@ -46,6 +46,16 @@ void main() {
     expect(loginExitosoLlamado, isTrue);
   });
 
+  testWidgets('el enlace de registro lleva a RegistroScreen', (tester) async {
+    final auth = AuthService(api: ApiClient(client: MockClient((r) async => http.Response('{}', 200))));
+    await pumpLogin(tester, auth, () {});
+
+    await tester.tap(find.byKey(const Key('ir_a_registro')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('condominio_field')), findsOneWidget);
+  });
+
   testWidgets('un login fallido muestra el mensaje de error del backend', (tester) async {
     final mockClient = MockClient((request) async {
       return http.Response('{"detail": "Credenciales inválidas"}', 401);

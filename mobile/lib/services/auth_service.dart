@@ -50,7 +50,13 @@ class AuthService {
 
   Future<void> login(String email, String password) async {
     final data = await _api.post('/auth/login', {'email': email, 'password': password});
-    final token = data['access_token'] as String;
+    await guardarToken(data['access_token'] as String);
+  }
+
+  // Expuesto para quien obtiene un token por otro camino (ej. RegistroScreen, que llama
+  // POST /residents/activar directamente — auto-login igual que /signup) y necesita persistirlo
+  // con la misma llave que usa el resto de la app.
+  Future<void> guardarToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.setString(_tokenKey, token);
   }
