@@ -1,6 +1,7 @@
 import 'package:app_residente/screens/login_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/auth_service.dart';
+import 'package:app_residente/services/biometric_auth_service.dart';
 import 'package:app_residente/widgets/anadir_a_inicio.dart';
 import 'package:app_residente/widgets/descarga_apk.dart';
 import 'package:app_residente/widgets/instalar_app.dart';
@@ -9,6 +10,13 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+
+// Doble de prueba: BiometricAuthService envuelve el plugin local_auth (canal de plataforma, no corre en
+// `flutter test` — ver login_screen_test.dart para el porqué es necesario, no solo por estilo).
+class _BiometricAuthServiceFalso extends BiometricAuthService {
+  @override
+  Future<bool> estaDisponible() async => false;
+}
 
 void main() {
   test('solo se ofrece el APK en la web abierta desde un Android', () {
@@ -77,6 +85,7 @@ void main() {
         home: LoginScreen(
           authService: auth,
           onLoginSuccess: () => entro = true,
+          biometricService: _BiometricAuthServiceFalso(),
           instalarApp: InstalarApp(
             apk: DescargarApk(visible: true, abrir: (url) async => abierta = url),
             atajo: const AnadirAPantallaDeInicio(visible: false),

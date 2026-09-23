@@ -66,5 +66,7 @@
 		<string>UIInterfaceOrientationLandscapeLeft</string>
 		<string>UIInterfaceOrientationLandscapeRight</string>
 	</array>
+	<key>NSFaceIDUsageDescription</key>
+	<string>Úsalo para entrar a tu cuenta más rápido, sin escribir tu contraseña cada vez.</string>
 </dict>
 </plist>

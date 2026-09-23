@@ -2,12 +2,14 @@ import 'package:flutter/material.dart';
 
 import '../services/api_client.dart';
 import '../services/auth_service.dart';
+import '../services/biometric_auth_service.dart';
 import '../widgets/instalar_app.dart';
 import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   final AuthService authService;
   final VoidCallback onLoginSuccess;
+  final BiometricAuthService? biometricService;
   // Bajar el APK (Android) o añadir la app a la pantalla de inicio (iPhone): solo aparece en la versión web.
   final Widget instalarApp;
 
@@ -15,6 +17,7 @@ class LoginScreen extends StatefulWidget {
     super.key,
     required this.authService,
     required this.onLoginSuccess,
+    this.biometricService,
     this.instalarApp = const InstalarApp(),
   });
 
@@ -27,6 +30,13 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   String? _error;
   bool _cargando = false;
+  late final BiometricAuthService _biometricService;
+
+  @override
+  void initState() {
+    super.initState();
+    _biometricService = widget.biometricService ?? BiometricAuthService();
+  }
 
   Future<void> _iniciarSesion() async {
     setState(() {
@@ -35,13 +45,43 @@ class _LoginScreenState extends State<LoginScreen> {
     });
     try {
       await widget.authService.login(_emailController.text.trim(), _passwordController.text);
+      // _cargando se apaga AQUÍ, no en un finally al final: _ofrecerBiometricos() espera a que el residente
+      // conteste un diálogo, y mientras tanto un spinner detrás no tiene sentido — además, gira sin parar
+      // (nunca "se asienta"), así que dejarlo prendido colgaría cualquier pumpAndSettle() de las pruebas.
+      if (mounted) setState(() => _cargando = false);
+      await _ofrecerBiometricos();
       widget.onLoginSuccess();
     } catch (err) {
-      setState(() {
-        _error = err is ApiException ? err.message : 'No se pudo iniciar sesión.';
-      });
-    } finally {
-      if (mounted) setState(() => _cargando = false);
+      if (mounted) {
+        setState(() {
+          _error = err is ApiException ? err.message : 'No se pudo iniciar sesión.';
+          _cargando = false;
+        });
+      }
+    }
+  }
+
+  // Se ofrece una sola vez por login manual (no en cada apertura de la app: quien ya dijo que no, no se le
+  // vuelve a preguntar hasta que cierre sesión y entre de nuevo con contraseña) — ver
+  // AuthService.biometricosActivados.
+  Future<void> _ofrecerBiometricos() async {
+    if (!mounted) return;
+    if (await widget.authService.biometricosActivados()) return;
+    if (!await _biometricService.estaDisponible()) return;
+    if (!mounted) return;
+    final activar = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Entrar más rápido'),
+        content: const Text('¿Quieres usar Face ID o tu huella para entrar la próxima vez, sin escribir tu contraseña?'),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text('Ahora no')),
+          TextButton(onPressed: () => Navigator.of(context).pop(true), child: const Text('Sí, activar')),
+        ],
+      ),
+    );
+    if (activar == true) {
+      await widget.authService.activarBiometricos();
     }
   }
 

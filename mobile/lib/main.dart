@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'theme.dart';
 
+import 'screens/bloqueo_biometrico_screen.dart';
 import 'screens/login_screen.dart';
 import 'screens/residente_home_screen.dart';
 import 'services/amenity_service.dart';
@@ -54,6 +55,10 @@ class _VivecomAppState extends State<VivecomApp> {
   String? _token;
   TokenPayload? _usuario;
   bool _cargandoSesion = true;
+  // true si hay sesión guardada Y el residente activó Face ID/huella (ver AuthService.biometricosActivados) —
+  // la sesión existe pero no se usa hasta pasar BloqueoBiometricoScreen. Se apaga al desbloquear (dura lo que
+  // dura la app abierta: la próxima vez que se abra de cero, se vuelve a pedir).
+  bool _necesitaDesbloqueo = false;
 
   @override
   void initState() {
@@ -63,9 +68,11 @@ class _VivecomAppState extends State<VivecomApp> {
 
   Future<void> _restaurarSesion() async {
     final token = await _authService.obtenerToken();
+    final necesitaDesbloqueo = token != null && await _authService.biometricosActivados();
     setState(() {
       _token = token;
       _usuario = token != null ? TokenPayload.decode(token) : null;
+      _necesitaDesbloqueo = necesitaDesbloqueo;
       _cargandoSesion = false;
     });
   }
@@ -75,6 +82,7 @@ class _VivecomAppState extends State<VivecomApp> {
     setState(() {
       _token = null;
       _usuario = null;
+      _necesitaDesbloqueo = false;
     });
   }
 
@@ -98,6 +106,13 @@ class _VivecomAppState extends State<VivecomApp> {
 
     if (token == null || usuario == null) {
       return LoginScreen(authService: _authService, onLoginSuccess: _restaurarSesion);
+    }
+
+    if (_necesitaDesbloqueo) {
+      return BloqueoBiometricoScreen(
+        onDesbloqueado: () => setState(() => _necesitaDesbloqueo = false),
+        onCerrarSesion: _onLogout,
+      );
     }
 
     // F1-24 es la app residente: solo tiene sentido para un usuario con

@@ -44,6 +44,25 @@ void main() {
       await auth.logout();
       expect(await auth.obtenerToken(), isNull);
     });
+
+    test('logout también apaga la preferencia de biométricos: sin sesión no hay nada que desbloquear', () async {
+      SharedPreferences.setMockInitialValues({'access_token': 'algo', 'biometrics_enabled': true});
+      final auth = AuthService();
+
+      expect(await auth.biometricosActivados(), isTrue);
+      await auth.logout();
+      expect(await auth.biometricosActivados(), isFalse);
+    });
+
+    test('biometricosActivados es false por defecto, hasta que se activa explícitamente', () async {
+      final auth = AuthService();
+
+      expect(await auth.biometricosActivados(), isFalse);
+      await auth.activarBiometricos();
+      expect(await auth.biometricosActivados(), isTrue);
+      await auth.desactivarBiometricos();
+      expect(await auth.biometricosActivados(), isFalse);
+    });
   });
 
   group('TokenPayload.decode', () {

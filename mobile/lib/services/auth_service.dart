@@ -38,6 +38,7 @@ class TokenPayload {
 
 class AuthService {
   static const _tokenKey = 'access_token';
+  static const _biometricsKey = 'biometrics_enabled';
 
   final ApiClient _api;
 
@@ -64,5 +65,26 @@ class AuthService {
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);
+    // Sin sesión que desbloquear, la preferencia de biométricos ya no aplica — se vuelve a ofrecer en el
+    // próximo login manual (ver LoginScreen).
+    await prefs.remove(_biometricsKey);
+  }
+
+  // Face ID/huella para entrar más rápido (ver BiometricAuthService): NO es una segunda credencial — solo
+  // desbloquea la sesión que ya existe (BloqueoBiometricoScreen, ver main.dart). Desactivada por defecto: el
+  // residente lo activa explícitamente después de un login manual exitoso.
+  Future<bool> biometricosActivados() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_biometricsKey) ?? false;
+  }
+
+  Future<void> activarBiometricos() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_biometricsKey, true);
+  }
+
+  Future<void> desactivarBiometricos() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove(_biometricsKey);
   }
 }
