@@ -1,8 +1,8 @@
 # Documento de alcance — Vivecom (México)
 
 **Tarea relacionada:** F0-01 — Definir alcance detallado del MVP
-**Estado:** ✅ Cerrado (v3.3) — 27 historias de usuario, incorpora hallazgos de entrevistas y, desde v3.3, el reglamento interior de cada condominio como configuración (sección 3.4), que **supera** cuatro decisiones anteriores (marcadas «superada por 3.4» abajo)
-**Versión:** 3.3
+**Estado:** ✅ Cerrado (v3.4) — 31 historias de usuario, incorpora hallazgos de entrevistas, el reglamento interior de cada condominio como configuración (sección 3.4, desde v3.3) y, desde v3.4, la landing de bienvenida para dar de alta un condominio sin intervención manual del equipo (sección 3.1)
+**Versión:** 3.4
 
 ---
 
@@ -42,8 +42,11 @@ Vivecom es una plataforma que centraliza la administración, comunicación, segu
 ### 3.1 Administrativo
 
 **Incluye:**
-- Alta de condominio, viviendas y residentes (con relación propietario/inquilino).
-- Configuración de cuotas: monto y periodicidad (mensual/bimestral) definidos por cada condominio; el recargo por atraso es, **por defecto**, 10% único a partir del minuto 1 del día 6 de cada mes (los primeros 5 días son de gracia) — *superada por 3.4:* cada condominio puede configurar día límite, porcentaje y modalidad (único o mensual sobre saldo) según su reglamento.
+- **Alta de condominio en bloque (landing de bienvenida, v3.4):** un condominio nuevo se da de alta sin intervención manual del equipo, en dos pasos — nombre del condominio y cuántas viviendas tiene, luego nombre y teléfono de quien se registra. Se crean de una vez todas las viviendas ("Casa 1" a "Casa N") y una cuenta de administrador (`administracion@<dominio>`, con `<dominio>` derivado del nombre del condominio — nunca un dominio real: Vivecom no tiene canal de correo, solo WhatsApp+SMS, así que el correo es únicamente un identificador de acceso). La contraseña inicial del administrador es el propio nombre del condominio, y el panel le exige cambiarla antes de dejarlo hacer cualquier otra cosa. La CLABE ya no se pide en este paso — se configura después, cuando el condominio la tenga lista, desde la pantalla de cambio seguro de cuenta (HU-A07); mientras tanto el condominio no puede recibir SPEI, pero eso no bloquea el resto del panel.
+- **Activar mi cuenta de residente (v3.4):** cada vivienda creada así trae de una vez una cuenta de residente **sin activar** (`casa<n>@<dominio>`). Desde la app, el residente la reclama dando el nombre del condominio y el número de su vivienda (que le confirma en vivo a qué cuenta va antes de seguir), su nombre completo, si es propietario o inquilino, su teléfono y la contraseña que él elige — a diferencia del administrador, aquí no hay contraseña temporal que cambiar: la define desde el primer momento. Entrar a una vivienda todavía sin reclamar da un mensaje claro ("todavía no se activó"), no un error genérico de credenciales.
+- **Entrar con Face ID/huella (v3.4):** después de un inicio de sesión manual, si el equipo lo soporta, la app residente ofrece activar el desbloqueo biométrico para no volver a escribir la contraseña — no sustituye la contraseña ni es una segunda cuenta: solo desbloquea la sesión que ya existe, igual que el código de acceso de cualquier app de banco.
+- Alta de condominio, viviendas y residentes (con relación propietario/inquilino) también disponible a mano desde el panel, en cualquier momento después del alta inicial. **Ninguna vivienda se puede eliminar** (decisión de producto, v3.4): es la unidad de la que cuelga todo el historial financiero y de accesos; si una deja de existir en la realidad (ej. fusión de dos lotes), se resuelve a mano por soporte. Sí se pueden editar sus datos y los de su(s) residente(s).
+- Configuración de cuotas: monto y periodicidad (mensual/bimestral/semanal) definidos por cada condominio; el recargo por atraso es, **por defecto**, 10% único a partir del minuto 1 del día 6 de cada mes (los primeros 5 días son de gracia) — *superada por 3.4:* cada condominio puede configurar día límite, porcentaje y modalidad (único o mensual sobre saldo) según su reglamento. Una cuota se puede eliminar mientras no haya generado ningún cargo todavía (después, solo se edita); también existe la periodicidad **pago único** (cuotas extraordinarias o de proyecto, ej. una obra puntual) que genera un solo cargo en su periodo sin reemplazar a la cuota recurrente del mes.
 - Recordatorios automáticos de pago: se envían desde el día 1 del mes hasta que la vivienda registre su pago, por notificación dentro de la app del condominio (canal principal) y WhatsApp; SMS como respaldo si los anteriores fallan. En cuanto el pago se registra, se envía una confirmación de pago en vez de seguir mandando recordatorios de cobro.
 - Pago anticipado: el residente puede pagar por adelantado de 1 a 12 meses en una sola transacción, precisamente para evitar que se generen recargos por mora en esos meses futuros.
 - Generación automática de cargos por vivienda cada ciclo.
@@ -52,9 +55,12 @@ Vivecom es una plataforma que centraliza la administración, comunicación, segu
 - El **tesorero** (rol del comité) es quien valida los pagos detectados y resuelve casos especiales. Si un residente transfiere de más, el excedente queda como **saldo a favor** para el siguiente periodo. Si la transferencia no se refleja de inmediato, queda en estado **"pendiente"** hasta que el sistema la detecte; si el banco la rechaza, el residente debe repetir la transferencia.
 - Recibo de pago simple (no fiscal) generado automáticamente por cada pago registrado, descargable en PDF.
 - Estado de cuenta por vivienda, consultable por el residente y el administrador.
-- Registro de gastos del condominio por categoría, con comprobante **obligatorio** en todos los casos.
+- Registro de gastos del condominio por categoría, con comprobante **obligatorio** en todos los casos. La categoría se elige de una lista sugerida (mantenimiento, vigilancia, jardinería, recolección de basura, limpieza de áreas comunes, administración, agua/luz/gas, elevadores y equipos, seguros, proyectos y obra) o se captura libre con "Otra…" (v3.4). Cada gasto también se marca como **único, semanal o mensual** (v3.4) — es solo una etiqueta para clasificar/filtrar, no genera automáticamente los gastos futuros de uno recurrente.
 - **Transparencia de gastos para residentes**: cada residente puede consultar en qué se gastó el dinero del condominio (categoría, monto, comprobante), no solo el administrador — motivo principal de adopción según entrevistas (sección 13).
 - Reporte de presupuesto vs. gasto real: el presupuesto se carga de forma **mensual** por defecto; para actividades específicas (ej. proyectos grandes) se puede definir a nivel **anual**.
+- **Dashboard financiero (v3.4):** al frente del panel, tres cifras (cuántas viviendas, cuánto se ha cobrado, cuánto se adeuda) — pinchar cualquiera filtra abajo el detalle de quién pagó, quién debe, o todas; debajo, el cobrado se desglosa por concepto (mantenimiento, amenidades, proyecto).
+- **Nombre y logo del condominio (v3.4):** el administrador los edita desde "Organización"; aparecen en el encabezado del panel, en el título de la pestaña del navegador y, en la app residente, junto al número de vivienda.
+- **Resumen de ocupación (v3.4):** en Viviendas, cuántas hay, cuántas habita su propietario y cuántas están rentadas, y quién vive en cada una (con su rol).
 - Exportación de reportes a Excel.
 
 **No incluye (en ninguna fase planeada, salvo que lo pidas):**
@@ -74,7 +80,7 @@ Vivecom es una plataforma que centraliza la administración, comunicación, segu
 - App de caseta funcional sin conexión a internet, que sincroniza al recuperarla. Si al sincronizar se detecta un error o conflicto (ej. registros duplicados), se notifica automáticamente al administrador.
 
 **No incluye (por ahora):**
-- Reconocimiento facial o biométrico (queda como evaluación futura, Fase 3).
+- Reconocimiento facial o biométrico **como control de acceso físico a la caseta/portón** (evaluado en F3-05, sigue sin construirse). No confundir con el desbloqueo biométrico de la propia app (v3.4, sección 3.1): ese es Face ID/huella del teléfono del residente para entrar más rápido a su cuenta, nada que ver con abrir la puerta ni con Vivecom almacenando ninguna plantilla biométrica.
 - Integración con cámaras de videovigilancia existentes.
 - Control de acceso físico automatizado (torniquetes, plumas) — el sistema registra, no abre puertas.
 
@@ -194,6 +200,9 @@ Vamos marcando esta lista conforme resolvamos cada punto — es el "qué falta" 
 - [x] **Proveedor de pagos:** no se requiere Open Banking ni iniciación de transferencias desde la app. El residente transfiere desde su propio banco (fuera de Vivecom) a la CLABE mostrada; solo se necesita un proveedor de **recepción/detección SPEI** (mucho más simple que iniciar transferencias) — el proveedor específico (STP, Arcus, etc.) se evalúa como parte de F0-05.
 - [x] **Flujo de aprobación de reservaciones — destinatario:** el administrador designa a uno o más miembros del comité como aprobadores (no todo el comité por defecto).
 - [x] **Flujo de aprobación de reservaciones — tiempo límite:** cada amenidad tiene su propio periodo límite de respuesta (configurable); si nadie aprueba a tiempo, se rechaza automáticamente.
+- [x] **Alta de condominio sin intervención del equipo (v3.4):** landing de bienvenida en dos pasos, sin pedir CLABE ni que el admin invente su propio correo/contraseña — ver HU-A14. El correo de cada cuenta (administracion@ y casa\<n\>@ un dominio derivado del nombre del condominio) es solo un identificador de acceso, nunca un correo real que reciba nada.
+- [x] **Se puede eliminar una vivienda (v3.4):** no. Solo se editan sus datos o los de su residente — ver sección 3.1.
+- [x] **Presupuesto atado a cuota mensual × número de viviendas:** pedido, pero **todavía no implementado** — entra en conflicto con el presupuesto por categoría que ya existe (HU-A10, carga manual) y falta decidir si lo reemplaza, lo complementa, o es una vista adicional de referencia. Queda para la siguiente revisión.
 
 ---
 
@@ -273,6 +282,26 @@ Como residente con adeudo, quiero pedir por escrito un acuerdo para pagar en par
 - Cumplido: se liquida lo cubierto (aunque sea antes de tiempo). Incumplido: vence una fecha del calendario sin el acumulado que le tocaba; la vivienda vuelve a mora y el recargo se recalcula. El seguimiento corre a diario a las 00:00.
 - La constancia de no adeudo se sigue negando mientras haya deuda, con o sin acuerdo.
 - El residente ve en la app su solicitud, el avance («llevas $X de $Y»), el próximo pago y el calendario; el panel del administrador tiene la sección «Acuerdos».
+
+**HU-A14 — Alta de condominio en bloque** *(v3.4)*
+Como quien va a administrar un condominio nuevo, quiero darlo de alta yo mismo sin depender de que alguien del equipo de Vivecom lo configure, para empezar a usarlo de inmediato.
+- Paso 1: nombre del condominio y cuántas viviendas tiene. Paso 2: mi nombre y mi teléfono.
+- Al terminar, existen todas las viviendas ("Casa 1".."Casa N"), mi cuenta de administrador queda activa (contraseña inicial: el nombre del condominio) y cada vivienda tiene ya un acceso para su residente, listo para que él lo reclame (HU-A15).
+- Se me pide cambiar mi contraseña antes de dejarme ver cualquier otra pantalla del panel.
+- No se me pide la CLABE en este paso — la configuro cuando la tenga lista, desde donde ya se cambia de forma segura (HU-A07).
+
+**HU-A15 — Activar mi cuenta de residente** *(v3.4)*
+Como residente de una vivienda recién dada de alta, quiero reclamar mi propia cuenta desde la app, para no depender de que el administrador me la cree y me pase una contraseña.
+- Doy el nombre del condominio y el número de mi vivienda; la app me confirma en vivo a qué correo va quedar ligada, antes de pedirme el resto.
+- Doy mi nombre completo, si soy propietario o inquilino, mi teléfono y la contraseña que yo elijo.
+- Si mi vivienda ya fue reclamada por alguien más, o el número no existe, me lo dice claramente — no me deja seguir con una vivienda equivocada.
+- Al terminar, entro directo a mi estado de cuenta, sin tener que iniciar sesión aparte.
+
+**HU-A16 — Entrar con Face ID/huella** *(v3.4)*
+Como residente, quiero poder desbloquear la app con mi huella o Face ID, para no escribir mi contraseña cada vez que la abro.
+- Después de iniciar sesión con mi contraseña, si mi teléfono lo soporta, se me ofrece activarlo.
+- Si lo activo, la próxima vez que abra la app me pide la huella/Face ID en vez de la contraseña; si la rechazo o falla, puedo reintentar o cerrar sesión — nunca entra sin que yo confirme.
+- Esto no reemplaza mi contraseña ni es una cuenta aparte: solo desbloquea la sesión que ya tenía abierta.
 
 ### 10.2 Seguridad
 
