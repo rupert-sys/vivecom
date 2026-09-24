@@ -1,4 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <!-- image_picker con ImageSource.camera (foto de una incidencia, ver incident_screen.dart) la requiere explícita. -->
+    <uses-permission android:name="android.permission.CAMERA"/>
     <application
         android:label="app_caseta"
         android:name="${applicationName}"
