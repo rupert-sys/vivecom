@@ -141,7 +141,7 @@ async def activar_residente(
         if cuenta is None:
             raise HTTPException(status.HTTP_404_NOT_FOUND, "No hay ninguna vivienda sin activar con ese número")
 
-        resident = Resident(nombre=payload.nombre_completo, telefono=payload.telefono, email=None)
+        resident = Resident(nombre=payload.nombre_completo, telefono=payload.telefono, email=payload.correo)
         db.add(resident)
         await db.flush()  # necesitamos resident.id antes de ligarlo a la vivienda
         db.add(ResidentProperty(resident_id=resident.id, property_id=cuenta.property_id, rol=payload.rol))

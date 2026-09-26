@@ -29,6 +29,14 @@ void main() {
     );
   }
 
+  testWidgets('dice que el condominio ya debe existir, no que esta pantalla lo va a crear', (tester) async {
+    final mockClient = MockClient((request) async => http.Response('{}', 404));
+    await pump(tester, httpClient: mockClient);
+
+    expect(find.text('Regístrate como residente'), findsOneWidget);
+    expect(find.textContaining('ya debe estar dado de alta por su administrador'), findsOneWidget);
+  });
+
   testWidgets('al escribir condominio y número de casa y salir del campo, muestra el usuario que le tocará', (tester) async {
     final mockClient = MockClient((request) async {
       expect(request.url.path, '/residents/activar/preview');
@@ -67,12 +75,14 @@ void main() {
     expect(boton.onPressed, isNull);
   });
 
-  testWidgets('completar el registro llama a onRegistroExitoso', (tester) async {
+  testWidgets('completar el registro llama a onRegistroExitoso, sin correo si se dejó vacío', (tester) async {
+    String? cuerpoEnviado;
     final mockClient = MockClient((request) async {
       if (request.url.path == '/residents/activar/preview') {
         return http.Response('{"email": "casa5@arequipa.com.mx", "identificador": "Casa 5"}', 200);
       }
       expect(request.url.path, '/residents/activar');
+      cuerpoEnviado = request.body;
       return http.Response('{"access_token": "un-token-nuevo", "token_type": "bearer"}', 200);
     });
     var exitosoLlamado = false;
@@ -86,10 +96,40 @@ void main() {
     await tester.enterText(find.byKey(const Key('password_field')), 'clave-de-ana-1');
     await tester.pumpAndSettle();
 
+    // El texto explicativo de arriba empuja el botón fuera del área visible en la pantalla de prueba.
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Registrarme'));
     await tester.tap(find.widgetWithText(ElevatedButton, 'Registrarme'));
     await tester.pumpAndSettle();
 
     expect(exitosoLlamado, isTrue);
+    expect(cuerpoEnviado, isNot(contains('correo')));
+  });
+
+  testWidgets('si se llena el correo, se manda en el registro', (tester) async {
+    String? cuerpoEnviado;
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/residents/activar/preview') {
+        return http.Response('{"email": "casa5@arequipa.com.mx", "identificador": "Casa 5"}', 200);
+      }
+      cuerpoEnviado = request.body;
+      return http.Response('{"access_token": "un-token-nuevo", "token_type": "bearer"}', 200);
+    });
+    await pump(tester, httpClient: mockClient);
+
+    await tester.enterText(find.byKey(const Key('condominio_field')), 'Condominio Arequipa');
+    await tester.enterText(find.byKey(const Key('casa_field')), '5');
+    await tester.enterText(find.byKey(const Key('nombre_field')), 'Ana Torres');
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(const Key('telefono_field')), '5551234567');
+    await tester.enterText(find.byKey(const Key('correo_field')), 'ana@example.com');
+    await tester.enterText(find.byKey(const Key('password_field')), 'clave-de-ana-1');
+    await tester.pumpAndSettle();
+
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Registrarme'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Registrarme'));
+    await tester.pumpAndSettle();
+
+    expect(cuerpoEnviado, contains('"correo":"ana@example.com"'));
   });
 
   testWidgets('un registro fallido muestra el mensaje de error del backend', (tester) async {
@@ -109,6 +149,7 @@ void main() {
     await tester.enterText(find.byKey(const Key('password_field')), 'clave-de-ana-1');
     await tester.pumpAndSettle();
 
+    await tester.ensureVisible(find.widgetWithText(ElevatedButton, 'Registrarme'));
     await tester.tap(find.widgetWithText(ElevatedButton, 'Registrarme'));
     await tester.pumpAndSettle();
 

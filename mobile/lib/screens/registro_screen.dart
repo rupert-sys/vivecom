@@ -29,6 +29,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   final _casaController = TextEditingController();
   final _nombreController = TextEditingController();
   final _telefonoController = TextEditingController();
+  final _correoController = TextEditingController();
   final _passwordController = TextEditingController();
   final _casaFocus = FocusNode();
 
@@ -92,6 +93,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
         nombreCompleto: _nombreController.text.trim(),
         rol: _rol,
         telefono: _telefonoController.text.trim(),
+        correo: _correoController.text.trim(),
         password: _passwordController.text,
       );
       await widget.authService.guardarToken(token);
@@ -114,6 +116,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     _casaController.dispose();
     _nombreController.dispose();
     _telefonoController.dispose();
+    _correoController.dispose();
     _passwordController.dispose();
     _casaFocus.dispose();
     super.dispose();
@@ -122,7 +125,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('Regístrate')),
+      appBar: AppBar(title: const Text('Regístrate como residente')),
       body: Center(
         child: SingleChildScrollView(
           keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
@@ -134,10 +137,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
+                  // Este campo NO da de alta un condominio — eso lo hace el administrador aparte (landing de
+                  // bienvenida del panel). Aquí solo identifica cuál, entre los que ya existen, es el tuyo.
+                  const Text(
+                    'Tu condominio ya debe estar dado de alta por su administrador. Dinos cuál es y tu número de casa para encontrar tu vivienda.',
+                    style: TextStyle(color: Colors.grey, fontSize: 13),
+                  ),
+                  const SizedBox(height: 12),
                   TextField(
                     key: const Key('condominio_field'),
                     controller: _condominioController,
-                    decoration: const InputDecoration(labelText: 'Nombre del condominio'),
+                    decoration: const InputDecoration(labelText: '¿En qué condominio vives?'),
                     onSubmitted: (_) => _verificarVivienda(),
                   ),
                   const SizedBox(height: 12),
@@ -179,6 +189,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     decoration: const InputDecoration(labelText: 'Teléfono'),
                     keyboardType: TextInputType.phone,
                     onChanged: (_) => setState(() {}),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    key: const Key('correo_field'),
+                    controller: _correoController,
+                    decoration: const InputDecoration(labelText: 'Correo (opcional)'),
+                    keyboardType: TextInputType.emailAddress,
                   ),
                   const SizedBox(height: 12),
                   TextField(

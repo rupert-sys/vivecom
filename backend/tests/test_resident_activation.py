@@ -158,6 +158,58 @@ def test_activar_crea_el_residente_lo_liga_a_la_vivienda_y_regresa_un_token(clie
     asyncio.run(_verificar())
 
 
+def test_activar_sin_correo_deja_el_residente_sin_email(client):
+    """El acceso ya es casa<n>@dominio — correo es opcional, un dato de contacto, no la credencial."""
+    asyncio.run(_seed_casa_sin_activar(client))
+
+    with _preparar(client):
+        response = client.post(
+            "/residents/activar",
+            json={
+                "nombre_condominio": NOMBRE_CONDOMINIO, "numero_de_casa": 1, "nombre_completo": "Ana Torres",
+                "rol": "propietario", "telefono": "5551234567", "password": "clave-de-ana-1",
+            },
+        )
+
+    assert response.status_code == 200
+
+    async def _verificar():
+        async with client.db_session_factory() as db:
+            cuenta = (
+                await db.execute(select(UserAccount).where(UserAccount.email == "casa1@arequipa.com.mx"))
+            ).scalar_one()
+            residente = await db.get(Resident, cuenta.resident_id)
+            assert residente.email is None
+
+    asyncio.run(_verificar())
+
+
+def test_activar_con_correo_lo_guarda_en_el_residente(client):
+    asyncio.run(_seed_casa_sin_activar(client))
+
+    with _preparar(client):
+        response = client.post(
+            "/residents/activar",
+            json={
+                "nombre_condominio": NOMBRE_CONDOMINIO, "numero_de_casa": 1, "nombre_completo": "Ana Torres",
+                "rol": "propietario", "telefono": "5551234567", "correo": "ana@example.com",
+                "password": "clave-de-ana-1",
+            },
+        )
+
+    assert response.status_code == 200
+
+    async def _verificar():
+        async with client.db_session_factory() as db:
+            cuenta = (
+                await db.execute(select(UserAccount).where(UserAccount.email == "casa1@arequipa.com.mx"))
+            ).scalar_one()
+            residente = await db.get(Resident, cuenta.resident_id)
+            assert residente.email == "ana@example.com"
+
+    asyncio.run(_verificar())
+
+
 def test_activar_una_vivienda_ya_activada_es_404(client):
     asyncio.run(_seed_casa_sin_activar(client))
     payload = {

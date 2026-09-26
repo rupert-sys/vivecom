@@ -44,4 +44,5 @@ class ResidentActivationRequest(BaseModel):
     nombre_completo: str = Field(min_length=1, max_length=200)
     rol: RolOcupacion  # propietario | inquilino
     telefono: str = Field(min_length=1, max_length=30)
+    correo: EmailStr | None = None  # opcional: el acceso ya es casa<n>@dominio, esto es solo un dato de contacto
     password: str = Field(min_length=8)

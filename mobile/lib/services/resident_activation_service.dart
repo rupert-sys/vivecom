@@ -25,6 +25,7 @@ class ResidentActivationService {
     required String nombreCompleto,
     required String rol, // "propietario" | "inquilino"
     required String telefono,
+    String? correo, // opcional: el acceso ya es casa<n>@dominio, esto es solo un dato de contacto
     required String password,
   }) async {
     final data = await _api.post('/residents/activar', {
@@ -33,6 +34,7 @@ class ResidentActivationService {
       'nombre_completo': nombreCompleto,
       'rol': rol,
       'telefono': telefono,
+      if (correo != null && correo.isNotEmpty) 'correo': correo,
       'password': password,
     });
     return data['access_token'] as String;
