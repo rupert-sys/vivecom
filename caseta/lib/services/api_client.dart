@@ -3,9 +3,16 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 
 // iOS Simulator comparte la red del host, así que localhost apunta al
-// backend corriendo en la máquina de desarrollo (uvicorn en :8000). Mismo
-// patrón que app_residente (mobile/lib/services/api_client.dart).
-const String apiBaseUrl = 'http://localhost:8000';
+// backend corriendo en la máquina de desarrollo (uvicorn en :8000). En un
+// dispositivo físico, localhost es el propio teléfono: se compila con
+// --dart-define=API_BASE_URL=https://api.<dominio> (ver
+// deploy/scripts/build-apk-caseta.sh). Mismo patrón que app_residente
+// (mobile/lib/services/api_client.dart) — bug real, encontrado 2026-09-25
+// probando en un Android físico: a diferencia de mobile/, este archivo
+// nunca leía el --dart-define en absoluto, así que cualquier build
+// (debug o release, con o sin caché limpia) siempre quedaba apuntando a
+// localhost:8000 sin importar qué se le pasara en la compilación.
+const String apiBaseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:8000');
 
 class ApiException implements Exception {
   final String message;
