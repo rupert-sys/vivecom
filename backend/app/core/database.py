@@ -57,7 +57,9 @@ SessionLocal = async_sessionmaker(engine, expire_on_commit=False, class_=AsyncSe
 
 
 @asynccontextmanager
-async def tenant_session(schema_name: str) -> AsyncIterator[AsyncSession]:
+async def tenant_session(
+    schema_name: str, session_factory: async_sessionmaker[AsyncSession] | None = None
+) -> AsyncIterator[AsyncSession]:
     """
     Abre una sesión y fija el search_path al schema del tenant para toda la transacción.
     Uso: `async with tenant_session(current_tenant.schema_name) as db: ...`
@@ -72,8 +74,15 @@ async def tenant_session(schema_name: str) -> AsyncIterator[AsyncSession]:
     del pool — eso sí sería un bug de seguridad multi-tenant real. La regla
     práctica: haz todo tu trabajo antes del commit() final, y no vuelvas a
     consultar la sesión después de comitear.
+
+    `session_factory`: por default usa el `SessionLocal` de este módulo (el engine de por vida del
+    proceso, pensado para el event loop único y persistente de uvicorn). Los workers de Celery
+    (app/workers/tasks.py) pasan aquí su propio session_factory, creado y desechado DENTRO del mismo
+    asyncio.run() de cada tarea — cada tarea corre en un event loop nuevo, y una conexión asyncpg
+    creada en un loop no se puede reusar ni cerrar limpiamente desde otro: reusar el engine global ahí
+    producía "RuntimeError: Event loop is closed" / "attached to a different loop" de forma intermitente.
     """
-    async with SessionLocal() as session:
+    async with (session_factory or SessionLocal)() as session:
         await session.execute(
             text("SELECT set_config('search_path', :schema, true)"),
             {"schema": f"{schema_name},public"},

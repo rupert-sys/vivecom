@@ -33,7 +33,14 @@ _notification_provider = TwilioProvider(
 
 
 async def _generate_for_all_tenants(periodo: date) -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -42,7 +49,7 @@ async def _generate_for_all_tenants(periodo: date) -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 nuevos = await generate_charges_for_period(db, periodo)
             resultados[tenant.schema_name] = len(nuevos)
         except Exception as exc:  # noqa: BLE001 — un tenant con error no debe tumbar a los demás
@@ -53,7 +60,14 @@ async def _generate_for_all_tenants(periodo: date) -> dict[str, int]:
 
 
 async def _apply_surcharges_for_all_tenants(hoy: date) -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -62,7 +76,7 @@ async def _apply_surcharges_for_all_tenants(hoy: date) -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 afectados = await apply_late_surcharges(db, hoy)
             resultados[tenant.schema_name] = len(afectados)
         except Exception as exc:  # noqa: BLE001
@@ -73,7 +87,14 @@ async def _apply_surcharges_for_all_tenants(hoy: date) -> dict[str, int]:
 
 
 async def _send_reminders_for_all_tenants(hoy: date) -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -82,7 +103,7 @@ async def _send_reminders_for_all_tenants(hoy: date) -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 enviados = await send_payment_reminders(db, _notification_provider, hoy)
             resultados[tenant.schema_name] = enviados
         except Exception as exc:  # noqa: BLE001
@@ -93,7 +114,14 @@ async def _send_reminders_for_all_tenants(hoy: date) -> dict[str, int]:
 
 
 async def _send_confirmations_for_all_tenants() -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -102,7 +130,7 @@ async def _send_confirmations_for_all_tenants() -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 enviados = await send_payment_confirmations(db, _notification_provider)
             resultados[tenant.schema_name] = enviados
         except Exception as exc:  # noqa: BLE001
@@ -113,7 +141,14 @@ async def _send_confirmations_for_all_tenants() -> dict[str, int]:
 
 
 async def _send_announcement_notifications_for_all_tenants() -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -122,7 +157,7 @@ async def _send_announcement_notifications_for_all_tenants() -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 ahora = datetime.now(timezone.utc).replace(tzinfo=None)
                 enviados = await send_announcement_notifications(db, _notification_provider, ahora)
             resultados[tenant.schema_name] = enviados
@@ -134,7 +169,14 @@ async def _send_announcement_notifications_for_all_tenants() -> dict[str, int]:
 
 
 async def _send_package_notifications_for_all_tenants() -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -143,7 +185,7 @@ async def _send_package_notifications_for_all_tenants() -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 enviados = await send_package_notifications(db, _notification_provider)
             resultados[tenant.schema_name] = enviados
         except Exception as exc:  # noqa: BLE001
@@ -154,7 +196,14 @@ async def _send_package_notifications_for_all_tenants() -> dict[str, int]:
 
 
 async def _process_poll_closures_for_all_tenants(hoy: date) -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -163,7 +212,7 @@ async def _process_poll_closures_for_all_tenants(hoy: date) -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 resultado = await process_poll_closures(db, _notification_provider, hoy)
             resultados[tenant.schema_name] = resultado["reactivadas"]
         except Exception as exc:  # noqa: BLE001
@@ -174,7 +223,14 @@ async def _process_poll_closures_for_all_tenants(hoy: date) -> dict[str, int]:
 
 
 async def _process_reservation_timeouts_for_all_tenants() -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -183,7 +239,7 @@ async def _process_reservation_timeouts_for_all_tenants() -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 ahora = datetime.now(timezone.utc).replace(tzinfo=None)
                 resultado = await process_reservation_timeouts(db, ahora)
             resultados[tenant.schema_name] = resultado["rechazadas"] + resultado["expiradas"]
@@ -195,7 +251,14 @@ async def _process_reservation_timeouts_for_all_tenants() -> dict[str, int]:
 
 
 async def _process_agreements_for_all_tenants(hoy: date) -> dict[str, int]:
-    engine = create_async_engine(settings.database_url)
+    # statement_cache_size=0 en ambas capas: sin esto, una conexión de este pool que ya sirvió a un
+    # tenant en esta misma corrida cachea el plan preparado atado al tipo ENUM de SU schema, y truena
+    # con CannotCoerceError al reusarse para el siguiente tenant (mismo motivo documentado en el
+    # engine global de app/core/database.py, que este engine local no heredaba).
+    engine = create_async_engine(
+        settings.database_url,
+        connect_args={"prepared_statement_cache_size": 0, "statement_cache_size": 0},
+    )
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
 
     resultados: dict[str, int] = {}
@@ -204,7 +267,7 @@ async def _process_agreements_for_all_tenants(hoy: date) -> dict[str, int]:
 
     for tenant in tenants:
         try:
-            async with tenant_session(tenant.schema_name) as db:
+            async with tenant_session(tenant.schema_name, session_factory) as db:
                 resultado = await procesar_acuerdos(db, hoy)
             resultados[tenant.schema_name] = resultado["cumplidos"] + resultado["incumplidos"]
         except Exception as exc:  # noqa: BLE001
