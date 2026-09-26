@@ -1,0 +1,41 @@
+# Variante del Caddyfile para exponer el servidor directo a internet, sin Cloudflare Tunnel: aquí Caddy
+# obtiene y renueva los certificados HTTPS solo, vía Let's Encrypt. El DNS de api/panel/app.<dominio> debe
+# apuntar directo a la IP del servidor en modo "DNS only" (sin el proxy naranja de Cloudflare), porque el
+# reto ACID de Let's Encrypt necesita llegar al origen real. Se activa junto con docker-compose.aws.yml:
+#   docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d
+
+(spa) {
+	encode gzip
+	header {
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+	}
+	@archivo path_regexp archivo \.[A-Za-z0-9]{1,8}$
+	handle @archivo {
+		file_server
+	}
+	handle {
+		try_files {path} /index.html
+		file_server
+	}
+}
+
+# App web de residentes (Flutter).
+app.{$DOMAIN} {
+	root * /srv/app
+	@sin_cache not path /canvaskit/*
+	header @sin_cache Cache-Control "no-store"
+	import spa
+}
+
+# Panel de administración (React).
+panel.{$DOMAIN} {
+	root * /srv/panel
+	header Cache-Control "no-cache"
+	import spa
+}
+
+# Backend: antes lo enrutaba directo el túnel de Cloudflare a backend:8000: aquí lo hace Caddy.
+api.{$DOMAIN} {
+	reverse_proxy backend:8000
+}

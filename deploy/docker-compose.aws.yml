@@ -1,0 +1,16 @@
+# Override para desplegar sin Cloudflare Tunnel: Caddy expone 80/443 directo al público y obtiene HTTPS solo
+# vía Let's Encrypt (el DNS de api/panel/app.<dominio> debe apuntar directo a la IP de este servidor).
+# Uso:  docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d
+services:
+  panel:
+    volumes:
+      - ./Caddyfile.direct-dns:/etc/caddy/Caddyfile:ro
+      - ./panel-dist:/srv/panel:ro
+      - ./app-dist:/srv/app:ro
+      - caddy_data:/data
+    ports:
+      - "80:80"
+      - "443:443"
+
+volumes:
+  caddy_data:
