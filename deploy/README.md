@@ -3,14 +3,22 @@
 Sirve para la **muestra** (tu Mac) y para la **PC dedicada** que la reemplaza: es el mismo montaje. Todo el estado vive en
 dos volúmenes de Docker (`pgdata`, `uploads`) y en el archivo `.env`; lo demás sale del repositorio.
 
-```
-Internet ── Cloudflare (HTTPS) ── túnel ── api.vivecom.com.mx → backend   (FastAPI)
-                                        ├─ panel.vivecom.com.mx → panel     (Caddy, panel de administración)
-                                        └─ app.vivecom.com.mx → panel     (Caddy, app web de residentes para iPhone)
-                       db (Postgres 16) · redis · worker + beat (Celery: cargos, recargos, seguimiento de acuerdos)
-```
+**Dos variantes, mismo stack, mismos contenedores — solo cambia cómo llega el tráfico:**
+- **Con túnel de Cloudflare** (lo que describe el resto de este documento): nada se abre en el router, el túnel sale
+  desde tu máquina hacia Cloudflare. Pensado para la muestra/un piloto chico desde una Mac o PC dedicada.
+- **DNS directo, sin túnel** (`docker-compose.aws.yml`, `Caddyfile.direct-dns`): Caddy expone 80/443 directo al
+  público y saca sus propios certificados HTTPS vía Let's Encrypt; el DNS de cada subdominio apunta directo a la IP
+  del servidor. **Es el modo que corre hoy en producción real**, en una instancia de AWS EC2 — se eligió al mudar de
+  la Mac de muestra a un servidor propio (ver `bitacora_vivecom.html`, Fase 5). Se activa con
+  `docker compose -f docker-compose.yml -f docker-compose.aws.yml up -d`; el resto del procedimiento (preparar la
+  máquina, compilar y subir por rsync, respaldos) es el mismo que para el modo con túnel, solo sin la sección 1
+  de abajo (no hace falta Cloudflare Tunnel ni `cloudflared/`).
 
-Nada se abre en el router: el túnel sale desde tu máquina hacia Cloudflare.
+```
+Con túnel:   Internet ── Cloudflare (HTTPS) ── túnel ── api/panel/app/admin.<dominio> → Caddy → backend/panel/app/admin
+DNS directo: Internet ───────── Let's Encrypt (HTTPS directo) ──────── api/panel/app/admin.<dominio> → Caddy → backend/panel/app/admin
+                                   db (Postgres 16) · redis · worker + beat (Celery: cargos, recargos, seguimiento de acuerdos)
+```
 
 ## 1. Cloudflare (una vez)
 El dominio (aquí `vivecom.com.mx`) debe estar en Cloudflare. El túnel se crea con la CLI y **una autorización tuya en el
