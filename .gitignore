@@ -39,3 +39,4 @@ deploy/app-dist/
 deploy/.env
 deploy/cloudflared/
 deploy/credenciales-muestra.md
+deploy/credenciales-san-miguel.md
