@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual del Administrador — Vivecom</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<div class="envoltura">
+  <a class="volver no-imprimir" href="index.html">&larr; Portal de documentación</a>
+  <header class="top">
+    <div>
+      <div class="titulo">Manual del Administrador</div>
+      <div class="subtitulo">Guía de uso del panel de administración — https://panel.vivecom.com.mx</div>
+    </div>
+    <button class="boton-imprimir no-imprimir" onclick="window.print()">Imprimir / guardar PDF</button>
+  </header>
+
+  <h2>1. Cómo entrar al panel</h2>
+  <ol>
+    <li>Entra a <strong>https://panel.vivecom.com.mx</strong> desde cualquier navegador (computadora, tablet o celular)</li>
+    <li>Escribe tu correo y contraseña</li>
+    <li>Si es tu primer ingreso, el sistema te va a pedir <strong>cambiar tu contraseña</strong> antes de dejarte ver cualquier otra pantalla — es obligatorio, un solo paso</li>
+  </ol>
+  <p>Si olvidaste tu contraseña o no recuerdas tu correo de acceso, contacta a soporte de Vivecom.</p>
+  <p><strong>Para tenerlo como app en tu celular</strong>, dos opciones: (a) desde el navegador (Safari/Chrome) → Añadir a
+  pantalla de inicio / Instalar app — es lo más rápido, no descarga ningún archivo; o (b) en Android, descarga e
+  instala <strong>https://app.vivecom.com.mx/vivecom-panel.apk</strong> (permite "instalar apps de orígenes
+  desconocidos" la primera vez). Ambas abren el mismo panel, con los mismos datos.</p>
+
+  <h2>2. El panorama general (Dashboard)</h2>
+  <p>Es lo primero que ves al entrar. Muestra tres números grandes:</p>
+  <ul>
+    <li><strong>Cuántas viviendas</strong> tiene el condominio</li>
+    <li><strong>Cuánto se ha cobrado</strong> este periodo</li>
+    <li><strong>Cuánto se adeuda</strong></li>
+  </ul>
+  <p><strong>Tip:</strong> toca cualquiera de los tres números y abajo aparece el detalle — quién pagó, quién debe, o todas las viviendas. Más abajo, el dinero cobrado se desglosa por concepto (mantenimiento, amenidades, proyectos).</p>
+
+  <h2>3. Viviendas y residentes</h2>
+  <p>En el menú <strong>Viviendas</strong> ves la lista completa: número, quién vive ahí (propietario o inquilino) y si ya reclamó su cuenta desde la app.</p>
+  <ul>
+    <li>Cuando das de alta el condominio, TODAS las viviendas se crean de una vez (Casa 1 a Casa N) con un acceso listo para que cada residente lo reclame por su cuenta desde la app — tú no tienes que crear cuentas una por una.</li>
+    <li><strong>Ninguna vivienda se puede eliminar</strong> (protege el historial de pagos y accesos). Si una deja de existir en la realidad, contacta a soporte.</li>
+    <li>Sí puedes <strong>editar</strong> los datos de una vivienda o de su residente en cualquier momento.</li>
+    <li>En <strong>Resumen de ocupación</strong> ves de un vistazo cuántas viviendas están habitadas por su dueño y cuántas rentadas.</li>
+  </ul>
+
+  <h2>4. Cuotas y cobranza</h2>
+  <ul>
+    <li>En <strong>Cuotas</strong> defines el monto y la periodicidad: mensual, bimestral, semanal, o <strong>pago único</strong> (para cuotas extraordinarias, ej. una obra puntual).</li>
+    <li>El <strong>recargo por atraso</strong> es configurable: día límite, porcentaje y si es un cargo único o mensual sobre el saldo.</li>
+    <li>Los cargos se generan solos cada periodo — no tienes que crearlos a mano.</li>
+    <li>El residente transfiere <strong>desde su propio banco</strong> a la CLABE del condominio; Vivecom detecta el depósito automáticamente y lo refleja en el estado de cuenta.</li>
+    <li>Si un pago no se refleja de inmediato queda "pendiente" hasta que el sistema lo detecte. Si el residente transfiere de más, el excedente queda como saldo a favor.</li>
+    <li><strong>Acuerdos de pago:</strong> si un residente no puede pagar de un jalón, puede pedir pagar en parcialidades desde la app — tú vas a <strong>Acuerdos</strong> para aprobar o rechazar la solicitud.</li>
+    <li>Puedes exportar cualquier reporte (cobranza, gastos, presupuesto) a Excel desde <strong>Reportes</strong>.</li>
+  </ul>
+
+  <h2>5. Gastos y presupuesto</h2>
+  <ul>
+    <li>En <strong>Gastos</strong>, cada registro necesita <strong>categoría</strong> (mantenimiento, vigilancia, jardinería, limpieza, administración, agua/luz/gas, elevadores, seguros, proyectos, u "Otra") y <strong>comprobante obligatorio</strong>.</li>
+    <li>Marca cada gasto como único, semanal o mensual — es solo para clasificar y filtrar, no genera gastos futuros solo.</li>
+    <li>Los residentes <strong>pueden ver</strong> en qué se gastó el dinero (categoría, monto, comprobante) desde su propia app — no pueden editar nada, solo consultar.</li>
+    <li>En <strong>Presupuesto</strong> cargas cuánto planeas gastar (mensual por defecto, anual para proyectos grandes) y comparas contra el gasto real.</li>
+  </ul>
+
+  <h2>6. Comunicación: avisos, votaciones y reservaciones</h2>
+  <ul>
+    <li><strong>Avisos:</strong> publica un comunicado y ve quién ya lo leyó — llega a la app del residente y por WhatsApp (SMS si los anteriores fallan).</li>
+    <li><strong>Votaciones:</strong> crea una votación con quórum mínimo; se cierra sola cuando se cumple el plazo o el quórum.</li>
+    <li><strong>Objetos perdidos:</strong> los residentes publican y tú moderas antes de que se vean.</li>
+    <li><strong>Amenidades y reservaciones:</strong> configuras qué amenidades existen, con cuántos días de anticipación se reservan, y designas a uno o más miembros del comité como <strong>aprobadores</strong>. Si nadie aprueba a tiempo, se rechaza sola.</li>
+  </ul>
+
+  <h2>7. Tu cuenta y la organización</h2>
+  <ul>
+    <li><strong>Organización:</strong> edita el nombre y el logo del condominio — aparecen en el panel y en la app de los residentes.</li>
+    <li><strong>Cuenta CLABE:</strong> configúrala o cámbiala cuando quieras desde aquí. Cambiarla pide <strong>confirmación explícita</strong> y queda registrada en la bitácora de auditoría, por seguridad.</li>
+    <li><strong>Cambiar tu contraseña:</strong> disponible en cualquier momento, no solo la primera vez.</li>
+    <li><strong>Seguridad del condominio:</strong> desde aquí ves los reportes de accesos e incidencias que registra el vigilante desde su propia app.</li>
+  </ul>
+
+  <h2>8. Preguntas frecuentes</h2>
+  <dl class="faq">
+    <dt>¿Cómo le doy acceso a un residente nuevo?</dt>
+    <dd>No hace falta que tú hagas nada — su vivienda ya tiene un acceso listo desde que diste de alta el condominio; él lo reclama solo desde la app con el número de su casa.</dd>
+    <dt>¿Puedo borrar una vivienda que ya no existe?</dt>
+    <dd>No, por diseño. Contacta a soporte para casos especiales (ej. fusión de dos lotes).</dd>
+    <dt>¿Qué pasa si un residente transfiere de más?</dt>
+    <dd>El excedente queda como saldo a favor para el siguiente periodo, automáticamente.</dd>
+    <dt>¿Los residentes ven cuánto gasta el condominio?</dt>
+    <dd>Sí, es intencional — pueden ver categoría, monto y comprobante de cada gasto, pero no pueden editarlos.</dd>
+    <dt>¿Se puede pagar en efectivo?</dt>
+    <dd>Solo si el reglamento del condominio lo permite; en ese caso lo captura el tesorero y entrega recibo.</dd>
+    <dt>¿Con quién me comunico si algo no funciona?</dt>
+    <dd>Contacta a soporte de Vivecom.</dd>
+  </dl>
+
+  <footer class="pie">Vivecom · Manual del Administrador · se actualiza con cada cambio real del panel</footer>
+</div>
+</body>
+</html>

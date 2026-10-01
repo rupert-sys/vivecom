@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arquitectura — Vivecom</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<div class="envoltura">
+  <a class="volver no-imprimir" href="index.html">&larr; Portal de documentación</a>
+  <header class="top">
+    <div>
+      <div class="titulo">Mapa de arquitectura</div>
+      <div class="subtitulo">Las piezas de Vivecom y cómo se conectan</div>
+    </div>
+    <button class="boton-imprimir no-imprimir" onclick="window.print()">Imprimir / guardar PDF</button>
+  </header>
+
+  <p>Vivecom es <strong>multi-tenant</strong>: un solo backend y una sola base de datos atienden a todos los
+  condominios, pero los datos de cada uno viven aislados en su propio <em>schema</em> de Postgres — ningún
+  condominio puede ver los datos de otro.</p>
+
+  <div class="capa">
+    <div class="capa-titulo">1 · Lo que usan las personas</div>
+    <div class="cajas">
+      <div class="caja clientes">
+        <div class="titulo-caja">Panel de administración</div>
+        <div class="detalle-caja">React (web) · panel.vivecom.com.mx<br>Administrador del condominio: viviendas, cuotas, gastos, avisos</div>
+      </div>
+      <div class="caja clientes">
+        <div class="titulo-caja">App Residente</div>
+        <div class="detalle-caja">Flutter (web + Android) · app.vivecom.com.mx<br>Residentes: pagar, avisos, votaciones, visitas</div>
+      </div>
+      <div class="caja clientes">
+        <div class="titulo-caja">App Vigilancia (caseta)</div>
+        <div class="detalle-caja">Flutter (Android nativo, offline-first)<br>Guardias: accesos, QR de visitas, paquetería, incidencias</div>
+      </div>
+      <div class="caja clientes">
+        <div class="titulo-caja">Administrador principal</div>
+        <div class="detalle-caja">React (web) · admin.vivecom.com.mx<br>Staff de Vivecom (no un condominio): lista y administra TODOS los condominios — activar/suspender, cuota, alta de uno nuevo</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flecha">↓ HTTPS / API REST ↓</div>
+
+  <div class="capa">
+    <div class="capa-titulo">2 · Backend</div>
+    <div class="cajas">
+      <div class="caja backend">
+        <div class="titulo-caja">API (FastAPI)</div>
+        <div class="detalle-caja">Python · api.vivecom.com.mx<br>Autenticación JWT, un endpoint por función, aislamiento por tenant</div>
+      </div>
+      <div class="caja backend">
+        <div class="titulo-caja">Worker + Beat (Celery)</div>
+        <div class="detalle-caja">Tareas periódicas: cargos mensuales, recargos, recordatorios de pago,<br>notificaciones, cierre de votaciones — corren solas, sin que nadie las dispare</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flecha">↓ ↓</div>
+
+  <div class="capa">
+    <div class="capa-titulo">3 · Datos e integraciones</div>
+    <div class="cajas">
+      <div class="caja datos">
+        <div class="titulo-caja">PostgreSQL</div>
+        <div class="detalle-caja">Un schema <code>public</code> (control: qué condominios existen, cuentas de staff Vivecom) +<br>un schema por condominio (viviendas, residentes, cuotas, pagos…)</div>
+      </div>
+      <div class="caja datos">
+        <div class="titulo-caja">Redis</div>
+        <div class="detalle-caja">Cola de tareas de Celery</div>
+      </div>
+      <div class="caja datos">
+        <div class="titulo-caja">Twilio (WhatsApp/SMS)</div>
+        <div class="detalle-caja">Notificaciones a residentes<br><strong>pendiente:</strong> conectar cuenta real</div>
+      </div>
+      <div class="caja datos">
+        <div class="titulo-caja">Detección SPEI</div>
+        <div class="detalle-caja">Confirma pagos por transferencia<br>automáticamente</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="flecha">↓ ↓</div>
+
+  <div class="capa">
+    <div class="capa-titulo">4 · Infraestructura (AWS)</div>
+    <div class="cajas">
+      <div class="caja infra">
+        <div class="titulo-caja">Servidor EC2</div>
+        <div class="detalle-caja">Ubuntu + Docker Compose · un solo servidor de producción<br>(sin ambientes separados de staging todavía)</div>
+      </div>
+      <div class="caja infra">
+        <div class="titulo-caja">Caddy</div>
+        <div class="detalle-caja">Reverse proxy + HTTPS automático (Let's Encrypt)<br>Sirve el panel, la app y este portal de documentación</div>
+      </div>
+      <div class="caja infra">
+        <div class="titulo-caja">DNS (Cloudflare)</div>
+        <div class="detalle-caja">api / panel / app / admin.vivecom.com.mx → IP del servidor<br>modo "DNS only" (sin proxy)</div>
+      </div>
+    </div>
+  </div>
+
+  <h2>Flujo típico: alta de un condominio nuevo</h2>
+  <ol>
+    <li>Alguien llena la landing de bienvenida (nombre del condominio + cuántas viviendas)</li>
+    <li>El backend crea un <strong>schema nuevo</strong> en Postgres para ese condominio</li>
+    <li>Se crean todas las viviendas de una vez, cada una con una cuenta <strong>sin activar</strong></li>
+    <li>Se crea la cuenta del administrador, con contraseña temporal que debe cambiar</li>
+    <li>Cada residente reclama su propia cuenta desde la app, con el número de su casa</li>
+  </ol>
+
+  <h2>Decisiones de arquitectura clave</h2>
+  <ul>
+    <li><strong>Un schema por tenant</strong> (no una base de datos por tenant): aísla los datos sin la complejidad operativa de administrar N bases de datos.</li>
+    <li><strong>El residente nunca transfiere dinero dentro de la app</strong> — transfiere desde su propio banco a la CLABE del condominio; Vivecom solo detecta el depósito.</li>
+    <li><strong>La app de vigilancia funciona sin internet</strong> — encola accesos/incidencias localmente y sincroniza sola al recuperar conexión.</li>
+    <li><strong>Un solo servidor</strong> en vez de microservicios administrados (ECS/RDS/S3): más simple de operar para el tamaño actual del proyecto — ver la nota de la tarea F0-15 en la bitácora.</li>
+    <li><strong>El staff de Vivecom no es un condominio más</strong>: su cuenta (VivecomStaff) y su login (/staff/login) viven aparte de cualquier tenant, a propósito — así ningún administrador de un condominio puede llegar a ver o administrar a los demás.</li>
+  </ul>
+
+  <footer class="pie">Vivecom · se actualiza con cada cambio real de la arquitectura</footer>
+</div>
+</body>
+</html>

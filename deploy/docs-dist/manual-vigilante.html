@@ -1,0 +1,85 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manual del Vigilante — Vivecom</title>
+<link rel="stylesheet" href="estilos.css">
+</head>
+<body>
+<div class="envoltura">
+  <a class="volver no-imprimir" href="index.html">&larr; Portal de documentación</a>
+  <header class="top">
+    <div>
+      <div class="titulo">Manual del Vigilante</div>
+      <div class="subtitulo">Guía de uso de la app de vigilancia de Vivecom</div>
+    </div>
+    <button class="boton-imprimir no-imprimir" onclick="window.print()">Imprimir / guardar PDF</button>
+  </header>
+
+  <h2>1. Descargar e iniciar sesión</h2>
+  <ol>
+    <li>Desde tu celular Android, entra a <strong>https://app.vivecom.com.mx/vivecom-caseta.apk</strong> para descargar la app (o pide el link directo al administrador)</li>
+    <li>Tu teléfono puede pedirte permitir "instalar apps de orígenes desconocidos" — es normal, solo la primera vez</li>
+    <li>Abre el archivo descargado para instalar</li>
+    <li>Al abrir la app por primera vez, acepta los permisos de <strong>Internet</strong> y <strong>Cámara</strong> que te pida — los necesitas para iniciar sesión y para fotografiar incidencias/escanear QR</li>
+    <li>Inicia sesión con el usuario y contraseña que te dio el administrador de tu condominio</li>
+  </ol>
+
+  <h2>2. Registrar accesos y escanear QR de visitantes</h2>
+  <p>Cada residente puede generar desde su app un <strong>código QR de un solo uso</strong> para invitar a un
+  visitante, con el nombre de la visita y cuántas personas son. Autorizar el acceso son <strong>dos
+  pasos</strong>, nunca uno solo automático:</p>
+  <ol>
+    <li><strong>Leer el código</strong> — apunta la cámara (o escribe el código a mano si la cámara falla). De inmediato ves el nombre del visitante, cuántos son, a qué vivienda va, y el nombre de quien lo invita — esto se lee directo del código, <strong>sin necesitar internet</strong>.</li>
+    <li><strong>Corrobora con el visitante</strong> que esos datos son correctos. Si hace falta, toca <strong>"Llamar a…"</strong> para marcarle al residente directo desde la app y confirmar.</li>
+    <li>Solo cuando ya verificaste, toca <strong>"Confirmar acceso"</strong> — ahí sí se consulta el servidor y se autoriza (o se rechaza, si el código ya se usó o no existe).</li>
+  </ol>
+  <div class="aviso"><strong>Sin internet:</strong> los pasos 1 y 2 (leer y llamar) funcionan siempre, sin
+  conexión. El paso 3 (confirmar) sí necesita internet, porque solo el servidor sabe si ese código ya se
+  usó — si no hay señal en ese momento, la app te avisa "Sin conexión" y te deja decidir a ti si lo dejas
+  pasar, ya con los datos del visitante y el teléfono del residente a la vista.</div>
+  <p>Todo acceso (con o sin QR) queda registrado en la <strong>bitácora de accesos</strong>, visible para el
+  administrador. Un código ya usado se marca como inválido — no dejes pasar a alguien con un QR rechazado.</p>
+
+  <h2>3. Registrar paquetería</h2>
+  <ol>
+    <li>Cuando llegue un paquete, ve a <strong>Paquetería</strong> → "Registrar"</li>
+    <li>Indica a qué vivienda pertenece</li>
+    <li>El residente recibe una notificación automática de que su paquete llegó</li>
+    <li>Cuando el residente lo recoja, márchalo como <strong>entregado</strong> — le llega una segunda notificación confirmando la entrega</li>
+  </ol>
+  <p>Cada paquete solo genera esas dos notificaciones (llegada y entrega), nunca recordatorios repetidos.</p>
+
+  <h2>4. Levantar una incidencia</h2>
+  <ol>
+    <li>Ve a <strong>Incidencias</strong> → "Nueva"</li>
+    <li>Describe qué pasó y, si aplica, toma una <strong>foto</strong> con la cámara de la app</li>
+    <li>Envía — el administrador recibe una <strong>alerta en tiempo real</strong></li>
+  </ol>
+  <p>Una incidencia se puede dar seguimiento: el administrador la puede marcar en proceso o resuelta, y todo el historial queda documentado para consultarlo después.</p>
+
+  <h2>5. Qué pasa si se va el internet</h2>
+  <p>La app está pensada para seguir funcionando aunque la caseta se quede sin internet un rato:</p>
+  <ul>
+    <li>Puedes seguir registrando accesos, paquetes e incidencias normalmente.</li>
+    <li>En cuanto vuelva la conexión, todo se sincroniza solo con el sistema central — no tienes que hacer nada especial.</li>
+    <li>Si algo no logra sincronizarse, el administrador recibe una alerta para revisarlo.</li>
+  </ul>
+
+  <h2>6. Preguntas frecuentes</h2>
+  <dl class="faq">
+    <dt>No me deja iniciar sesión, ¿qué hago?</dt>
+    <dd>Verifica que tengas datos móviles o WiFi activo, y que aceptaste el permiso de Internet al instalar. Si sigue sin funcionar, contacta al administrador.</dd>
+    <dt>¿Puedo dejar pasar a alguien sin QR?</dt>
+    <dd>Sí, pero regístralo igual en la bitácora de accesos — el registro es lo que le da seguimiento y seguridad real al condominio.</dd>
+    <dt>¿Qué hago si el QR dice inválido pero el visitante insiste en que es correcto?</dt>
+    <dd>No lo dejes pasar solo por eso — usa el nombre y teléfono de quien lo invita (si el código los trae) para confirmar antes.</dd>
+    <dt>¿Se me pide cámara para qué?</dt>
+    <dd>Para fotografiar incidencias y para escanear los códigos QR de visitantes.</dd>
+  </dl>
+
+  <footer class="pie">Vivecom · Manual del Vigilante · se actualiza con cada cambio real de la app</footer>
+</div>
+</body>
+</html>
