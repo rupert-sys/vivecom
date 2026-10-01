@@ -22,7 +22,8 @@
 |---|---|---|
 | id | uuid PK | |
 | identificador | varchar | Ej. "Casa 14", "Depto 302" |
-| created_at | timestamp | |
+| referencia_pago | varchar(7), unique | Referencia numérica de SPEI para identificar de qué vivienda es un depósito, ya que todas transfieren a la misma CLABE del condominio — el residente la captura al transferir |
+| saldo_a_favor | decimal(10,2), default 0 | Excedente cuando un depósito conciliado supera lo debido; se descuenta automáticamente del siguiente `fee_charge` que se genere |
 
 ### resident
 | Campo | Tipo | Notas |
@@ -55,13 +56,21 @@
 
 ## Financiero
 
+> **Nota de implementación (corregido contra el código real, antes desalineado):** el diseño que terminó
+> implementándose es más simple de lo que describía esta sección originalmente — no existen tablas separadas
+> `payment_allocation` ni `credit_balance`. Un pago anticipado de 1-12 meses simplemente crea de una vez varios
+> `fee_charge` ya marcados `pagado`, todos con el mismo `payment_id` (relación 1-a-muchos: un `payment` puede
+> saldar varios `fee_charge`, ver `payment_reconciliation_service._aplicar_pago_anticipado`). El saldo a favor
+> tampoco es una tabla con historial: es un solo campo `saldo_a_favor` en `property`, que se incrementa cuando
+> un depósito conciliado supera lo debido y se descuenta automáticamente del siguiente `fee_charge` que se genere.
+
 ### fee *(configuración de cuota)*
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid PK | |
 | monto | decimal(10,2) | |
-| periodicidad | enum(mensual, bimestral) | |
-| activa_desde | date | |
+| periodicidad | enum(mensual, bimestral, semanal, unica) | `semanal` se elige pero hoy genera con la misma cadencia que `mensual` (no implementado de verdad, ver fee.py); `unica` es para cuotas extraordinarias — no compite por ser "la cuota vigente", genera un solo cargo |
+| activa_desde | date | Para `unica`, es el periodo al que aplica ese cargo único, no una fecha de inicio |
 
 ### fee_charge *(cargo generado por ciclo)*
 | Campo | Tipo | Notas |
@@ -69,41 +78,26 @@
 | id | uuid PK | |
 | property_id | uuid FK → property | |
 | fee_id | uuid FK → fee | |
-| periodo | date | Mes/ciclo que corresponde |
+| periodo | date | Primer día del mes/ciclo que corresponde |
 | monto_base | decimal(10,2) | |
 | recargo_aplicado | decimal(10,2) | 10% si no se pagó antes del minuto 1 del día 6 (regla global, HU-A04) |
 | estado | enum(pendiente, pagado, vencido) | |
-| created_at | timestamp | |
+| payment_id | uuid FK → payment (nullable) | Se llena al conciliar el depósito que lo saldó; varios `fee_charge` pueden compartir el mismo `payment_id` (pago anticipado) |
+| recordatorio_enviado_en | date (nullable) | Último recordatorio mandado — una vez al día, no en cada corrida del job |
+| confirmacion_enviada | boolean | Si ya se avisó que este cargo quedó pagado (una sola vez, sin importar qué lo pagó) |
 
 ### payment
 | Campo | Tipo | Notas |
 |---|---|---|
 | id | uuid PK | |
-| property_id | uuid FK → property | |
-| fee_charge_id | uuid FK → fee_charge (nullable) | Null si es pago anticipado que cubre varios cargos futuros (ver payment_allocation) |
+| property_id | uuid FK → property (nullable) | Null si la referencia no coincide con ninguna vivienda — el pago se guarda igual para que el tesorero lo resuelva a mano (HU-A06), en vez de perderse |
 | monto | decimal(10,2) | |
-| estado | enum(pendiente, confirmado, rechazado) | HU-A04 |
-| clabe_virtual | varchar(18) | CLABE de cobro asignada por el proveedor SPEI (STP/Fintoc) |
-| fecha_deteccion | timestamp (nullable) | Cuándo el proveedor confirmó el depósito |
-| validado_por | uuid FK → user_account (nullable) | Tesorero que revisó el caso (HU-A06) |
-| created_at | timestamp | |
-
-### payment_allocation *(para pagos anticipados 1-12 meses, HU-A05)*
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| payment_id | uuid FK → payment | |
-| fee_charge_id | uuid FK → fee_charge | |
-| monto_aplicado | decimal(10,2) | |
-
-### credit_balance *(saldo a favor, HU-A06)*
-| Campo | Tipo | Notas |
-|---|---|---|
-| id | uuid PK | |
-| property_id | uuid FK → property | |
-| monto | decimal(10,2) | |
-| origen_payment_id | uuid FK → payment | |
-| aplicado | boolean | Si ya se descontó del siguiente cargo |
+| estado | enum(pendiente, confirmado, rechazado) | `pendiente` = detectado pero sin conciliar (ej. referencia no reconocida) |
+| referencia_recibida | varchar(7) | La referencia de 7 dígitos que el residente captura al transferir (ver `property.referencia_pago`) |
+| clave_rastreo | varchar, unique | Identificador único de la transacción SPEI — evita procesar el mismo webhook dos veces si el proveedor lo reintenta |
+| proveedor | varchar | Proveedor de recepción SPEI, default `"stp"` |
+| fecha_deteccion | timestamp | Cuándo el proveedor confirmó el depósito |
+| registrado_por | uuid (nullable) | Quién lo capturó a mano (efectivo, o una transferencia que el proveedor no detectó) — null en pagos detectados automáticamente |
 
 ### clabe_change_log *(auditoría, HU-A07 — vive en schema público junto a tenant)*
 | Campo | Tipo | Notas |
