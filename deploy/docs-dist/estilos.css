@@ -71,7 +71,9 @@ strong { font-weight: 700; }
 .boton-imprimir {
   font-family: inherit; font-size: 13px; padding: 8px 16px; border-radius: 999px;
   border: 1px solid var(--linea-fuerte); background: white; color: var(--tinta); cursor: pointer;
+  display: inline-block; text-decoration: none; margin-left: 8px;
 }
+.boton-imprimir:first-child { margin-left: 0; }
 .boton-imprimir:hover { background: var(--papel-2); }
 
 .faq dt { font-weight: 700; margin-top: 14px; }
