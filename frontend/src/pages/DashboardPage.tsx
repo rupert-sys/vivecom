@@ -17,6 +17,21 @@ const TITULO_DETALLE: Record<Filtro, string> = {
   pendiente: 'Quién debe',
 }
 
+// Sin centavos: para las cifras del Dashboard no aportan nada (nadie paga $49,500.37 de mantenimiento) y sí
+// estorban a simple vista — con separador de miles, que a estos montos ya se le nota la falta.
+function formatoDinero(monto: number): string {
+  return `$${Math.round(monto).toLocaleString('es-MX')}`
+}
+
+// Rotación de color para las tarjetas "cobrado por concepto" (Mantenimiento, Amenidades, Proyecto…) — antes
+// eran todas blancas/sin color, lo único vivo en el Dashboard eran Cobrado (teal) y Adeudado (amber).
+const PALETA_CONCEPTOS = [
+  { color: 'var(--dustblue)', tint: 'var(--dustblue-tint)' },
+  { color: 'var(--brick)', tint: 'var(--brick-tint)' },
+  { color: 'var(--teal)', tint: 'var(--teal-tint)' },
+  { color: 'var(--amber)', tint: 'var(--amber-tint)' },
+]
+
 function filasDelDetalle(porVivienda: PropertyCollectionsSummary[], filtro: Filtro): PropertyCollectionsSummary[] {
   if (filtro === 'cobrado') return porVivienda.filter((f) => f.cobrado > 0).sort((a, b) => b.cobrado - a.cobrado)
   if (filtro === 'pendiente') return porVivienda.filter((f) => f.pendiente > 0).sort((a, b) => b.pendiente - a.pendiente)
@@ -35,6 +50,9 @@ export function DashboardPage() {
   const [propertyId, setPropertyId] = useState('')
   const [mes, setMes] = useState('')
   const [filtro, setFiltro] = useState<Filtro>('todas')
+  // Qué tarjeta de "cobrado por concepto" está pinchada — null = ninguna. A diferencia de `filtro` (que
+  // cambia la tabla de abajo), esto solo expande un detalle bajo las propias tarjetas de concepto.
+  const [conceptoAbierto, setConceptoAbierto] = useState<string | null>(null)
 
   async function reload() {
     setLoading(true)
@@ -60,6 +78,7 @@ export function DashboardPage() {
 
   useEffect(() => {
     setFiltro('todas') // un filtro de vivienda/periodo nuevo invalida el "quién pagó/debe" que se estaba viendo
+    setConceptoAbierto(null)
   }, [propertyId, mes])
 
   if (!tieneAcceso) {
@@ -93,41 +112,78 @@ export function DashboardPage() {
       ) : (
         summary && (
           <>
-            <div role="group" aria-label="Resumen financiero" style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
-              <StatCard label="Viviendas" onClick={() => setFiltro('todas')} active={filtro === 'todas'}>
+            <div role="group" aria-label="Resumen financiero" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+              <StatCard
+                label="Viviendas"
+                color="var(--dustblue)"
+                tint="var(--dustblue-tint)"
+                onClick={() => setFiltro('todas')}
+                active={filtro === 'todas'}
+              >
                 {properties.length}
               </StatCard>
               <StatCard
                 label="Cobrado"
                 color="var(--teal)"
+                tint="var(--teal-tint)"
                 onClick={() => setFiltro('cobrado')}
                 active={filtro === 'cobrado'}
               >
-                ${summary.cobrado_total.toFixed(2)}
+                {formatoDinero(summary.cobrado_total)}
               </StatCard>
               <StatCard
                 label="Adeudado"
                 color="var(--amber)"
+                tint="var(--amber-tint)"
                 onClick={() => setFiltro('pendiente')}
                 active={filtro === 'pendiente'}
               >
-                ${summary.pendiente_total.toFixed(2)}
+                {formatoDinero(summary.pendiente_total)}
               </StatCard>
             </div>
             <p style={{ color: 'var(--ink-soft)', marginTop: 0 }}>Pincha una tarjeta para ver el detalle por vivienda.</p>
 
-            <div role="group" aria-label="Cobrado por concepto" style={{ display: 'flex', gap: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
-              {summary.por_origen.map((origen) => (
-                <StatCard key={origen.concepto} label={origen.concepto}>
-                  ${origen.cobrado.toFixed(2)}
-                  {origen.pendiente > 0 && (
-                    <span style={{ color: 'var(--amber)', fontSize: '0.85rem', display: 'block' }}>
-                      ${origen.pendiente.toFixed(2)} pendiente
-                    </span>
-                  )}
-                </StatCard>
-              ))}
+            <div role="group" aria-label="Cobrado por concepto" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+              {summary.por_origen.map((origen, i) => {
+                const paleta = PALETA_CONCEPTOS[i % PALETA_CONCEPTOS.length]
+                return (
+                  <StatCard
+                    key={origen.concepto}
+                    label={origen.concepto}
+                    color={paleta.color}
+                    tint={paleta.tint}
+                    onClick={() => setConceptoAbierto(conceptoAbierto === origen.concepto ? null : origen.concepto)}
+                    active={conceptoAbierto === origen.concepto}
+                  >
+                    {formatoDinero(origen.cobrado)}
+                    {origen.pendiente > 0 && (
+                      <span style={{ color: 'var(--amber)', fontSize: '0.85rem', display: 'block' }}>
+                        {formatoDinero(origen.pendiente)} pendiente
+                      </span>
+                    )}
+                  </StatCard>
+                )
+              })}
             </div>
+
+            {conceptoAbierto &&
+              (() => {
+                const origen = summary.por_origen.find((o) => o.concepto === conceptoAbierto)
+                if (!origen) return null
+                return (
+                  <div className="card" style={{ padding: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
+                    <strong>{origen.concepto}</strong>
+                    <p style={{ margin: 'var(--space-2) 0 0' }}>
+                      Cobrado: <span className="mono">{formatoDinero(origen.cobrado)}</span>
+                      {' · '}
+                      Pendiente:{' '}
+                      <span className="mono" style={{ color: origen.pendiente > 0 ? 'var(--amber)' : undefined }}>
+                        {formatoDinero(origen.pendiente)}
+                      </span>
+                    </p>
+                  </div>
+                )
+              })()}
 
             <h3>{TITULO_DETALLE[filtro]}</h3>
             {(() => {
@@ -157,10 +213,10 @@ export function DashboardPage() {
                       <tr key={fila.property_id} style={{ borderBottom: '1px solid var(--border)' }}>
                         <td>{fila.identificador}</td>
                         <td className="mono" style={{ color: 'var(--teal)' }}>
-                          ${fila.cobrado.toFixed(2)}
+                          {formatoDinero(fila.cobrado)}
                         </td>
                         <td className="mono" style={{ color: 'var(--amber)' }}>
-                          ${fila.pendiente.toFixed(2)}
+                          {formatoDinero(fila.pendiente)}
                         </td>
                       </tr>
                     ))}

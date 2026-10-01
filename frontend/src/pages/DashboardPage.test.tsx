@@ -53,14 +53,14 @@ describe('DashboardPage', () => {
 
     render(<DashboardPage />)
 
-    expect(await screen.findByText('$3333.00')).toBeInTheDocument()
-    expect(screen.getByText('$9999.00')).toBeInTheDocument()
-    expect(screen.getByText('$1111.00')).toBeInTheDocument()
-    expect(screen.getByText('$2222.00')).toBeInTheDocument()
+    expect(await screen.findByText('$3,333')).toBeInTheDocument()
+    expect(screen.getByText('$9,999')).toBeInTheDocument()
+    expect(screen.getByText('$1,111')).toBeInTheDocument()
+    expect(screen.getByText('$2,222')).toBeInTheDocument()
     expect(screen.getByText('2')).toBeInTheDocument() // tarjeta "Viviendas": 2 propiedades
-    expect(screen.getByText('$6666.00')).toBeInTheDocument() // Mantenimiento
-    expect(screen.getByText('$7777.00')).toBeInTheDocument() // Amenidades
-    expect(screen.getByText('$8888.00')).toBeInTheDocument() // Proyecto
+    expect(screen.getByText('$6,666')).toBeInTheDocument() // Mantenimiento
+    expect(screen.getByText('$7,777')).toBeInTheDocument() // Amenidades
+    expect(screen.getByText('$8,888')).toBeInTheDocument() // Proyecto
     const tabla = within(screen.getByRole('table'))
     expect(tabla.getByText('Casa 1')).toBeInTheDocument()
     expect(tabla.getByText('Casa 2')).toBeInTheDocument()
@@ -73,7 +73,7 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
 
     render(<DashboardPage />)
-    await screen.findByText('$3333.00')
+    await screen.findByText('$3,333')
     let tabla = within(screen.getByRole('table'))
     expect(tabla.getByText('Casa 1')).toBeInTheDocument()
     expect(tabla.getByText('Casa 2')).toBeInTheDocument()
@@ -91,6 +91,23 @@ describe('DashboardPage', () => {
 
     await user.click(screen.getByRole('button', { name: /^viviendas/i }))
     expect(await screen.findByText('Detalle por vivienda')).toBeInTheDocument()
+  })
+
+  it('pinchar una tarjeta de concepto muestra su detalle de cobrado/pendiente', async () => {
+    mockUser('admin')
+    vi.spyOn(propertiesApi, 'listProperties').mockResolvedValue(properties)
+    vi.spyOn(reportsApi, 'getCollectionsSummary').mockResolvedValue(summary)
+    const user = userEvent.setup()
+
+    render(<DashboardPage />)
+    await screen.findByText('$3,333')
+
+    await user.click(screen.getByRole('button', { name: /mantenimiento/i }))
+    await waitFor(() => expect(screen.getAllByText('$6,666')).toHaveLength(2)) // tarjeta + detalle expandido
+    expect(screen.getByText(/cobrado:/i)).toBeInTheDocument()
+
+    await user.click(screen.getByRole('button', { name: /mantenimiento/i }))
+    expect(screen.getAllByText('$6,666')).toHaveLength(1) // se cierra al pinchar otra vez
   })
 
   it('tesorero también tiene acceso', async () => {
@@ -130,7 +147,7 @@ describe('DashboardPage', () => {
     const user = userEvent.setup()
 
     render(<DashboardPage />)
-    await screen.findByText('$3333.00')
+    await screen.findByText('$3,333')
 
     await user.selectOptions(screen.getByRole('combobox'), 'p2')
 
