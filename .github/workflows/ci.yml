@@ -46,34 +46,3 @@ jobs:
           DATABASE_URL: postgresql+asyncpg://vivecom:vivecom@localhost:5432/vivecom_test
           JWT_SECRET: test-secret-not-for-prod
         run: pytest -v
-
-  build-and-push:
-    needs: test-backend
-    if: github.ref == 'refs/heads/main'
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Configurar credenciales AWS
-        uses: aws-actions/configure-aws-credentials@v4
-        with:
-          role-to-assume: ${{ secrets.AWS_DEPLOY_ROLE_ARN }}
-          aws-region: mx-central-1
-
-      - name: Login a ECR
-        id: ecr
-        uses: aws-actions/amazon-ecr-login@v2
-
-      - name: Build y push de la imagen
-        working-directory: backend
-        env:
-          REGISTRY: ${{ steps.ecr.outputs.registry }}
-          IMAGE: vivecom-backend
-        run: |
-          docker build -t $REGISTRY/$IMAGE:${{ github.sha }} -t $REGISTRY/$IMAGE:latest .
-          docker push $REGISTRY/$IMAGE:${{ github.sha }}
-          docker push $REGISTRY/$IMAGE:latest
-
-      - name: Desplegar a staging (ECS)
-        run: |
-          aws ecs update-service --cluster vivecom-staging --service backend --force-new-deployment

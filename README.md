@@ -4,11 +4,19 @@ Plataforma de administración, comunicación, seguridad y pagos para condominios
 
 ## Estructura del repo
 ```
-backend/    API en FastAPI (Python), multi-tenant por schema de PostgreSQL
-frontend/   Panel admin (React + TypeScript + Vite)
-infra/      Infraestructura como código (Terraform, AWS)
-design/     Sistema de diseño (paleta, tipografía, componentes)
-.github/    Pipeline de CI/CD (GitHub Actions)
+backend/         API en FastAPI (Python), multi-tenant por schema de PostgreSQL
+frontend/        Panel de administración de un condominio (React + TypeScript + Vite) —
+                  instalable como PWA y empacado como app nativa de Android (frontend/android/, vía Capacitor)
+staff-frontend/  Portal de administrador principal (staff Vivecom): lista y administra todos los
+                  condominios, login propio sin relación con ningún tenant (admin.<dominio>)
+mobile/          App de residentes (Flutter) — iOS y web (app.<dominio>)
+caseta/          App de vigilancia (Flutter, Android) — escaneo de QR de visitantes/proveedores
+deploy/          Despliegue de producción: Docker Compose + Caddy en una sola instancia —
+                  ver deploy/README.md para el procedimiento real
+design/          Sistema de diseño (paleta, tipografía, componentes)
+infra/           Terraform para AWS — histórico, no es el mecanismo de despliegue actual
+                  (ver deploy/README.md); se dejó sin usar al optar por una sola instancia
+.github/         CI: corre lint + pytest del backend en cada push/PR
 ```
 
 ## Levantar el backend en local
@@ -51,25 +59,26 @@ El volumen nombrado `vivecom_frontend_node_modules` evita instalar
 contenedor Linux y macOS). `.claude/launch.json` ya tiene esta variante del
 dev server configurada para levantarse con un clic desde Claude Code.
 
-## Desplegar infraestructura (requiere cuenta de AWS propia)
-```bash
-cd infra
-terraform init -backend-config="bucket=TU_BUCKET_DE_STATE" -backend-config="key=vivecom/staging.tfstate"
-terraform plan -var="environment=staging" -var="db_password=$TF_VAR_db_password"
-terraform apply
-```
+El portal de administrador principal (`staff-frontend/`) se levanta y se
+prueba igual que `frontend/`, apuntando al mismo backend.
+
+Las apps de Flutter (`mobile/`, `caseta/`) requieren Flutter instalado —
+`flutter run` dentro de cada carpeta.
+
+## Desplegar a producción
+El despliegue real es una sola máquina (Docker Compose + Caddy, HTTPS directo
+vía Let's Encrypt), no el Terraform de `infra/`. El procedimiento completo
+—incluyendo por qué nunca hay que compilar en el servidor— está en
+[`deploy/README.md`](deploy/README.md).
 
 ## Documentos de referencia
 - `alcance_vivecom.md` — alcance del producto, historias de usuario, decisiones de negocio.
 - `modelo_datos_vivecom.md` — modelo de datos completo (ERD).
 - `plan_de_trabajo_vivecom.xlsx` — backlog de las 4 fases del proyecto.
-- `CONTRIBUTING.md` — estrategia de branching y convención de commits (F0-13).
+- `bitacora_vivecom.html` — bitácora cronológica de cambios del proyecto.
+- `CONTRIBUTING.md` — estrategia de branching y convención de commits.
 
 ## Pendiente de configurar (requiere acción humana, no se puede automatizar desde aquí)
-- Crear el repositorio real en GitHub/GitLab y hacer el primer push de este contenido
-  (ya es un repo git local, con `main` como rama inicial — ver `CONTRIBUTING.md`).
-- Configurar la protección de la rama `main` en el repositorio real, según la política
-  documentada en `CONTRIBUTING.md`.
-- Crear la cuenta de AWS y el bucket S3 para el state de Terraform.
-- Configurar los secrets de GitHub Actions: `AWS_DEPLOY_ROLE_ARN`.
-- Crear la cuenta con el proveedor de recepción SPEI (STP o Fintoc) y agregar sus credenciales como secreto.
+- Configurar la protección de la rama `main` en GitHub, según la política documentada en `CONTRIBUTING.md`.
+- Confirmar que el secreto real de recepción SPEI (`STP_WEBHOOK_SECRET` en `deploy/.env`, proveedor STP/Fintoc)
+  esté puesto en el servidor de producción — `backend/app/core/config.py` solo trae un valor de ejemplo por default.
