@@ -33,6 +33,17 @@ http://app.{$DOMAIN} {
 	import spa
 }
 
+# Portal de administrador principal (staff Vivecom, React): lista y administra TODOS los condominios, con su
+# propio login (/staff/login) sin relación con ningún tenant — ver staff-frontend/. Necesita su propio bloque
+# de host explícito: sin esto caería en el catch-all :80 de abajo (pensado para panel.<dominio>).
+# AVISO: en este modo (detrás de Cloudflare Tunnel) además hace falta agregar la ruta de admin.<dominio> al
+# config.yml del túnel (fuera del repo, ver deploy/README.md) — sin eso, Cloudflare nunca llega a este bloque.
+http://admin.{$DOMAIN} {
+	root * /srv/admin
+	header Cache-Control "no-cache"
+	import spa
+}
+
 # panel.<dominio>, y cualquier otro host (p. ej. http://127.0.0.1:8081 al probar sin el túnel). Los .js del panel llevan
 # huella (assets/index-<huella>.js), así que su caché no estorba; index.html no lo cachea Cloudflare.
 :80 {

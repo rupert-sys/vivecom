@@ -6,7 +6,7 @@ from prometheus_fastapi_instrumentator import Instrumentator
 from app.api import (
     access_log, amenities, announcement_questions, announcements, auth, budgets, expenses, fees, files, incidents, lost_found, packages,
     payment_agreements, payment_proofs, payments, payments_webhook, polls, privacy, properties, reglamento, reports, reservations, residents, signup,
-    staff_auth, staff_reports, tenant_config, users, visitor_qr,
+    staff_auth, staff_reports, staff_tenants, tenant_config, users, visitor_qr,
 )
 from app.core.config import settings
 
@@ -68,6 +68,7 @@ app.include_router(privacy.router)
 app.include_router(users.router)
 app.include_router(staff_auth.router)
 app.include_router(staff_reports.router)
+app.include_router(staff_tenants.router)
 
 # F1-36: expone /metrics en formato Prometheus/OpenMetrics (conteo y latencia
 # por endpoint) — tanto Grafana+Prometheus como Datadog saben scrapear este

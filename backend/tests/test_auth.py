@@ -184,6 +184,39 @@ def test_login_incluye_debe_cambiar_password_en_el_token(client):
     assert payload["debe_cambiar_password"] is True
 
 
+async def _seed_login_tenant_desactivado(client):
+    """Portal de administrador principal (staff Vivecom): un condominio desactivado no puede iniciar sesión."""
+    from tests.conftest import TEST_TENANT_ID
+
+    await _crear_tablas(client)
+    user_id = uuid.uuid4()
+    async with client.db_session_factory() as db:
+        db.add(
+            Tenant(
+                id=uuid.UUID(TEST_TENANT_ID), nombre="Condominio de prueba", clabe_destino="012180001547896321",
+                precio_por_vivienda=25.00, schema_name="test", activo=False,
+            )
+        )
+        db.add(UserLookup(email=TEST_EMAIL, tenant_id=uuid.UUID(TEST_TENANT_ID), user_id=user_id))
+        db.add(
+            UserAccount(
+                id=user_id, email=TEST_EMAIL, password_hash=hash_password(TEST_PASSWORD), rol="admin", property_id=None
+            )
+        )
+        await db.commit()
+
+
+def test_login_a_un_tenant_desactivado_es_rechazado(client):
+    asyncio.run(_seed_login_tenant_desactivado(client))
+    fake_tenant_session = _preparar_login(client)
+
+    with patch.object(auth_module, "tenant_session", fake_tenant_session):
+        response = client.post("/auth/login", json={"email": TEST_EMAIL, "password": TEST_PASSWORD})
+
+    assert response.status_code == 403
+    assert "suspendido" in response.json()["detail"]
+
+
 def test_a_nonexistent_email_still_runs_a_bcrypt_verification(client):
     """
     F2-21: antes, un email inexistente respondía 401 de inmediato SIN correr

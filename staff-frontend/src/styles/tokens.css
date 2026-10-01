@@ -1,0 +1,46 @@
+/* Sistema de diseño Vivecom (F0-10, evolucionado) — ver design/design_system.md.
+   Concepto: ledger / documento oficial de condominio, no dashboard corporativo genérico ni app social. */
+:root {
+  /* Tinta y superficies */
+  --ink: #1c2a39;
+  --ink-2: #16283a; /* un tono más profundo: barra lateral, encabezados de énfasis */
+  --ink-soft: #5c6773;
+  --ink-faint: #8b93a0;
+  --paper: #f6f4ee;
+  --surface: #ffffff;
+  --surface-2: #fbfaf6; /* fondo de fila alterna / hover sutil */
+  --border: #d8d3c4;
+  --border-soft: #e8e4d8;
+
+  /* Color de marca y semánticos (fondo tenue + variante fuerte, para chips/alertas/botones) */
+  --teal: #2f6f5e;
+  --teal-strong: #24594b;
+  --teal-tint: #e7f1ed;
+  --amber: #9a6b1f;
+  --amber-tint: #f6ecd9;
+  --brick: #a6432f;
+  --brick-strong: #8a3526;
+  --brick-tint: #f7e7e2;
+  --dustblue: #3e5c76;
+  --dustblue-tint: #e8edf2;
+
+  --focus-ring: 0 0 0 3px rgba(47, 111, 94, 0.3);
+
+  --font-heading: 'Source Serif 4', Georgia, serif;
+  --font-mono: 'IBM Plex Mono', ui-monospace, SFMono-Regular, monospace;
+  --font-body: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+
+  --radius-sm: 4px;
+  --radius: 8px;
+  --radius-lg: 14px;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 16px;
+  --space-4: 24px;
+  --space-5: 32px;
+
+  --shadow-sm: 0 1px 2px rgba(22, 40, 58, 0.06);
+  --shadow-md: 0 6px 20px -4px rgba(22, 40, 58, 0.16);
+
+  --sidebar-w: 232px;
+}

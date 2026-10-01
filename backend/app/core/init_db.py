@@ -32,6 +32,17 @@ async def init_control_schema(engine: AsyncEngine) -> None:
             # /signup (landing de bienvenida) ya no pide la CLABE al dar de alta un condominio — ver Tenant.clabe_destino.
             await conn.execute(text("ALTER TABLE public.tenant ALTER COLUMN clabe_destino DROP NOT NULL"))
             await conn.execute(text("ALTER TABLE public.clabe_change_log ALTER COLUMN clabe_anterior DROP NOT NULL"))
+            # Portal de administrador principal (staff Vivecom, ver api/staff_tenants.py): activo/fecha_creacion no
+            # existían antes de eso. DEFAULT now() es solo para no dejar NULL las filas de tenants ya creados — el
+            # modelo de Python (Tenant.fecha_creacion) fija su propio valor en cada INSERT nuevo sin depender de esto.
+            await conn.execute(text("ALTER TABLE public.tenant ADD COLUMN IF NOT EXISTS activo BOOLEAN NOT NULL DEFAULT true"))
+            await conn.execute(
+                text("ALTER TABLE public.tenant ADD COLUMN IF NOT EXISTS fecha_creacion TIMESTAMP NOT NULL DEFAULT now()")
+            )
+            # Papelera del portal de administrador principal (ver api/staff_tenants.py): en_papelera/papelera_en
+            # no existían antes de eso.
+            await conn.execute(text("ALTER TABLE public.tenant ADD COLUMN IF NOT EXISTS en_papelera BOOLEAN NOT NULL DEFAULT false"))
+            await conn.execute(text("ALTER TABLE public.tenant ADD COLUMN IF NOT EXISTS papelera_en TIMESTAMP"))
 
 
 async def main() -> None:

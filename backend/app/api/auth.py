@@ -36,6 +36,12 @@ async def login(payload: LoginRequest, control_db: AsyncSession = Depends(contro
         await control_db.execute(select(Tenant).where(Tenant.id == lookup.tenant_id))
     ).scalar_one()
 
+    # Portal de administrador principal (staff Vivecom): un condominio desactivado desde ahí no puede
+    # iniciar sesión — es lo único que le da efecto real a "suspender" un condominio (ver Tenant.activo).
+    # Se revisa antes de tocar la contraseña: no tiene sentido verificarla si el tenant entero está apagado.
+    if not tenant.activo:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, "Este condominio está suspendido. Contacta a Vivecom.")
+
     # 2. Dentro del schema de ese tenant, verificar la contraseña.
     async with tenant_session(tenant.schema_name) as tenant_db:
         user = (
