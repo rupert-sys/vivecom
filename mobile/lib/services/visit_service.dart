@@ -6,8 +6,15 @@ class VisitService {
 
   VisitService({ApiClient? api}) : _api = api ?? ApiClient();
 
-  Future<VisitorQr> generarCodigoDeVisita(String token) async {
-    final data = await _api.post('/visitor-qr', {}, token: token);
+  Future<VisitorQr> generarCodigoDeVisita(
+    String token, {
+    required String nombreVisitante,
+    required int numeroPersonas,
+  }) async {
+    final data = await _api.post('/visitor-qr', {
+      'nombre_visitante': nombreVisitante,
+      'numero_personas': numeroPersonas,
+    }, token: token);
     return VisitorQr.fromJson(data as Map<String, dynamic>);
   }
 

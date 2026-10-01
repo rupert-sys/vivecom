@@ -73,6 +73,8 @@ def test_el_guardia_emite_un_codigo_de_proveedor_y_al_validarlo_ve_quien_es_y_a_
     assert validado == {
         "valido": True, "motivo": None, "property_id": prop, "tipo": "proveedor",
         "descripcion": "Plomería López", "vivienda": "Casa 4",
+        "nombre_visitante": None, "horario_esperado": None, "numero_personas": None,
+        "nombre_residente": None, "telefono_residente": None,
     }
     assert client.post(f"/visitor-qr/{codigo['codigo']}/validate").json()["motivo"] == "ya_usado"
 
@@ -89,7 +91,7 @@ def test_un_proveedor_del_condominio_en_general_no_lleva_vivienda(client):
 def test_el_codigo_de_una_visita_al_validarse_dice_a_que_vivienda_va(client):
     prop = _vivienda(client, "Casa 7")
     _como("residente", property_id=prop)
-    codigo = client.post("/visitor-qr").json()
+    codigo = client.post("/visitor-qr", json={"nombre_visitante": "Juan Pérez"}).json()
     assert codigo["tipo"] == "visitante"
 
     _como("guardia")
@@ -112,4 +114,6 @@ def test_un_codigo_inexistente_sigue_rechazandose_sin_datos_de_vivienda(client):
     _como("guardia")
     assert client.post("/visitor-qr/no-existe/validate").json() == {
         "valido": False, "motivo": "no_existe", "property_id": None, "tipo": None, "descripcion": None, "vivienda": None,
+        "nombre_visitante": None, "horario_esperado": None, "numero_personas": None,
+        "nombre_residente": None, "telefono_residente": None,
     }

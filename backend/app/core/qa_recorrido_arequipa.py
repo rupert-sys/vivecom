@@ -402,7 +402,7 @@ def main() -> int:
                  val["valido"] and val["tipo"] == "proveedor" and val["vivienda"] == "Casa 4" and val["descripcion"] == "Plomería López", str(val))
             R.ok("el código no se puede usar dos veces", c.post(f"/visitor-qr/{prov.json()['codigo']}/validate", headers=G).json()["motivo"] == "ya_usado")
             R.ok("un residente no emite códigos de proveedor", c.post("/visitor-qr/provider", headers=RES[1], json={"descripcion": "X"}).status_code == 403)
-            qr = c.post("/visitor-qr", headers=RES[1]).json()
+            qr = c.post("/visitor-qr", headers=RES[1], json={"nombre_visitante": "Juan Pérez"}).json()
             valqr = c.post(f"/visitor-qr/{qr['codigo']}/validate", headers=G).json()
             R.ok("Casa 1 genera el QR de su visita y el guardia lo valida diciendo a qué casa va",
                  valqr["valido"] and valqr["tipo"] == "visitante" and valqr["vivienda"] == "Casa 1")

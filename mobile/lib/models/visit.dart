@@ -8,6 +8,11 @@ class VisitorQr {
   final bool usado;
   final DateTime fechaGenerado;
   final DateTime? fechaUsado;
+  final String? nombreVisitante;
+  final int? numeroPersonas;
+  // qrPayload trae nombre/casa/residente/teléfono congelados al generarse: es lo que se codifica en la
+  // imagen del QR (en vez del código pelón) para que el guardia lo pueda leer sin conexión.
+  final String? qrPayload;
 
   VisitorQr({
     required this.id,
@@ -15,7 +20,14 @@ class VisitorQr {
     required this.usado,
     required this.fechaGenerado,
     required this.fechaUsado,
+    this.nombreVisitante,
+    this.numeroPersonas,
+    this.qrPayload,
   });
+
+  // Lo que la app codifica en la imagen del QR: el payload con los datos legibles sin conexión si existe
+  // (código generado con esta versión), o el código pelón si no (compatibilidad con códigos viejos).
+  String get datosParaElQr => qrPayload ?? codigo;
 
   factory VisitorQr.fromJson(Map<String, dynamic> json) {
     final usado = json['fecha_usado'] as String?;
@@ -25,6 +37,9 @@ class VisitorQr {
       usado: json['usado'] as bool,
       fechaGenerado: utcNaiveToDateTime(json['fecha_generado'] as String),
       fechaUsado: usado == null ? null : utcNaiveToDateTime(usado),
+      nombreVisitante: json['nombre_visitante'] as String?,
+      numeroPersonas: json['numero_personas'] as int?,
+      qrPayload: json['qr_payload'] as String?,
     );
   }
 }

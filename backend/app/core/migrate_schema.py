@@ -94,6 +94,12 @@ COLUMNAS_NUEVAS: list[tuple[str, str, str]] = [
     ("user_account", "activada", "BOOLEAN NOT NULL DEFAULT TRUE"),
     ("user_account", "nombre", "VARCHAR"),
     ("user_account", "telefono", "VARCHAR"),
+    # QR de visitante con datos legibles sin conexión (nombre, horario, personas, y el payload que se
+    # codifica en la imagen del QR con vivienda/residente incluidos).
+    ("visitor_qr", "nombre_visitante", "VARCHAR"),
+    ("visitor_qr", "horario_esperado", "TIMESTAMP"),
+    ("visitor_qr", "numero_personas", "INTEGER"),
+    ("visitor_qr", "qr_payload", "VARCHAR"),
 ]
 
 # (nombre del tipo ENUM nativo en Postgres, valor nuevo). Ver nota arriba: sin

@@ -15,6 +15,12 @@ const _codigoLibre =
 
 void main() {
   Future<void> pumpVisitas(WidgetTester tester, http.Client client, {CompartirCodigo? compartir}) async {
+    // El generador de código (nombre + contador de personas) más la lista de códigos y paquetes es más
+    // alto que el viewport por defecto — un ListView solo construye lo visible, así que sin esto
+    // "Mis códigos"/"Paquetes" ni siquiera existen en el árbol de la prueba.
+    tester.view.physicalSize = const Size(800, 2000);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
     await tester.pumpWidget(
       MaterialApp(
         home: Scaffold(
@@ -28,6 +34,26 @@ void main() {
     );
     await tester.pumpAndSettle();
   }
+
+  Future<void> llenarNombre(WidgetTester tester, [String nombre = 'Juan Pérez']) async {
+    await tester.enterText(find.byKey(const Key('nombre_visitante_field')), nombre);
+    await tester.pump();
+  }
+
+  testWidgets('el botón de generar sigue deshabilitado hasta escribir el nombre de la visita', (tester) async {
+    final mockClient = MockClient((request) async => http.Response('[]', 200));
+    await pumpVisitas(tester, mockClient);
+
+    final boton = tester.widget<ElevatedButton>(find.widgetWithText(ElevatedButton, 'Generar código de visita'));
+    expect(boton.onPressed, isNull);
+
+    await llenarNombre(tester);
+
+    final botonHabilitado = tester.widget<ElevatedButton>(
+      find.widgetWithText(ElevatedButton, 'Generar código de visita'),
+    );
+    expect(botonHabilitado.onPressed, isNotNull);
+  });
 
   testWidgets('sin códigos ni paquetes muestra los mensajes vacíos', (tester) async {
     final mockClient = MockClient((request) async => http.Response('[]', 200));
@@ -52,6 +78,7 @@ void main() {
     });
 
     await pumpVisitas(tester, mockClient);
+    await llenarNombre(tester);
     await tester.tap(find.text('Generar código de visita'));
     await tester.pumpAndSettle();
 
@@ -125,6 +152,7 @@ void main() {
     });
 
     await pumpVisitas(tester, mockClient);
+    await llenarNombre(tester);
     await tester.tap(find.text('Generar código de visita'));
     await tester.pumpAndSettle();
 
@@ -156,6 +184,7 @@ void main() {
       },
     );
 
+    await llenarNombre(tester);
     await tester.tap(find.text('Generar código de visita'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('compartir_codigo')));
@@ -196,6 +225,7 @@ void main() {
           throw Exception('sin app para compartir'),
     );
 
+    await llenarNombre(tester);
     await tester.tap(find.text('Generar código de visita'));
     await tester.pumpAndSettle();
     await tester.ensureVisible(find.byKey(const Key('compartir_codigo')));

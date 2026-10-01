@@ -3,6 +3,7 @@ F2-02 / HU-S02: QR de acceso temporal generado por el residente.
 F2-03 / HU-S03: validación del QR por el guardia, de un solo uso.
 """
 
+import json
 import uuid
 
 from app.api.deps import get_current_user
@@ -37,23 +38,44 @@ def test_resident_generates_qr(client):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
 
     _como_residente(prop["id"])
-    response = client.post("/visitor-qr")
+    response = client.post("/visitor-qr", json={"nombre_visitante": "Juan Pérez", "numero_personas": 2})
     assert response.status_code == 201
     body = response.json()
     assert body["property_id"] == prop["id"]
     assert body["usado"] is False
     assert len(body["codigo"]) > 10
+    assert body["nombre_visitante"] == "Juan Pérez"
+    assert body["numero_personas"] == 2
+
+
+def test_qr_payload_trae_lo_necesario_para_leerse_sin_conexion(client):
+    prop = client.post("/properties", json={"identificador": "Casa 7"}).json()
+    _como_residente(prop["id"])
+    body = client.post("/visitor-qr", json={"nombre_visitante": "Ana Torres", "numero_personas": 3}).json()
+
+    payload = json.loads(body["qr_payload"])
+    assert payload["codigo"] == body["codigo"]
+    assert payload["nombre_visitante"] == "Ana Torres"
+    assert payload["numero_personas"] == 3
+    assert payload["vivienda"] == "Casa 7"
 
 
 def test_resident_without_property_cannot_generate_qr(client):
-    response = client.post("/visitor-qr")  # admin del fixture, sin property_id
+    response = client.post("/visitor-qr", json={"nombre_visitante": "Juan Pérez"})  # admin del fixture, sin property_id
     assert response.status_code == 400
+
+
+def test_resident_debe_dar_el_nombre_del_visitante(client):
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como_residente(prop["id"])
+    response = client.post("/visitor-qr", json={"nombre_visitante": ""})
+    assert response.status_code == 422
 
 
 def test_guard_validates_qr_successfully(client):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
     _como_residente(prop["id"])
-    qr = client.post("/visitor-qr").json()
+    qr = client.post("/visitor-qr", json={"nombre_visitante": "Juan Pérez"}).json()
 
     _como_guardia()
     response = client.post(f"/visitor-qr/{qr['codigo']}/validate")
@@ -61,12 +83,13 @@ def test_guard_validates_qr_successfully(client):
     body = response.json()
     assert body["valido"] is True
     assert body["property_id"] == prop["id"]
+    assert body["nombre_visitante"] == "Juan Pérez"
 
 
 def test_qr_cannot_be_used_twice(client):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
     _como_residente(prop["id"])
-    qr = client.post("/visitor-qr").json()
+    qr = client.post("/visitor-qr", json={"nombre_visitante": "Juan Pérez"}).json()
 
     _como_guardia()
     client.post(f"/visitor-qr/{qr['codigo']}/validate")

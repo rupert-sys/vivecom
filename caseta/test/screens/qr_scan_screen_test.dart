@@ -34,7 +34,7 @@ void main() {
   // estas pruebas cubren el flujo de código manual, que es el único
   // verificable sin hardware real (y el respaldo real para un guardia si la
   // cámara falla).
-  testWidgets('valida un código manualmente y muestra "Acceso autorizado"', (tester) async {
+  testWidgets('leer un código manualmente muestra el botón de confirmar, y confirmar da "Acceso autorizado"', (tester) async {
     final mockClient = MockClient((request) async {
       if (request.url.path == '/properties') return http.Response('[]', 200);
       expect(request.url.toString(), 'http://localhost:8000/visitor-qr/abc123/validate');
@@ -44,7 +44,14 @@ void main() {
     await pumpPantalla(tester, mockClient);
 
     await tester.enterText(find.byKey(const Key('codigo_field')), 'abc123');
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Validar'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+    await tester.pumpAndSettle();
+
+    // No se valida (ni se consume) solo con leerlo — el guardia todavía no confirmó nada.
+    expect(find.text('Acceso autorizado.'), findsNothing);
+    expect(find.byKey(const Key('confirmar_acceso')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('confirmar_acceso')));
     await tester.pumpAndSettle();
 
     expect(find.text('Acceso autorizado.'), findsOneWidget);
@@ -56,7 +63,9 @@ void main() {
     await pumpPantalla(tester, mockClient);
 
     await tester.enterText(find.byKey(const Key('codigo_field')), 'abc123');
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Validar'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_acceso')));
     await tester.pumpAndSettle();
 
     expect(find.text('Este código ya fue usado.'), findsOneWidget);
@@ -68,13 +77,132 @@ void main() {
     await pumpPantalla(tester, mockClient);
 
     await tester.enterText(find.byKey(const Key('codigo_field')), 'abc123');
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Validar'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_acceso')));
     await tester.pumpAndSettle();
 
     expect(find.text('No autorizado'), findsOneWidget);
   });
 
-  testWidgets('no valida un código vacío', (tester) async {
+  testWidgets(
+    'un código con el payload de una visita se lee sin conexión y valida con el código real (no el JSON completo)',
+    (tester) async {
+      final mockClient = MockClient((request) async {
+        if (request.url.path == '/properties') return http.Response('[]', 200);
+        expect(request.url.toString(), 'http://localhost:8000/visitor-qr/CODE123/validate');
+        return http.Response(
+          '{"valido": true, "motivo": null, "property_id": "p4", "tipo": "visitante", "vivienda": "Casa 4", '
+          '"nombre_visitante": "Juan Pérez", "numero_personas": 2, "nombre_residente": "Ana", "telefono_residente": "555-1234"}',
+          200,
+        );
+      });
+      await pumpPantalla(tester, mockClient);
+
+      final payload = jsonEncode({
+        'codigo': 'CODE123',
+        'nombre_visitante': 'Juan Pérez',
+        'numero_personas': 2,
+        'vivienda': 'Casa 4',
+        'nombre_residente': 'Ana',
+        'telefono_residente': '555-1234',
+      });
+      await tester.enterText(find.byKey(const Key('codigo_field')), payload);
+      await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+      await tester.pumpAndSettle();
+
+      // Los datos se ven de inmediato, sin haber confirmado nada todavía.
+      expect(find.text('Visitante: Juan Pérez'), findsOneWidget);
+      expect(find.text('Acceso autorizado.'), findsNothing);
+      expect(find.byKey(const Key('llamar_residente')), findsOneWidget);
+      expect(find.text('Llamar a 555-1234'), findsOneWidget);
+
+      await tester.tap(find.byKey(const Key('confirmar_acceso')));
+      await tester.pumpAndSettle();
+
+      expect(find.text('Acceso autorizado.'), findsOneWidget);
+      expect(find.text('Visitante: Juan Pérez'), findsOneWidget);
+      expect(find.text('2 personas'), findsOneWidget);
+      expect(find.text('Lo invita: Ana'), findsOneWidget);
+    },
+  );
+
+  testWidgets('el botón de llamar marca el teléfono del residente', (tester) async {
+    String? telefonoMarcado;
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response('[]', 200);
+      return http.Response('{"valido": true, "motivo": null, "property_id": null}', 200);
+    });
+    final api = ApiClient(client: mockClient);
+    tester.view.physicalSize = const Size(800, 2400);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(tester.view.reset);
+    await tester.pumpWidget(
+      MaterialApp(
+        home: Scaffold(
+          body: QrScanScreen(
+            token: 'un-token',
+            visitorQrService: VisitorQrService(api: api),
+            propertyService: PropertyService(api: api),
+            llamar: (telefono) async => telefonoMarcado = telefono,
+          ),
+        ),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    final payload = jsonEncode({'codigo': 'CODE123', 'nombre_visitante': 'Juan Pérez', 'telefono_residente': '555-1234'});
+    await tester.enterText(find.byKey(const Key('codigo_field')), payload);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('llamar_residente')));
+    await tester.pumpAndSettle();
+
+    expect(telefonoMarcado, '555-1234');
+  });
+
+  testWidgets('sin conexión, se sigue viendo lo que el código ya trae escrito', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response('[]', 200);
+      throw Exception('sin red');
+    });
+    await pumpPantalla(tester, mockClient);
+
+    final payload = jsonEncode({'codigo': 'CODE123', 'nombre_visitante': 'Juan Pérez', 'vivienda': 'Casa 4'});
+    await tester.enterText(find.byKey(const Key('codigo_field')), payload);
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_acceso')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('sin_conexion_qr')), findsOneWidget);
+    expect(find.byKey(const Key('info_offline_qr')), findsOneWidget);
+    expect(find.text('Visitante: Juan Pérez'), findsOneWidget);
+    expect(find.text('Acceso autorizado.'), findsNothing);
+  });
+
+  testWidgets('un código pelón (sin payload) no muestra la tarjeta de datos sin conexión', (tester) async {
+    final mockClient = MockClient((request) async {
+      if (request.url.path == '/properties') return http.Response('[]', 200);
+      return http.Response('{"valido": true, "motivo": null, "property_id": null}', 200);
+    });
+    await pumpPantalla(tester, mockClient);
+
+    await tester.enterText(find.byKey(const Key('codigo_field')), 'abc123');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('info_offline_qr')), findsNothing);
+    // Un código pelón sí trae botón de confirmar (solo no hay nada que leer sin conexión).
+    expect(find.byKey(const Key('confirmar_acceso')), findsOneWidget);
+
+    await tester.tap(find.byKey(const Key('confirmar_acceso')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Acceso autorizado.'), findsOneWidget);
+  });
+
+  testWidgets('no hace nada al leer un código vacío', (tester) async {
     var llamadas = 0;
     final mockClient = MockClient((request) async {
       if (request.url.path == '/properties') return http.Response('[]', 200);
@@ -84,17 +212,20 @@ void main() {
 
     await pumpPantalla(tester, mockClient);
 
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Validar'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
     await tester.pumpAndSettle();
 
     expect(llamadas, 0);
+    expect(find.byKey(const Key('confirmar_acceso')), findsNothing);
   });
 
   const propiedades = '[{"id": "p1", "identificador": "Casa 1"}, {"id": "p4", "identificador": "Casa 4"}]';
 
   Future<void> validar(WidgetTester tester, String codigo) async {
     await tester.enterText(find.byKey(const Key('codigo_field')), codigo);
-    await tester.tap(find.widgetWithText(ElevatedButton, 'Validar'));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Leer código'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('confirmar_acceso')));
     await tester.pumpAndSettle();
   }
 

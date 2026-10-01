@@ -338,9 +338,9 @@ def test_constancia_de_una_vivienda_inexistente_es_404(client):
 def test_el_residente_lista_solo_sus_propios_codigos_qr(client):
     propia, otra = _vivienda(client, "Casa 1"), _vivienda(client, "Casa 2")
     _como("residente", property_id=propia)
-    codigo = client.post("/visitor-qr").json()["codigo"]
+    codigo = client.post("/visitor-qr", json={"nombre_visitante": "Juan Pérez"}).json()["codigo"]
     _como("residente", property_id=otra)
-    client.post("/visitor-qr")
+    client.post("/visitor-qr", json={"nombre_visitante": "Otro Visitante"})
 
     _como("residente", property_id=propia)
     mios = client.get("/visitor-qr").json()

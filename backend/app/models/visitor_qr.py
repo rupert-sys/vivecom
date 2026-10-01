@@ -1,7 +1,7 @@
 import uuid
 from datetime import datetime
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.core.database_base import TenantBase
@@ -27,3 +27,13 @@ class VisitorQR(TenantBase):
     usado: Mapped[bool] = mapped_column(Boolean, default=False)
     fecha_generado: Mapped[datetime] = mapped_column(DateTime)
     fecha_usado: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    # Datos de la visita esperada (solo tipo="visitante", capturados por el residente al generar el
+    # código): nullable porque un código de proveedor no los usa y un código viejo no los tiene.
+    nombre_visitante: Mapped[str | None] = mapped_column(String, nullable=True)
+    horario_esperado: Mapped[datetime | None] = mapped_column(DateTime, nullable=True)
+    numero_personas: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    # JSON con todo lo anterior + vivienda/residente que lo generó + el propio código, congelado al
+    # momento de generarse: es lo que la app residente codifica en la imagen del QR (en vez del código
+    # pelón), para que el guardia pueda leer quién es el visitante y a quién llamar SIN conexión — la
+    # validación real de "ya se usó" sigue necesitando estar en línea (ver validate_and_consume_qr).
+    qr_payload: Mapped[str | None] = mapped_column(String, nullable=True)

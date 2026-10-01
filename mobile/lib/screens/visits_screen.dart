@@ -32,12 +32,20 @@ Future<void> compartirConLaHojaDelSistema({required String codigo, required Uint
 }
 
 /// El QR como PNG con fondo blanco y margen (una visita lo abre en el chat, en modo oscuro también).
+/// Corrección de nivel alto (H, ~30% de los módulos recuperables): el payload de una visita trae nombre,
+/// casa, residente y teléfono además del código — es bastante más largo que un token pelón, y con el nivel
+/// L de por default (el más bajo) escanear la pantalla de un teléfono con la cámara de otro fallaba en la
+/// práctica (un poco de reflejo o desenfoque bastaba para que el guardia viera "código no existe").
 Future<Uint8List> imagenDelQr(String codigo, {double lado = 720, double margen = 60}) async {
   final grabador = ui.PictureRecorder();
   final lienzo = Canvas(grabador);
   lienzo.drawRect(Rect.fromLTWH(0, 0, lado, lado), Paint()..color = Colors.white);
   lienzo.translate(margen, margen);
-  QrPainter(data: codigo, version: QrVersions.auto).paint(lienzo, Size(lado - 2 * margen, lado - 2 * margen));
+  QrPainter(
+    data: codigo,
+    version: QrVersions.auto,
+    errorCorrectionLevel: QrErrorCorrectLevel.H,
+  ).paint(lienzo, Size(lado - 2 * margen, lado - 2 * margen));
   final imagen = await grabador.endRecording().toImage(lado.toInt(), lado.toInt());
   final bytes = await imagen.toByteData(format: ui.ImageByteFormat.png);
   return bytes!.buffer.asUint8List();
@@ -73,6 +81,15 @@ class _VisitsScreenState extends State<VisitsScreen> {
   bool _generando = false;
   String? _errorGenerar;
   bool _compartiendo = false;
+
+  final _nombreVisitanteController = TextEditingController();
+  int _numeroPersonas = 1;
+
+  @override
+  void dispose() {
+    _nombreVisitanteController.dispose();
+    super.dispose();
+  }
 
   @override
   void initState() {
@@ -118,15 +135,26 @@ class _VisitsScreenState extends State<VisitsScreen> {
     }
   }
 
+  bool get _puedeGenerar => _nombreVisitanteController.text.trim().isNotEmpty;
+
   Future<void> _generar() async {
+    if (!_puedeGenerar) return;
     setState(() {
       _generando = true;
       _errorGenerar = null;
     });
     try {
-      final codigo = await widget.visitService.generarCodigoDeVisita(widget.token);
+      final codigo = await widget.visitService.generarCodigoDeVisita(
+        widget.token,
+        nombreVisitante: _nombreVisitanteController.text.trim(),
+        numeroPersonas: _numeroPersonas,
+      );
       if (!mounted) return;
-      setState(() => _recienGenerado = codigo);
+      setState(() {
+        _recienGenerado = codigo;
+        _nombreVisitanteController.clear();
+        _numeroPersonas = 1;
+      });
       await _cargarCodigos();
     } catch (err) {
       if (!mounted) return;
@@ -168,7 +196,7 @@ class _VisitsScreenState extends State<VisitsScreen> {
   Future<void> _compartir(VisitorQr codigo) async {
     setState(() => _compartiendo = true);
     try {
-      final imagen = await imagenDelQr(codigo.codigo);
+      final imagen = await imagenDelQr(codigo.datosParaElQr);
       await widget.compartir(
         codigo: codigo.codigo,
         imagen: imagen,
@@ -197,7 +225,8 @@ class _VisitsScreenState extends State<VisitsScreen> {
             const SizedBox(height: 4),
             const Text(
               'Genera un código y enséñaselo (o mándaselo) a tu visita: el guardia lo escanea en la caseta '
-              'y la deja pasar. Sirve una sola vez.',
+              'y la deja pasar. Sirve una sola vez. El nombre y cuántos son quedan en el código, para que '
+              'el guardia los vea aunque no tenga internet en ese momento.',
             ),
             const SizedBox(height: 12),
             if (codigo != null) ...[
@@ -206,7 +235,12 @@ class _VisitsScreenState extends State<VisitsScreen> {
                   key: const Key('qr_generado'),
                   color: Colors.white,
                   padding: const EdgeInsets.all(8),
-                  child: QrImageView(key: Key('qr_${codigo.codigo}'), data: codigo.codigo, size: 200),
+                  child: QrImageView(
+                    key: Key('qr_${codigo.codigo}'),
+                    data: codigo.datosParaElQr,
+                    size: 240,
+                    errorCorrectionLevel: QrErrorCorrectLevel.H,
+                  ),
                 ),
               ),
               const SizedBox(height: 8),
@@ -222,13 +256,38 @@ class _VisitsScreenState extends State<VisitsScreen> {
               ),
               const SizedBox(height: 12),
             ],
+            TextField(
+              key: const Key('nombre_visitante_field'),
+              controller: _nombreVisitanteController,
+              decoration: const InputDecoration(labelText: 'Nombre de tu visita'),
+              onChanged: (_) => setState(() {}),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                const Text('¿Cuántas personas?'),
+                const Spacer(),
+                IconButton(
+                  key: const Key('personas_menos'),
+                  onPressed: _numeroPersonas > 1 ? () => setState(() => _numeroPersonas--) : null,
+                  icon: const Icon(Icons.remove_circle_outline),
+                ),
+                Text('$_numeroPersonas', key: const Key('personas_valor')),
+                IconButton(
+                  key: const Key('personas_mas'),
+                  onPressed: () => setState(() => _numeroPersonas++),
+                  icon: const Icon(Icons.add_circle_outline),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
             if (_errorGenerar != null)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
                 child: Text(_errorGenerar!, style: const TextStyle(color: Colors.red)),
               ),
             ElevatedButton.icon(
-              onPressed: _generando ? null : _generar,
+              onPressed: _generando || !_puedeGenerar ? null : _generar,
               icon: const Icon(Icons.qr_code),
               label: Text(
                 _generando ? 'Generando…' : (codigo == null ? 'Generar código de visita' : 'Generar otro código'),
@@ -250,11 +309,15 @@ class _VisitsScreenState extends State<VisitsScreen> {
           (c) => ListTile(
             key: Key('codigo_${c.id}'),
             leading: Icon(c.usado ? Icons.check_circle : Icons.qr_code_2, color: c.usado ? Colors.grey : Colors.green),
-            title: Text(c.usado ? 'Usado' : 'Sin usar'),
+            title: Text(c.nombreVisitante ?? (c.usado ? 'Usado' : 'Sin usar')),
             subtitle: Text(
-              c.usado && c.fechaUsado != null
-                  ? 'Generado ${_fechaHora(c.fechaGenerado)} · usado ${_fechaHora(c.fechaUsado!)}'
-                  : 'Generado ${_fechaHora(c.fechaGenerado)}',
+              [
+                if (c.nombreVisitante != null) c.usado ? 'Usado' : 'Sin usar',
+                if (c.numeroPersonas != null) '${c.numeroPersonas} persona${c.numeroPersonas == 1 ? '' : 's'}',
+                c.usado && c.fechaUsado != null
+                    ? 'Generado ${_fechaHora(c.fechaGenerado)} · usado ${_fechaHora(c.fechaUsado!)}'
+                    : 'Generado ${_fechaHora(c.fechaGenerado)}',
+              ].join(' · '),
             ),
             onTap: c.usado ? null : () => setState(() => _recienGenerado = c),
           ),
