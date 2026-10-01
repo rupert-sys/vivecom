@@ -20,7 +20,10 @@ x-backend: &backend
     # Un solo equipo con volumen persistente que backup.sh respalda: se acepta el disco local en producción.
     STORAGE_LOCAL_IN_PRODUCTION: "true"
     PUBLIC_BASE_URL: https://api.${DOMAIN}
-    CORS_ORIGINS: https://panel.${DOMAIN},https://app.${DOMAIN}
+    # https://localhost / capacitor://localhost: el origen desde el que corre vivecom-panel.apk (Capacitor
+    # empaca los archivos localmente y los sirve desde ahí, no desde panel.${DOMAIN} — encontrado probando el
+    # login real del APK en un Android físico, "no se puede iniciar sesión" sin más detalle).
+    CORS_ORIGINS: https://panel.${DOMAIN},https://app.${DOMAIN},https://admin.${DOMAIN},https://localhost,capacitor://localhost
   volumes:
     - uploads:/data/uploads
   depends_on:
@@ -68,8 +71,10 @@ services:
     <<: *backend
     command: ["celery", "-A", "app.workers.celery_app", "beat", "--loglevel=info", "--schedule=/tmp/celerybeat-schedule"]
 
-  # Panel de administración (panel.<dominio>, deploy/panel-dist) y app web de los residentes para iPhone
-  # (app.<dominio>, deploy/app-dist). Se compilan con scripts/build-panel.sh y scripts/build-app-web.sh.
+  # Panel de administración (panel.<dominio>, deploy/panel-dist), app web de los residentes para iPhone
+  # (app.<dominio>, deploy/app-dist) y portal de administrador principal para staff Vivecom
+  # (admin.<dominio>, deploy/admin-dist). Se compilan con scripts/build-panel.sh, build-app-web.sh y
+  # build-admin.sh respectivamente.
   panel:
     image: caddy:2-alpine
     restart: unless-stopped
@@ -79,6 +84,7 @@ services:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - ./panel-dist:/srv/panel:ro
       - ./app-dist:/srv/app:ro
+      - ./admin-dist:/srv/admin:ro
     ports:
       - "127.0.0.1:8081:80"
 

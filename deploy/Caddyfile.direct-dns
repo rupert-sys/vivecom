@@ -20,8 +20,20 @@
 	}
 }
 
+# RSA en vez del default de Caddy (ECDSA, encadena a ISRG Root X2): Root X2 es mucho más nueva que
+# ISRG Root X1 y muchos Android todavía no la traen en su almacén de confianza del sistema — el navegador
+# (almacén propio de Chrome) la acepta sin problema, pero una app nativa (Flutter/dart:io usa el almacén
+# del sistema) la rechaza con HandshakeException. Encontrado probando el login de la app de vigilancia en
+# un Android real: el navegador del mismo teléfono sí cargaba la API, la app no.
+(rsa) {
+	tls {
+		key_type rsa2048
+	}
+}
+
 # App web de residentes (Flutter).
 app.{$DOMAIN} {
+	import rsa
 	root * /srv/app
 	@sin_cache not path /canvaskit/*
 	header @sin_cache Cache-Control "no-store"
@@ -30,12 +42,31 @@ app.{$DOMAIN} {
 
 # Panel de administración (React).
 panel.{$DOMAIN} {
+	import rsa
+	# Portal de documentación (manuales, arquitectura): estático, se sirve antes que el SPA del panel para
+	# que /docs/* no caiga en el fallback a index.html del panel.
+	handle_path /docs/* {
+		root * /srv/docs
+		try_files {path} {path}/ /index.html
+		file_server
+	}
 	root * /srv/panel
+	header Cache-Control "no-cache"
+	import spa
+}
+
+# Portal de administrador principal (staff Vivecom, React) — separado del panel de arriba: lista y administra
+# TODOS los condominios desde un solo lugar, con su propio login (/staff/login, sin relación con ningún
+# tenant individual — ver app/models/vivecom_staff.py). Ver staff-frontend/.
+admin.{$DOMAIN} {
+	import rsa
+	root * /srv/admin
 	header Cache-Control "no-cache"
 	import spa
 }
 
 # Backend: antes lo enrutaba directo el túnel de Cloudflare a backend:8000: aquí lo hace Caddy.
 api.{$DOMAIN} {
+	import rsa
 	reverse_proxy backend:8000
 }

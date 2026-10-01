@@ -33,7 +33,22 @@ cd deploy
 cp .env.example .env        # llenar: DOMAIN=vivecom.com.mx, POSTGRES_PASSWORD, JWT_SECRET, STP_WEBHOOK_SECRET
 ./scripts/build-panel.sh    # panel-dist/  (usa Docker, compila para https://api.<DOMAIN>)
 ./scripts/build-app-web.sh  # app-dist/    (usa Flutter)
+./scripts/build-admin.sh    # admin-dist/  (usa Docker, portal de administrador principal — staff Vivecom)
 docker compose --profile tunnel up -d --build
+```
+
+**Importante — nunca compiles en el servidor pequeño (instancia AWS de producción, ~900MB de RAM):**
+`build-panel.sh`/`build-app-web.sh`/`build-admin.sh` corren un `npm ci`/`flutter build` dentro de un
+contenedor extra — en una máquina con esa poca RAM, compitiendo con backend/worker/beat/db/redis ya
+corriendo, eso puede hacer que el kernel mate a `uvicorn` por falta de memoria (pasó de verdad en
+producción, 2026-09-29: el backend estuvo caído unos minutos hasta que Docker lo reinició solo). Los tres
+scripts ya traen una salvaguarda que aborta solos si detectan poca RAM disponible (se puede forzar con
+`FORZAR_BUILD_LOCAL=1`, pero no hay motivo real para hacerlo). La forma segura de actualizar cualquiera de
+los tres en el servidor real: compilarlo en tu máquina de desarrollo y subir solo la carpeta `*-dist/` ya
+lista por `rsync`:
+```bash
+./scripts/build-admin.sh                                              # en tu máquina
+rsync -az admin-dist/ ubuntu@<IP-del-servidor>:~/vivecom/deploy/admin-dist/
 ```
 Al arrancar, el backend crea las tablas de control si la base es nueva y migra los condominios existentes
 (`app/core/init_db.py` + `migrate_schema --all`). Probar sin el túnel: `curl http://127.0.0.1:8010/docs`.
