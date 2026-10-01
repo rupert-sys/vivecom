@@ -197,7 +197,7 @@ async def test_register_entry_reads_before_commit_not_after(client):
         llamadas = _instrumentar_orden_de_llamadas(db)
         payload = AccessLogCreate(tipo="proveedor", placas=["ABC-123"])
 
-        resultado = await register_entry(payload, db)
+        resultado = await register_entry(payload, db=db)
 
     assert resultado.placas == ["ABC-123"]
     assert "commit" in llamadas
@@ -212,7 +212,7 @@ async def test_register_exit_reads_before_commit_not_after(client):
     client.get("/access-log")  # dispara la creación de tablas (ver conftest.py)
 
     async with client.db_session_factory() as db:
-        log = await register_entry(AccessLogCreate(tipo="proveedor", placas=["DEF-456"]), db)
+        log = await register_entry(AccessLogCreate(tipo="proveedor", placas=["DEF-456"]), db=db)
 
         llamadas = _instrumentar_orden_de_llamadas(db)
         resultado = await register_exit(log.id, db)
