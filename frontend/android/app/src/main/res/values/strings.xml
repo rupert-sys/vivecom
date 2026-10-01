@@ -1,0 +1,7 @@
+<?xml version='1.0' encoding='utf-8'?>
+<resources>
+    <string name="app_name">Panel Vivecom</string>
+    <string name="title_activity_main">Panel Vivecom</string>
+    <string name="package_name">mx.vivecom.panel</string>
+    <string name="custom_url_scheme">mx.vivecom.panel</string>
+</resources>

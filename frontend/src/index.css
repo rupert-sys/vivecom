@@ -6,6 +6,9 @@
 
 html {
   -webkit-font-smoothing: antialiased;
+  /* Sin esto, el WebView de la app (vivecom-panel.apk) deja rebotar la página al llegar al tope/fondo del
+     scroll — el gesto más "de navegador" que hay. En el navegador normal esto no se nota/no aplica igual. */
+  overscroll-behavior: none;
 }
 
 body {
@@ -15,6 +18,20 @@ body {
   font-family: var(--font-body);
   font-size: 15px;
   line-height: 1.5;
+  overscroll-behavior: none;
+  /* Quita el resaltado gris/azul que Android pone por default al tocar cualquier elemento (típico de
+     páginas web sin estilizar) — los estados :hover/:active propios ya cubren la retroalimentación visual. */
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* Selección de texto larga con lupa/menú "Copiar" solo tiene sentido en contenido de lectura (párrafos,
+   celdas de tabla) — en botones, links de navegación y encabezados solo se siente como "estoy en una
+   página web". El contenido real (inputs, tablas, párrafos) no está en esta lista, así que sigue
+   seleccionable con normalidad. */
+button, a, nav, aside, h1, h2, h3, .chip {
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 h1, h2, h3 {
@@ -224,3 +241,118 @@ tbody tr:hover {
 .chip-brick { background: var(--brick-tint); color: var(--brick-strong); }
 .chip-blue { background: var(--dustblue-tint); color: var(--dustblue); }
 .chip-neutral { background: var(--surface-2); color: var(--ink-soft); border: 1px solid var(--border-soft); }
+
+/* ---------- Celular (Layout.tsx) ----------
+   El panel nació solo para escritorio: el menú lateral fijo (--sidebar-w) no cabía en una pantalla de celular
+   y se comía casi todo el ancho, dejando el contenido real en una tira angosta — "se ve como un explorador de
+   PC" (encontrado probando el panel ya instalable como app, 2026-09-29). Esta es la primera media query de
+   todo el panel: en escritorio (ancho > 860px) nada cambia, el layout sigue siendo el de siempre. */
+
+.mobile-topbar {
+  display: none;
+}
+
+.sidebar-backdrop {
+  display: none;
+}
+
+.bottom-tabs {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  .mobile-topbar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-3);
+    width: 100%;
+    box-sizing: border-box;
+    position: sticky;
+    top: 0;
+    z-index: 30;
+    padding: var(--space-3);
+    background: var(--ink-2);
+    color: #fff;
+  }
+
+  /* Fuera de pantalla por default — se desliza a la vista con .sidebar--open (ver Layout.tsx). Las demás
+     reglas inline (ancho, colores) del componente siguen aplicando tal cual; aquí solo se ajusta la posición. */
+  .sidebar {
+    position: fixed !important;
+    top: 0;
+    left: 0;
+    height: 100vh !important;
+    transform: translateX(-100%);
+    transition: transform 0.2s ease;
+    z-index: 40;
+  }
+
+  .sidebar--open {
+    transform: translateX(0);
+  }
+
+  .sidebar-backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    background: rgba(22, 40, 58, 0.5);
+    z-index: 35;
+  }
+
+  .app-content main {
+    max-width: 100%;
+    /* env(safe-area-inset-bottom): dentro del APK (Capacitor) esto respeta el gesto/barra de inicio del
+       teléfono — sin esto la barra inferior fija quedaría tapada por eso en los equipos que lo usan. */
+    padding: var(--space-4) var(--space-3) calc(64px + var(--space-3) + env(safe-area-inset-bottom, 0px)) !important;
+  }
+
+  /* Barra de navegación inferior fija — el cambio "de verdad" para que se sienta app y no página web: las
+     primeras secciones del rol como pestañas con ícono, más "Más" para el resto y para cerrar sesión. */
+  .bottom-tabs {
+    display: flex;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 45;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .bottom-tab {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 8px 2px 6px;
+    background: none;
+    border: none;
+    border-radius: 0;
+    text-decoration: none;
+    color: var(--ink-soft);
+    font-size: 0.66rem;
+    font-weight: 500;
+    line-height: 1.1;
+  }
+
+  .bottom-tab-icono {
+    font-size: 1.3rem;
+    line-height: 1;
+  }
+
+  .bottom-tab--active {
+    color: var(--teal-strong);
+    font-weight: 600;
+  }
+
+  /* Cualquier tabla más ancha que la pantalla (varias páginas del panel no están pensadas para celular
+     todavía) se puede recorrer con scroll horizontal en vez de desbordar y romper el layout. */
+  table {
+    display: block;
+    max-width: 100%;
+    overflow-x: auto;
+  }
+}

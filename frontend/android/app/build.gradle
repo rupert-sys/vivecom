@@ -1,0 +1,89 @@
+apply plugin: 'com.android.application'
+
+// Llave de firma propia de esta app (nunca la de mobile/ ni caseta/ — mismo criterio: cada app tiene su
+// propia identidad). key.properties vive fuera del repositorio (ver android/.gitignore); si falta, el build
+// cae al firmado de debug en vez de tronar, para que `npx cap sync`/desarrollo normal no dependan de ella.
+def keyPropertiesFile = rootProject.file('key.properties')
+def keyProperties = new Properties()
+if (keyPropertiesFile.exists()) {
+    keyProperties.load(new FileInputStream(keyPropertiesFile))
+}
+
+android {
+    namespace "mx.vivecom.panel"
+    compileSdk rootProject.ext.compileSdkVersion
+    defaultConfig {
+        applicationId "mx.vivecom.panel"
+        minSdkVersion rootProject.ext.minSdkVersion
+        targetSdkVersion rootProject.ext.targetSdkVersion
+        versionCode 1
+        versionName "1.0"
+        testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
+        aaptOptions {
+             // Files and dirs to omit from the packaged assets dir, modified to accommodate modern web apps.
+             // Default: https://android.googlesource.com/platform/frameworks/base/+/282e181b58cf72b6ca770dc7ca5f91f135444502/tools/aapt/AaptAssets.cpp#61
+            ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
+        }
+    }
+    signingConfigs {
+        release {
+            if (keyPropertiesFile.exists()) {
+                keyAlias keyProperties['keyAlias']
+                keyPassword keyProperties['keyPassword']
+                storeFile file(keyProperties['storeFile'])
+                storePassword keyProperties['storePassword']
+            }
+        }
+    }
+    buildTypes {
+        release {
+            minifyEnabled false
+            proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+            signingConfig = keyPropertiesFile.exists() ? signingConfigs.release : signingConfigs.debug
+        }
+    }
+    // El lint de AGP 8.7.2 truena contra el JDK 25 instalado en esta Mac (único disponible — Android Studio
+    // no trae uno más viejo empacado). No es un app para Play Store, así que se salta en vez de bloquear el
+    // build; el lint normal de desarrollo (Android Studio) no se ve afectado por esto.
+    lint {
+        checkReleaseBuilds false
+        abortOnError false
+    }
+}
+
+// kotlin-stdlib 1.8+ ya incluye lo que antes vivía en kotlin-stdlib-jdk7/jdk8 por separado — alguna
+// dependencia transitiva de Capacitor todavía pide las versiones viejas y separadas, y eso duplica clases
+// en el release (checkReleaseDuplicateClasses). Fix estándar de Kotlin para este caso: excluirlas.
+configurations.all {
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk7'
+    exclude group: 'org.jetbrains.kotlin', module: 'kotlin-stdlib-jdk8'
+}
+
+repositories {
+    flatDir{
+        dirs '../capacitor-cordova-android-plugins/src/main/libs', 'libs'
+    }
+}
+
+dependencies {
+    implementation fileTree(include: ['*.jar'], dir: 'libs')
+    implementation "androidx.appcompat:appcompat:$androidxAppCompatVersion"
+    implementation "androidx.coordinatorlayout:coordinatorlayout:$androidxCoordinatorLayoutVersion"
+    implementation "androidx.core:core-splashscreen:$coreSplashScreenVersion"
+    implementation project(':capacitor-android')
+    testImplementation "junit:junit:$junitVersion"
+    androidTestImplementation "androidx.test.ext:junit:$androidxJunitVersion"
+    androidTestImplementation "androidx.test.espresso:espresso-core:$androidxEspressoCoreVersion"
+    implementation project(':capacitor-cordova-android-plugins')
+}
+
+apply from: 'capacitor.build.gradle'
+
+try {
+    def servicesJSON = file('google-services.json')
+    if (servicesJSON.text) {
+        apply plugin: 'com.google.gms.google-services'
+    }
+} catch(Exception e) {
+    logger.info("google-services.json not found, google-services plugin not applied. Push Notifications won't work")
+}

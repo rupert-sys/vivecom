@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sin esto, Capacitor resolvía estos colores desde el default genérico de su propia librería
+         (azul/blanco de plantilla): la barra de estado del teléfono no combinaba con el header navy del
+         panel, y se sentía "de plantilla" en vez de una app propia. Mismos tokens que styles/tokens.css
+         (teal, ink 2). -->
+    <color name="colorPrimary">#2F6F5E</color>
+    <color name="colorPrimaryDark">#16283A</color>
+    <color name="colorAccent">#2F6F5E</color>
+</resources>
