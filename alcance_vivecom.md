@@ -203,6 +203,8 @@ Vamos marcando esta lista conforme resolvamos cada punto — es el "qué falta" 
 - [x] **Alta de condominio sin intervención del equipo (v3.4):** landing de bienvenida en dos pasos, sin pedir CLABE ni que el admin invente su propio correo/contraseña — ver HU-A14. El correo de cada cuenta (administracion@ y casa\<n\>@ un dominio derivado del nombre del condominio) es solo un identificador de acceso, nunca un correo real que reciba nada.
 - [x] **Se puede eliminar una vivienda (v3.4):** no. Solo se editan sus datos o los de su residente — ver sección 3.1.
 - [x] **Presupuesto atado a cuota mensual × número de viviendas:** pedido, pero **todavía no implementado** — entra en conflicto con el presupuesto por categoría que ya existe (HU-A10, carga manual) y falta decidir si lo reemplaza, lo complementa, o es una vista adicional de referencia. Queda para la siguiente revisión.
+- [x] **Copy de "Activar mi cuenta de residente" (refinamiento):** el residente reportó que la pantalla sonaba como si él fuera a dar de alta un condominio nuevo — se aclaró el copy y se agregó un correo opcional de contacto. Ver HU-A15.
+- [x] **Despliegue de producción:** se movió de la máquina de muestra a un servidor propio en AWS EC2 (Docker, HTTPS directo con Let's Encrypt, DNS propio) — es un cambio de infraestructura, no de alcance funcional; el detalle vive en `bitacora_vivecom.html`, Fase 5.
 
 ---
 
@@ -292,8 +294,9 @@ Como quien va a administrar un condominio nuevo, quiero darlo de alta yo mismo s
 
 **HU-A15 — Activar mi cuenta de residente** *(v3.4)*
 Como residente de una vivienda recién dada de alta, quiero reclamar mi propia cuenta desde la app, para no depender de que el administrador me la cree y me pase una contraseña.
+- La pantalla deja claro que el condominio ya debe existir (dado de alta por su administrador, HU-A14) — aquí el residente solo identifica cuál es el suyo, nunca da de alta uno nuevo. *(refinamiento de copy, v3.4)*
 - Doy el nombre del condominio y el número de mi vivienda; la app me confirma en vivo a qué correo va quedar ligada, antes de pedirme el resto.
-- Doy mi nombre completo, si soy propietario o inquilino, mi teléfono y la contraseña que yo elijo.
+- Doy mi nombre completo, si soy propietario o inquilino, mi teléfono, un correo **opcional** (solo dato de contacto — mi acceso real sigue siendo casa\<n\>@dominio) y la contraseña que yo elijo.
 - Si mi vivienda ya fue reclamada por alguien más, o el número no existe, me lo dice claramente — no me deja seguir con una vivienda equivocada.
 - Al terminar, entro directo a mi estado de cuenta, sin tener que iniciar sesión aparte.
 
