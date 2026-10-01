@@ -105,12 +105,13 @@ async def register_entry(
     for placa in payload.placas:
         db.add(Vehicle(access_log_id=log.id, placa=placa))
 
-    await db.commit()
     # No se usa _to_read() aquí a propósito: re-consultar Vehicle en la MISMA
     # sesión después de este commit revienta contra Postgres real (el
-    # search_path del tenant, fijado con is_local=true, ya no aplica — ver
-    # core/database.py y el mismo bug ya corregido en polls.py). Las placas
-    # ya se conocen del propio payload, no hace falta volver a pedirlas.
+    # search_path del tenant, fijado con is_local=true, ya no aplica después
+    # de comitear — ver core/database.py y el mismo bug ya corregido en
+    # polls.py). Las placas ya se conocen del propio payload, no hace falta
+    # volver a pedirlas.
+    await db.commit()
     return _leer(log, list(payload.placas))
 
 
