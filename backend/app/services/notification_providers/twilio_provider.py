@@ -28,11 +28,16 @@ _TWILIO_API_BASE = "https://api.twilio.com/2010-04-01"
 
 
 class TwilioProvider(NotificationProvider):
-    def __init__(self, account_sid: str, auth_token: str, whatsapp_from: str, sms_from: str):
+    def __init__(
+        self, account_sid: str, auth_token: str, whatsapp_from: str, sms_from: str, api_base: str = _TWILIO_API_BASE
+    ):
         self.account_sid = account_sid
         self.auth_token = auth_token
         self.whatsapp_from = whatsapp_from
         self.sms_from = sms_from
+        # Configurable (default: la API real de Twilio) para poder apuntar a un stub local en QA — ver
+        # app/core/qa_notificaciones.py y Settings.twilio_api_base.
+        self.api_base = api_base
 
     async def _enviar(self, de: str, para: str, mensaje: str) -> bool:
         """
@@ -44,7 +49,7 @@ class TwilioProvider(NotificationProvider):
         enviar". Ahora cualquier error de httpx (no solo un status >= 300)
         se trata igual: intento fallido, no una excepción.
         """
-        url = f"{_TWILIO_API_BASE}/Accounts/{self.account_sid}/Messages.json"
+        url = f"{self.api_base}/Accounts/{self.account_sid}/Messages.json"
         try:
             async with httpx.AsyncClient(timeout=10.0) as client:
                 response = await client.post(

@@ -30,6 +30,7 @@ _notification_provider = TwilioProvider(
     auth_token=settings.twilio_auth_token,
     whatsapp_from=settings.twilio_whatsapp_from,
     sms_from=settings.twilio_sms_from,
+    api_base=settings.twilio_api_base,
 )
 
 _MOTIVO_A_MENSAJE = {

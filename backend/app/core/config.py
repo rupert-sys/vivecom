@@ -33,6 +33,10 @@ class Settings(BaseSettings):
     twilio_auth_token: str = "cambia-esto-en-produccion"
     twilio_whatsapp_from: str = "+10000000000"  # número de WhatsApp Business aprobado por Twilio
     twilio_sms_from: str = "+10000000000"  # número SMS de respaldo
+    # F1-35 (QA de entrega): apuntar a un stub local en vez de la API real de Twilio para poder inspeccionar
+    # qué se habría mandado (destinatario, contenido, si cayó a SMS) sin una cuenta de Twilio real — ver
+    # app/core/qa_notificaciones.py. En producción se deja el default real.
+    twilio_api_base: str = "https://api.twilio.com/2010-04-01"
 
     # Almacenamiento de archivos (comprobantes de pago y de gastos). En desarrollo
     # se guardan en disco local; en producción, en S3 (STORAGE_BACKEND=s3) — un
