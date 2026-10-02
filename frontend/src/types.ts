@@ -275,6 +275,14 @@ export interface AccessLogEntry {
   autorizado_por: 'residente_previo' | 'telefono' | 'otro' | null
 }
 
+// F2-04/HU-S05: paquete recibido en la caseta para una vivienda.
+export interface Package {
+  id: string
+  property_id: string
+  fecha_llegada: string
+  fecha_recogido: string | null
+}
+
 // Cajones de visitas libres ahora mismo (reglamento Art. 2 IX-XI).
 export interface VisitorParking {
   total_cajones: number

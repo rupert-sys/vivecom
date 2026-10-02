@@ -29,6 +29,7 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: '/expenses', etiqueta: 'Gastos', roles: ['admin', 'tesorero', 'comite_aprobador', 'comite_lectura'] },
   { ruta: '/reports/export', etiqueta: 'Exportar', roles: ['admin', 'tesorero'] },
   { ruta: '/amenities', etiqueta: 'Amenidades', roles: ['admin'] },
+  { ruta: '/packages', etiqueta: 'Paquetería', roles: ['admin'] },
   { ruta: '/reservations', etiqueta: 'Reservaciones', roles: ['admin', 'tesorero', 'comite_aprobador'] },
   { ruta: '/security', etiqueta: 'Seguridad', roles: ['admin', 'guardia', 'comite_aprobador', 'comite_lectura'] },
   { ruta: '/announcements', etiqueta: 'Avisos', roles: ['admin'] },

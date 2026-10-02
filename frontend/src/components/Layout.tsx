@@ -30,6 +30,7 @@ const ICONO_DE_SECCION: Record<string, string> = {
   '/expenses': '💸',
   '/reports/export': '📤',
   '/amenities': '🏊',
+  '/packages': '📦',
   '/reservations': '📅',
   '/security': '🛡️',
   '/announcements': '📢',
