@@ -27,6 +27,7 @@ export const SECCIONES: readonly Seccion[] = [
   { ruta: '/payment-agreements', etiqueta: 'Acuerdos', roles: ['admin', 'tesorero', 'comite_aprobador', 'comite_lectura'] },
   { ruta: '/clabe', etiqueta: 'CLABE', roles: ['admin'] },
   { ruta: '/expenses', etiqueta: 'Gastos', roles: ['admin', 'tesorero', 'comite_aprobador', 'comite_lectura'] },
+  { ruta: '/caja', etiqueta: 'Caja chica/grande', roles: ['admin', 'tesorero', 'comite_aprobador', 'comite_lectura'] },
   { ruta: '/reports/export', etiqueta: 'Exportar', roles: ['admin', 'tesorero'] },
   { ruta: '/amenities', etiqueta: 'Amenidades', roles: ['admin'] },
   { ruta: '/packages', etiqueta: 'Paquetería', roles: ['admin'] },

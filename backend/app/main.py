@@ -4,7 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from prometheus_fastapi_instrumentator import Instrumentator
 
 from app.api import (
-    access_log, amenities, announcement_questions, announcements, auth, budgets, expenses, fees, files, incidents, lost_found, packages,
+    access_log, amenities, announcement_questions, announcements, auth, budgets, cash_movements, expenses, fees, files, incidents,
+    lost_found, packages,
     payment_agreements, payment_proofs, payments, payments_webhook, polls, privacy, properties, reglamento, reports, reservations, residents, signup,
     staff_auth, staff_reports, staff_tenants, tenant_config, users, visitor_qr,
 )
@@ -53,6 +54,7 @@ app.include_router(payment_proofs.router)
 app.include_router(payment_agreements.router)
 app.include_router(expenses.router)
 app.include_router(budgets.router)
+app.include_router(cash_movements.router)
 app.include_router(reports.router)
 app.include_router(announcements.router)
 app.include_router(announcement_questions.router)

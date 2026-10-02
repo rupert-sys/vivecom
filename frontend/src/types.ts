@@ -158,6 +158,25 @@ export interface Expense {
   recurrencia: RecurrenciaGasto
 }
 
+// F0-12: caja chica y caja grande — efectivo físico, con historial de movimientos.
+export type TipoCaja = 'chica' | 'grande'
+export type TipoMovimientoCaja = 'ingreso' | 'egreso'
+
+export interface CashMovement {
+  id: string
+  caja: TipoCaja
+  tipo: TipoMovimientoCaja
+  monto: number
+  motivo: string
+  fecha: string
+  registrado_por: string
+}
+
+export interface CashBalance {
+  chica: number
+  grande: number
+}
+
 export interface TotalPorConcepto {
   concepto: string
   total: number
@@ -341,7 +360,7 @@ export interface PaymentAgreement {
   causa: string
   propuesta_pagos: number
   propuesta_primer_pago: string
-  capturado_por_admin: boolean
+  capturado_por_staff: boolean
   created_at: string
   decidido_en: string | null
   motivo_rechazo: string | null

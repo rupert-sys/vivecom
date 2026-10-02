@@ -57,9 +57,25 @@ async def _cargos_de(client) -> list[FeeCharge]:
         return result.scalars().all()
 
 
+def _como(rol: str) -> None:
+    import uuid
+
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
+
+
 @pytest.mark.asyncio
 async def test_advance_payment_creates_future_charges_immediately(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     # Sin ningún cargo generado todavía: deposita 3 meses (el depósito llega
     # el 15 de septiembre, así que "el mes" es septiembre).
@@ -83,6 +99,7 @@ async def test_advance_payment_creates_future_charges_immediately(client, deposi
 @pytest.mark.asyncio
 async def test_advance_payment_pays_current_charge_then_advances(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})  # cargo de septiembre ya existe
 
@@ -101,6 +118,7 @@ async def test_advance_payment_pays_current_charge_then_advances(client, deposit
 @pytest.mark.asyncio
 async def test_advance_payment_caps_at_12_months(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
 
     # 13 meses excede el máximo de HU-A05: no se trata como anticipo, todo
@@ -116,6 +134,7 @@ async def test_advance_payment_caps_at_12_months(client, deposit_env):
 @pytest.mark.asyncio
 async def test_advance_payment_blocked_while_older_charge_unpaid(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
     client.post("/fees/apply-late-surcharges", params={"hoy": "2026-09-06"})  # ahora debe 1500 + 150 = 1650
@@ -136,6 +155,7 @@ async def test_advance_payment_blocked_while_older_charge_unpaid(client, deposit
 @pytest.mark.asyncio
 async def test_advance_payment_continues_from_last_charged_period(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 

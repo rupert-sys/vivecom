@@ -12,10 +12,10 @@ from app.services.budget_service import get_budget_vs_actual
 
 router = APIRouter(prefix="/budgets", tags=["budgets"])
 
-admin_only = [Depends(require_roles(Rol.admin))]
+tesorero_only = [Depends(require_roles(Rol.tesorero))]
 
 
-@router.post("", response_model=BudgetRead, status_code=status.HTTP_201_CREATED, dependencies=admin_only)
+@router.post("", response_model=BudgetRead, status_code=status.HTTP_201_CREATED, dependencies=tesorero_only)
 async def create_budget(payload: BudgetCreate, db: AsyncSession = Depends(get_tenant_db)):
     budget = Budget(
         categoria=payload.categoria, periodicidad=payload.periodicidad, periodo=payload.periodo,

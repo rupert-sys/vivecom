@@ -17,7 +17,7 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from app.core.config import settings
 from app.core.database_base import ControlBase, TenantBase
 from app.models import (  # noqa: F401
-    access_log, amenity, announcement, budget, expense, fee, fee_charge, incident, lost_found_item, package,
+    access_log, amenity, announcement, budget, cash_movement, expense, fee, fee_charge, incident, lost_found_item, package,
     payment, payment_agreement, payment_proof, poll, property, reglamento, reservation, resident, stored_file, user, vehicle,
     visitor_qr,
 )

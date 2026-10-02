@@ -1,4 +1,5 @@
 def test_create_and_list_fee(client):
+    _como("tesorero")
     response = client.post(
         "/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-10-01"}
     )
@@ -13,6 +14,7 @@ def test_create_and_list_fee(client):
 
 
 def test_update_fee_monto(client):
+    _como("tesorero")
     fee = client.post(
         "/fees", json={"monto": 1000.00, "periodicidad": "mensual", "activa_desde": "2026-10-01"}
     ).json()
@@ -38,6 +40,7 @@ def test_global_rules_are_not_per_tenant_configurable(client):
 
 
 def test_delete_fee_sin_cargos(client):
+    _como("tesorero")
     fee = client.post(
         "/fees", json={"monto": 1000.00, "periodicidad": "mensual", "activa_desde": "2026-10-01"}
     ).json()
@@ -51,11 +54,13 @@ def test_delete_fee_sin_cargos(client):
 def test_delete_fee_inexistente_es_404(client):
     import uuid
 
+    _como("tesorero")
     assert client.delete(f"/fees/{uuid.uuid4()}").status_code == 404
 
 
 def test_no_se_puede_eliminar_una_cuota_que_ya_genero_cargos(client):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")
     fee = client.post(
         "/fees", json={"monto": 1000.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"}
     ).json()
@@ -67,11 +72,13 @@ def test_no_se_puede_eliminar_una_cuota_que_ya_genero_cargos(client):
     assert len(client.get("/fees").json()) == 1  # sigue ahí
 
 
-def test_solo_el_admin_elimina_cuotas(client):
+def test_solo_tesoreria_modifica_cuotas(client):
+    """F0-12: tesorería es quien modifica cuotas — el administrador ya no puede (antes sí podía)."""
+    _como("tesorero")
     fee = client.post(
         "/fees", json={"monto": 1000.00, "periodicidad": "mensual", "activa_desde": "2026-10-01"}
     ).json()
-    for rol in ("tesorero", "comite_aprobador", "residente", "guardia"):
+    for rol in ("admin", "comite_aprobador", "residente", "guardia"):
         _como(rol)
         assert client.delete(f"/fees/{fee['id']}").status_code == 403
 
@@ -94,6 +101,7 @@ def _como(rol: str) -> None:
 def test_una_cuota_unica_genera_un_solo_cargo_para_su_periodo_y_no_reemplaza_a_la_mensual(client):
     casa1 = client.post("/properties", json={"identificador": "Casa 1"}).json()
     client.post("/properties", json={"identificador": "Casa 2"})
+    _como("tesorero")
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-01-01"})
     client.post("/fees", json={"monto": 5000.00, "periodicidad": "unica", "activa_desde": "2026-09-01"})
 
@@ -110,6 +118,7 @@ def test_una_cuota_unica_genera_un_solo_cargo_para_su_periodo_y_no_reemplaza_a_l
 
 def test_reintentar_la_generacion_de_una_cuota_unica_no_duplica(client):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")
     client.post("/fees", json={"monto": 5000.00, "periodicidad": "unica", "activa_desde": "2026-09-01"})
 
     primera = client.post("/fees/generate-charges", params={"periodo": "2026-09-01"}).json()
@@ -125,6 +134,7 @@ def test_una_cuota_semanal_se_puede_crear_y_hoy_genera_con_la_misma_cadencia_que
     el modelo (Periodicidad.semanal).
     """
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")
     creada = client.post("/fees", json={"monto": 200.00, "periodicidad": "semanal", "activa_desde": "2026-09-01"})
     assert creada.status_code == 201 and creada.json()["periodicidad"] == "semanal"
 

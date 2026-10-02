@@ -42,9 +42,13 @@ def _vivienda_con_deuda(client, nombre="Casa 1", meses_atras=2):
     """Una vivienda con una cuota de $750 vencida (de hace `meses_atras` meses) y el reglamento con el efectivo activo."""
     prop = client.post("/properties", json={"identificador": nombre}).json()["id"]
     if not client.get("/fees").json():
+        _como("tesorero")  # F0-12: crear cuotas y generar cargos ahora es de tesorería, no del administrador
         client.post("/fees", json={"monto": 750, "periodicidad": "mensual", "activa_desde": "2020-01-01"})
+    _como("admin")  # el reglamento lo sigue administrando el administrador, eso no cambió
     client.patch("/tenant/reglamento", json={"acepta_pago_efectivo": True, "morosos_sin_voto": True, "morosos_sin_areas_comunes": True})
+    _como("tesorero")
     client.post("/fees/generate-charges", params={"periodo": _mes(meses_atras).isoformat()})
+    _como("admin")  # deja el rol en el estado implícito que ya esperaban los llamadores de este helper
     return prop
 
 
@@ -136,7 +140,7 @@ def test_el_residente_solicita_un_acuerdo_y_no_cambia_nada_hasta_que_se_apruebe(
 
     assert respuesta.status_code == 201
     acuerdo = respuesta.json()
-    assert (acuerdo["estado"], acuerdo["vivienda"], acuerdo["capturado_por_admin"], acuerdo["calendario"]) == ("solicitado", "Casa 1", False, None)
+    assert (acuerdo["estado"], acuerdo["vivienda"], acuerdo["capturado_por_staff"], acuerdo["calendario"]) == ("solicitado", "Casa 1", False, None)
     estado = _estado(client, prop)
     assert estado["en_mora"] is True and estado["en_acuerdo"] is False  # una solicitud pendiente no suspende la mora
 
@@ -163,14 +167,16 @@ def test_el_plazo_maximo_sale_del_reglamento(client):
     assert _solicitar(client, prop, pagos=6, dias=1).status_code == 201
 
 
-def test_el_administrador_captura_el_escrito_de_un_vecino_pero_un_residente_no_lo_hace_por_otro(client):
+def test_tesoreria_captura_el_escrito_de_un_vecino_pero_ya_no_el_administrador(client):
+    """F0-12: capturar la solicitud en papel de un vecino pasó de ser del administrador a ser de tesorería."""
     prop = _vivienda_con_deuda(client)
-    _como("admin")
+    _como("tesorero")
     capturado = client.post("/payment-agreements", json={
         "property_id": prop, "causa": CAUSA, "numero_de_pagos": 2, "primer_pago": (hoy_local() + timedelta(days=5)).isoformat()})
-    assert capturado.status_code == 201 and capturado.json()["capturado_por_admin"] is True
-    _como("guardia")
-    assert client.post("/payment-agreements", json={"causa": CAUSA, "numero_de_pagos": 1, "primer_pago": (hoy_local() + timedelta(days=5)).isoformat()}).status_code == 400
+    assert capturado.status_code == 201 and capturado.json()["capturado_por_staff"] is True
+    for rol in ("admin", "guardia"):
+        _como(rol)
+        assert client.post("/payment-agreements", json={"causa": CAUSA, "numero_de_pagos": 1, "primer_pago": (hoy_local() + timedelta(days=5)).isoformat()}).status_code == 400, rol
 
 
 def test_el_documento_de_respaldo_es_propio_y_lo_ve_quien_decide(client):
@@ -340,14 +346,14 @@ def _recargo_de(client, prop):
 def test_con_el_recargo_congelado_no_crece_mientras_se_cumple(client):
     client.patch("/tenant/reglamento", json={"recargo_modalidad": "mensual_sobre_saldo", "recargo_porcentaje": 0.05})
     congelada = _vivienda_con_deuda(client, "Casa 1")
-    _como("admin")
+    _como("tesorero")
     client.post("/fees/apply-late-surcharges")  # el recargo de hoy
     inicial = _recargo_de(client, congelada)
     assert inicial > 0
 
     _acuerdo_vigente(client, congelada, congela_recargo=True)
     futuro = (hoy_local() + timedelta(days=65)).isoformat()
-    _como("admin")
+    _como("tesorero")
     client.post("/fees/apply-late-surcharges", params={"hoy": futuro})
     assert _recargo_de(client, congelada) == inicial  # congelado mientras el acuerdo se cumple
 
@@ -355,11 +361,11 @@ def test_con_el_recargo_congelado_no_crece_mientras_se_cumple(client):
 def test_sin_congelar_el_recargo_sigue_corriendo(client):
     client.patch("/tenant/reglamento", json={"recargo_modalidad": "mensual_sobre_saldo", "recargo_porcentaje": 0.05})
     prop = _vivienda_con_deuda(client)
-    _como("admin")
+    _como("tesorero")
     client.post("/fees/apply-late-surcharges")
     inicial = _recargo_de(client, prop)
     _acuerdo_vigente(client, prop, congela_recargo=False)
-    _como("admin")
+    _como("tesorero")
     client.post("/fees/apply-late-surcharges", params={"hoy": (hoy_local() + timedelta(days=65)).isoformat()})
     assert _recargo_de(client, prop) > inicial
 
@@ -368,7 +374,7 @@ def test_sin_congelar_el_recargo_sigue_corriendo(client):
 async def test_al_incumplirse_el_recargo_vuelve_a_correr(client):
     client.patch("/tenant/reglamento", json={"recargo_modalidad": "mensual_sobre_saldo", "recargo_porcentaje": 0.05})
     prop = _vivienda_con_deuda(client)
-    _como("admin")
+    _como("tesorero")
     client.post("/fees/apply-late-surcharges")
     inicial = _recargo_de(client, prop)
     _acuerdo_vigente(client, prop, pagos=1)
@@ -376,7 +382,7 @@ async def test_al_incumplirse_el_recargo_vuelve_a_correr(client):
     futuro = hoy_local() + timedelta(days=65)
     async with client.db_session_factory() as db:
         assert (await procesar_acuerdos(db, futuro)) == {"cumplidos": 0, "incumplidos": 1}
-    _como("admin")
+    _como("tesorero")
     client.post("/fees/apply-late-surcharges", params={"hoy": futuro.isoformat()})
     assert _recargo_de(client, prop) > inicial  # ya no está congelado
     assert _estado(client, prop)["en_mora"] is True
@@ -487,7 +493,7 @@ async def test_quien_va_al_corriente_con_el_calendario_sigue_vigente_y_un_incump
 def test_pagar_la_cuota_corriente_no_se_va_a_la_deuda_del_acuerdo(client):
     prop = _vivienda_con_deuda(client)
     vigente = _acuerdo_vigente(client, prop, pagos=3)
-    _como("admin")
+    _como("tesorero")
     client.post("/fees/generate-charges", params={"periodo": _mes(0).isoformat()})  # la cuota del mes actual
 
     _efectivo(client, prop, 750)

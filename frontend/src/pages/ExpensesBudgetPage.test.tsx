@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
 import { ExpensesBudgetPage } from './ExpensesBudgetPage'
@@ -93,13 +93,13 @@ describe('ExpensesBudgetPage', () => {
     expect(await screen.findByText('$3200.00')).toBeInTheDocument()
     expect(screen.getByText('$5000.00')).toBeInTheDocument()
     expect(screen.getByText('$3210.00')).toBeInTheDocument()
-    // "Jardinería" aparece dos veces (categoría del gasto y de la fila del
-    // presupuesto) — legítimamente ambiguo, solo se confirma que ambas tablas
-    // renderizaron su respectiva fila.
-    expect(screen.getAllByText('Jardinería')).toHaveLength(2)
+    // "Jardinería" aparece tres veces (la opción sugerida del selector de
+    // categoría, la fila del gasto y la fila del presupuesto) — legítimamente
+    // ambiguo, solo se confirma que ambas tablas renderizaron su respectiva fila.
+    expect(screen.getAllByText('Jardinería')).toHaveLength(3)
   })
 
-  it('no muestra los formularios de alta si el rol no es admin', async () => {
+  it('no muestra los formularios de alta si el rol no es tesorería', async () => {
     mockUser('residente')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([gasto])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([comparacion])
@@ -111,8 +111,8 @@ describe('ExpensesBudgetPage', () => {
     expect(screen.queryByPlaceholderText('Monto planeado')).not.toBeInTheDocument()
   })
 
-  it('un admin puede registrar un gasto nuevo', async () => {
-    mockUser('admin')
+  it('tesorería puede registrar un gasto nuevo', async () => {
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
@@ -139,8 +139,8 @@ describe('ExpensesBudgetPage', () => {
     )
   })
 
-  it('un admin puede registrar un presupuesto nuevo', async () => {
-    mockUser('admin')
+  it('tesorería puede registrar un presupuesto nuevo', async () => {
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const createSpy = vi.spyOn(budgetsApi, 'createBudget').mockResolvedValue({
@@ -184,7 +184,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('muestra el error del backend si falla la carga', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockRejectedValue(new Error('caída'))
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
 
@@ -279,7 +279,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('un gasto operativo no pide sustento; uno extraordinario sí y avisa el umbral del reglamento', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const user = userEvent.setup({ delay: null })
@@ -296,7 +296,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('registra un gasto extraordinario con asamblea, acta y cotizaciones', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
@@ -339,7 +339,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('muestra el rechazo del backend cuando falta asamblea o cotizaciones', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     vi.spyOn(expensesApi, 'createExpense').mockRejectedValue(
@@ -361,7 +361,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('sube el comprobante como archivo y el gasto lleva su identificador, no un enlace', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const uploadSpy = vi
@@ -392,7 +392,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('sin archivo ni enlace no se manda el gasto y se pide adjuntar el comprobante', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
@@ -410,7 +410,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('sube también el archivo de cada cotización', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     let contador = 0
@@ -448,7 +448,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('si la subida falla, muestra el motivo y no registra el gasto', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     vi.spyOn(filesApi, 'uploadFile').mockRejectedValue(new ApiError(415, 'Solo se aceptan fotos (JPG, PNG, WEBP, HEIC) o PDF.'))
@@ -469,7 +469,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('ofrece categorías sugeridas y "Otra…" para escribir una distinta', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
 
@@ -485,7 +485,7 @@ describe('ExpensesBudgetPage', () => {
   })
 
   it('un gasto se puede marcar como recurrente (semanal o mensual)', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(expensesApi, 'listExpenses').mockResolvedValue([])
     vi.spyOn(budgetsApi, 'getBudgetReport').mockResolvedValue([])
     const createSpy = vi.spyOn(expensesApi, 'createExpense').mockResolvedValue(gasto)
@@ -517,7 +517,13 @@ describe('ExpensesBudgetPage', () => {
 
     render(<ExpensesBudgetPage />)
 
-    await screen.findByText('Vigilancia')
-    expect(screen.getByText('Mensual')).toBeInTheDocument()
+    // "Vigilancia" también es una opción del selector de categoría (visible desde
+    // el primer render); hay que esperar a que aparezca dentro de una fila de la
+    // tabla, no a la primera coincidencia con ese texto.
+    await waitFor(() => {
+      expect(screen.getAllByText('Vigilancia').some((el) => el.closest('tr'))).toBe(true)
+    })
+    const fila = screen.getAllByText('Vigilancia').find((el) => el.closest('tr'))!.closest('tr')!
+    expect(within(fila).getByText('Mensual')).toBeInTheDocument()
   })
 })

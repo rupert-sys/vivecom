@@ -1,7 +1,23 @@
 
 
+def _como(rol: str) -> None:
+    import uuid
+
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
+
+
 def _setup_charge(client, periodo="2026-09-01"):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas, cargos y recargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": periodo})
 

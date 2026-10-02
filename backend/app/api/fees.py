@@ -18,7 +18,7 @@ from app.services.reminder_service import send_payment_confirmations, send_payme
 
 router = APIRouter(prefix="/fees", tags=["fees"])
 
-admin_only = [Depends(require_roles(Rol.admin))]
+tesorero_only = [Depends(require_roles(Rol.tesorero))]
 
 _notification_provider = TwilioProvider(
     account_sid=settings.twilio_account_sid,
@@ -39,7 +39,7 @@ async def get_global_rules():
     return {"recargo_porcentaje": RECARGO_PORCENTAJE, "recargo_dia_del_mes": RECARGO_DIA_DEL_MES}
 
 
-@router.post("", response_model=FeeRead, status_code=status.HTTP_201_CREATED, dependencies=admin_only)
+@router.post("", response_model=FeeRead, status_code=status.HTTP_201_CREATED, dependencies=tesorero_only)
 async def create_fee(payload: FeeCreate, db: AsyncSession = Depends(get_tenant_db)):
     fee = Fee(monto=payload.monto, periodicidad=payload.periodicidad, activa_desde=payload.activa_desde)
     db.add(fee)
@@ -63,7 +63,7 @@ async def get_fee(fee_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
     return fee
 
 
-@router.patch("/{fee_id}", response_model=FeeRead, dependencies=admin_only)
+@router.patch("/{fee_id}", response_model=FeeRead, dependencies=tesorero_only)
 async def update_fee(fee_id: uuid.UUID, payload: FeeUpdate, db: AsyncSession = Depends(get_tenant_db)):
     fee = await db.get(Fee, fee_id)
     if fee is None:
@@ -74,7 +74,7 @@ async def update_fee(fee_id: uuid.UUID, payload: FeeUpdate, db: AsyncSession = D
     return fee
 
 
-@router.delete("/{fee_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=admin_only)
+@router.delete("/{fee_id}", status_code=status.HTTP_204_NO_CONTENT, dependencies=tesorero_only)
 async def delete_fee(fee_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db)):
     """
     Solo se puede eliminar una cuota que todavía no generó ningún cargo (se dio de alta por error, o su fecha
@@ -94,7 +94,7 @@ async def delete_fee(fee_id: uuid.UUID, db: AsyncSession = Depends(get_tenant_db
     await db.commit()
 
 
-@router.post("/generate-charges", dependencies=admin_only)
+@router.post("/generate-charges", dependencies=tesorero_only)
 async def trigger_generate_charges(periodo: date | None = None, db: AsyncSession = Depends(get_tenant_db)):
     """
     Disparo manual de la generación de cargos (el job periódico real vive en
@@ -106,7 +106,7 @@ async def trigger_generate_charges(periodo: date | None = None, db: AsyncSession
     return {"periodo": periodo_objetivo.isoformat(), "cargos_generados": len(nuevos)}
 
 
-@router.post("/apply-late-surcharges", dependencies=admin_only)
+@router.post("/apply-late-surcharges", dependencies=tesorero_only)
 async def trigger_apply_late_surcharges(hoy: date | None = None, db: AsyncSession = Depends(get_tenant_db)):
     """
     Disparo manual del recargo por mora (10%, a partir del día 6 de cada
@@ -117,7 +117,7 @@ async def trigger_apply_late_surcharges(hoy: date | None = None, db: AsyncSessio
     return {"fecha_referencia": fecha_referencia.isoformat(), "cargos_marcados_vencidos": len(afectados)}
 
 
-@router.post("/send-reminders", dependencies=admin_only)
+@router.post("/send-reminders", dependencies=tesorero_only)
 async def trigger_send_reminders(hoy: date | None = None, db: AsyncSession = Depends(get_tenant_db)):
     """
     Disparo manual de recordatorios de pago (F1-13). El job real corre
@@ -129,7 +129,7 @@ async def trigger_send_reminders(hoy: date | None = None, db: AsyncSession = Dep
     return {"fecha_referencia": fecha_referencia.isoformat(), "recordatorios_enviados": enviados}
 
 
-@router.post("/send-payment-confirmations", dependencies=admin_only)
+@router.post("/send-payment-confirmations", dependencies=tesorero_only)
 async def trigger_send_payment_confirmations(db: AsyncSession = Depends(get_tenant_db)):
     """
     Disparo manual de confirmaciones de pago (F1-13). El job real corre cada

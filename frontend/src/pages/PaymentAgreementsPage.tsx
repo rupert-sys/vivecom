@@ -56,7 +56,9 @@ export function PaymentAgreementsPage() {
   const { user } = useAuth()
   const tieneAcceso = user !== null && ROLES_QUE_VEN.has(user.rol)
   const puedeDecidir = user !== null && ROLES_QUE_DECIDEN.has(user.rol)
-  const esAdmin = user?.rol === 'admin'
+  // F0-12: capturar una solicitud en papel ahora es de tesorería, no del administrador — coincide con el
+  // cambio en backend/app/api/payment_agreements.py (request_agreement ya solo acepta property_id de tesorero).
+  const esTesorero = user?.rol === 'tesorero'
 
   const [acuerdos, setAcuerdos] = useState<PaymentAgreement[]>([])
   const [viviendas, setViviendas] = useState<Property[]>([])
@@ -211,7 +213,7 @@ export function PaymentAgreementsPage() {
         <StatCard label="Deuda que cubren">{money(deudaCubierta)}</StatCard>
       </div>
 
-      {esAdmin && (
+      {esTesorero && (
         <details style={{ marginBottom: 'var(--space-4)' }}>
           <summary>Capturar la solicitud por escrito de un vecino</summary>
           <form onSubmit={handleCapturar} style={{ display: 'grid', gap: 'var(--space-2)', maxWidth: 480, marginTop: 'var(--space-2)' }}>
@@ -273,7 +275,7 @@ export function PaymentAgreementsPage() {
             <div key={a.id} style={tarjeta}>
               <div style={{ color: 'var(--ink-soft)' }}>
                 {a.vivienda ?? '—'} · solicitado el {fecha(a.created_at)}
-                {a.capturado_por_admin && ' · capturado por la administración'}
+                {a.capturado_por_staff && ' · capturado por tesorería'}
               </div>
               <p style={{ whiteSpace: 'pre-wrap' }}>{a.causa}</p>
               <p>

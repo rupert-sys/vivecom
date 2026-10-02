@@ -27,7 +27,7 @@ STAFF_FINANZAS = {Rol.admin.value, Rol.tesorero.value}
 
 # Quién puede SUBIR cada clase de archivo.
 _SUBEN = {
-    "gasto": {Rol.admin.value},  # solo el administrador registra gastos (POST /expenses)
+    "gasto": {Rol.tesorero.value},  # F0-12: solo tesorería registra gastos (POST /expenses), ya no el administrador
     "pago": None,  # cualquier usuario autenticado (el residente adjunta su comprobante del banco)
     "incidencia": {Rol.admin.value, Rol.guardia.value, Rol.comite_aprobador.value},
     "acuerdo": None,  # el escrito o documento de respaldo de una solicitud de acuerdo de pago (cualquier residente)

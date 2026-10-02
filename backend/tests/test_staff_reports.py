@@ -128,8 +128,16 @@ async def test_executive_summary_aggregates_across_multiple_tenants(client):
     # --- Tenant A (el del fixture `client`, schema "test"): 1 vivienda,
     # 1 cargo pagado de $1000, 1 incidencia abierta.
     client.post("/properties", json={"identificador": "Casa A1"})
+    # F0-12: cuotas y cargos son de tesorería, no del administrador.
+    tenant_id_a = app.dependency_overrides[get_current_user]().tenant_id
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id=str(uuid.uuid4()), tenant_id=tenant_id_a, schema_name="test", rol="tesorero", property_id=None
+    )
     client.post("/fees", json={"monto": 1000.00, "periodicidad": "mensual", "activa_desde": "2026-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-01-01"})
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id=str(uuid.uuid4()), tenant_id=tenant_id_a, schema_name="test", rol="admin", property_id=None
+    )  # las incidencias no las gestiona tesorería
     client.post("/incidents", json={"descripcion": "Fuga de agua"})
 
     # --- Tenant B: engine SQLite propio, sembrado reutilizando los mismos
@@ -165,6 +173,9 @@ async def test_executive_summary_aggregates_across_multiple_tenants(client):
     # y la tasa de morosidad de tenant B aporten algo distinto de tenant A).
     client.post("/properties", json={"identificador": "Casa B1"})
     client.post("/properties", json={"identificador": "Casa B2"})
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id=str(uuid.uuid4()), tenant_id=str(tenant_b_id), schema_name="test-b", rol="tesorero", property_id=None
+    )  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 2000.00, "periodicidad": "mensual", "activa_desde": "2026-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-01-01"})
     client.post("/fees/apply-late-surcharges", params={"hoy": "2026-02-01"})

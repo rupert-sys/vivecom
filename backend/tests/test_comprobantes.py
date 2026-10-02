@@ -51,6 +51,7 @@ def _gasto(**extra):
 
 
 def test_un_gasto_con_su_comprobante_subido_se_lee_con_un_enlace_que_lo_abre(client):
+    _como("tesorero")  # F0-12: gastos son de tesorería, no del administrador (subir el comprobante incluido)
     archivo = _subir(client, kind="gasto", contenido=PDF, nombre="factura.pdf")
     creado = client.post("/expenses", json=_gasto(comprobante_archivo_id=archivo["id"], tipo_comprobante="factura"))
 
@@ -66,24 +67,28 @@ def test_un_gasto_con_su_comprobante_subido_se_lee_con_un_enlace_que_lo_abre(cli
 
 
 def test_un_gasto_sigue_aceptando_un_enlace_como_comprobante(client):
+    _como("tesorero")
     creado = client.post("/expenses", json=_gasto(comprobante_url="https://ejemplo.com/factura.pdf"))
     assert creado.status_code == 201
     assert creado.json()["comprobante_url"] == "https://ejemplo.com/factura.pdf"  # un enlace externo queda tal cual
 
 
 def test_un_gasto_sin_ningun_comprobante_se_rechaza(client):
+    _como("tesorero")
     respuesta = client.post("/expenses", json=_gasto())
     assert respuesta.status_code == 422
     assert "comprobante" in respuesta.text.lower()
 
 
 def test_el_comprobante_debe_ser_un_archivo_de_gasto_que_exista(client):
+    _como("tesorero")
     assert client.post("/expenses", json=_gasto(comprobante_archivo_id=str(uuid.uuid4()))).status_code == 422
     de_pago = _subir(client, kind="pago")
     assert client.post("/expenses", json=_gasto(comprobante_archivo_id=de_pago["id"])).status_code == 422
 
 
 def test_las_cotizaciones_tambien_pueden_ser_archivos(client):
+    _como("tesorero")
     comprobante = _subir(client, kind="gasto")
     cotizacion = _subir(client, kind="gasto", contenido=PDF, nombre="cotizacion.pdf")
     creado = client.post(
@@ -103,6 +108,7 @@ def test_las_cotizaciones_tambien_pueden_ser_archivos(client):
 
 
 def test_un_residente_abre_el_comprobante_de_un_gasto_pero_no_puede_registrar_uno(client):
+    _como("tesorero")
     archivo = _subir(client, kind="gasto")
     client.post("/expenses", json=_gasto(comprobante_archivo_id=archivo["id"]))
 
@@ -117,6 +123,7 @@ def test_el_excel_de_gastos_no_lleva_la_referencia_interna_como_enlace(client):
 
     from openpyxl import load_workbook
 
+    _como("tesorero")
     archivo = _subir(client, kind="gasto")
     client.post("/expenses", json=_gasto(comprobante_archivo_id=archivo["id"]))
     excel = load_workbook(BytesIO(client.get("/reports/expenses/export").content))
@@ -130,6 +137,7 @@ def test_el_excel_de_gastos_no_lleva_la_referencia_interna_como_enlace(client):
 
 def _vivienda_con_cargo(client, monto=750.0):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()["id"]
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": monto, "periodicidad": "mensual", "activa_desde": "2026-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
     return prop
@@ -162,7 +170,7 @@ def test_solo_puede_adjuntar_un_archivo_propio_y_de_pago(client):
     _como("residente", property_id=prop)  # ...y ahora es otra persona
     assert client.post("/payment-proofs", json={"monto": 750, "archivo_id": ajeno["id"]}).status_code == 422
 
-    _como("admin")
+    _como("tesorero")
     de_gasto = _subir(client, kind="gasto")
     _como("residente", property_id=prop)
     assert client.post("/payment-proofs", json={"monto": 750, "archivo_id": de_gasto["id"]}).status_code == 422
@@ -190,6 +198,7 @@ def test_no_se_pueden_acumular_comprobantes_pendientes_sin_limite(client):
 
 def test_cada_residente_ve_solo_los_de_su_vivienda_y_tesoreria_todos(client):
     una = _vivienda_con_cargo(client)
+    _como("admin")  # dar de alta una vivienda sigue siendo del administrador
     otra = client.post("/properties", json={"identificador": "Casa 2"}).json()["id"]
     _como("residente", property_id=una)
     _enviar(client)

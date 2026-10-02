@@ -65,9 +65,23 @@ async def _cargos_de(client) -> list[FeeCharge]:
         return result.scalars().all()
 
 
+def _como(rol: str) -> None:
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
+
+
 @pytest.mark.asyncio
 async def test_excess_deposit_becomes_credit(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
@@ -85,6 +99,7 @@ async def test_excess_deposit_becomes_credit(client, deposit_env):
 @pytest.mark.asyncio
 async def test_credit_settles_next_generated_charge(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     # Deposita antes de que exista ningún cargo, con un monto que NO es un
     # múltiplo exacto de la cuota (1.5x) para que F1-08 no lo intercepte:
@@ -110,6 +125,7 @@ async def test_credit_settles_next_generated_charge(client, deposit_env):
 @pytest.mark.asyncio
 async def test_insufficient_credit_leaves_new_charge_pending(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
 
     async with deposit_env() as control_db:

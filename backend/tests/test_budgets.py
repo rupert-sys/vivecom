@@ -1,7 +1,23 @@
 """
 F1-16 / HU-A10: presupuesto por categoría (mensual por defecto, o anual) y
 el reporte que lo compara contra el gasto real.
+F0-12: solo tesorería crea presupuestos (antes era el administrador).
 """
+
+
+def _como(rol: str) -> None:
+    import uuid
+
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
 
 
 def _gasto(client, categoria, monto, fecha):
@@ -12,6 +28,7 @@ def _gasto(client, categoria, monto, fecha):
 
 
 def test_create_and_list_budget(client):
+    _como("tesorero")
     created = client.post(
         "/budgets",
         json={"categoria": "Mantenimiento", "periodicidad": "mensual", "periodo": "2026-09-01", "monto_planeado": 5000.00},
@@ -23,7 +40,19 @@ def test_create_and_list_budget(client):
     assert listado[0]["categoria"] == "Mantenimiento"
 
 
+def test_solo_tesoreria_crea_presupuestos(client):
+    """F0-12: el administrador ya no puede crear presupuestos (antes sí podía) — solo tesorería."""
+    for rol in ("admin", "comite_aprobador", "residente", "guardia"):
+        _como(rol)
+        response = client.post(
+            "/budgets",
+            json={"categoria": "Mantenimiento", "periodicidad": "mensual", "periodo": "2026-09-01", "monto_planeado": 5000.00},
+        )
+        assert response.status_code == 403, rol
+
+
 def test_report_compares_monthly_budget_against_actual_expenses(client):
+    _como("tesorero")
     client.post(
         "/budgets",
         json={"categoria": "Mantenimiento", "periodicidad": "mensual", "periodo": "2026-09-01", "monto_planeado": 5000.00},
@@ -41,6 +70,7 @@ def test_report_compares_monthly_budget_against_actual_expenses(client):
 
 
 def test_report_excludes_budget_from_a_different_month(client):
+    _como("tesorero")
     client.post(
         "/budgets",
         json={"categoria": "Mantenimiento", "periodicidad": "mensual", "periodo": "2026-08-01", "monto_planeado": 5000.00},
@@ -51,6 +81,7 @@ def test_report_excludes_budget_from_a_different_month(client):
 
 
 def test_report_annual_budget_sums_expenses_across_the_whole_year(client):
+    _como("tesorero")
     client.post(
         "/budgets",
         json={"categoria": "Jardinería", "periodicidad": "anual", "periodo": "2026-01-01", "monto_planeado": 24000.00},
@@ -66,6 +97,7 @@ def test_report_annual_budget_sums_expenses_across_the_whole_year(client):
 
 
 def test_report_with_no_expenses_shows_zero_actual(client):
+    _como("tesorero")
     client.post(
         "/budgets",
         json={"categoria": "Eventos", "periodicidad": "mensual", "periodo": "2026-09-01", "monto_planeado": 1000.00},

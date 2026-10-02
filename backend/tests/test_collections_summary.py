@@ -34,6 +34,7 @@ def _como(rol: str, property_id: str | None = None):
 def _setup_dos_viviendas_con_cargos(client):
     casa1 = client.post("/properties", json={"identificador": "Casa 1"}).json()
     casa2 = client.post("/properties", json={"identificador": "Casa 2"}).json()
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
     return casa1, casa2
@@ -115,6 +116,7 @@ def _por_concepto(body, concepto: str) -> dict:
 
 def test_por_origen_separa_mantenimiento_de_proyecto(client):
     casa1 = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como("tesorero")
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees", json={"monto": 5000.00, "periodicidad": "unica", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})

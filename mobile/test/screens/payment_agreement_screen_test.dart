@@ -11,7 +11,7 @@ import 'package:http/testing.dart';
 
 String _acuerdo({String id = 'a1', String estado = 'solicitado', String? motivo, bool conCalendario = false}) =>
     '{"id": "$id", "property_id": "p1", "vivienda": "Casa 1", "estado": "$estado", "causa": "Perdí mi empleo en agosto.", '
-    '"propuesta_pagos": 3, "propuesta_primer_pago": "2026-10-05", "capturado_por_admin": false, "created_at": "2026-09-18T15:00:00", '
+    '"propuesta_pagos": 3, "propuesta_primer_pago": "2026-10-05", "capturado_por_staff": false, "created_at": "2026-09-18T15:00:00", '
     '"decidido_en": null, "motivo_rechazo": ${motivo == null ? 'null' : '"$motivo"'}, "archivo_url": null, "vigente_desde": null, '
     '"calendario": ${conCalendario ? '[{"fecha": "2026-10-05", "monto": 250.0}, {"fecha": "2026-11-05", "monto": 250.0}, {"fecha": "2026-12-05", "monto": 250.0}]' : 'null'}, '
     '"congela_recargo": ${conCalendario ? 'true' : 'null'}, "deuda_inicial": ${conCalendario ? '750.0' : 'null'}, '

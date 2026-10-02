@@ -13,6 +13,7 @@ import { ExpensesBudgetPage } from './pages/ExpensesBudgetPage'
 import { ReportsExportPage } from './pages/ReportsExportPage'
 import { AmenitiesPollsPage } from './pages/AmenitiesPollsPage'
 import { PackagesPage } from './pages/PackagesPage'
+import { CashMovementsPage } from './pages/CashMovementsPage'
 import { SecurityDashboardPage } from './pages/SecurityDashboardPage'
 import { AnnouncementsPage } from './pages/AnnouncementsPage'
 import { CollectionStatusPage } from './pages/CollectionStatusPage'
@@ -56,6 +57,7 @@ export default function App() {
         <Route path="/reports/export" element={<ReportsExportPage />} />
         <Route path="/amenities" element={<AmenitiesPollsPage />} />
         <Route path="/packages" element={<PackagesPage />} />
+        <Route path="/caja" element={<CashMovementsPage />} />
         <Route path="/security" element={<SecurityDashboardPage />} />
         <Route path="/announcements" element={<AnnouncementsPage />} />
         <Route path="/announcement-questions" element={<AnnouncementQuestionsPage />} />

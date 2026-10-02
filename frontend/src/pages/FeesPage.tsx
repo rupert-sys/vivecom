@@ -28,6 +28,9 @@ function SelectorDePeriodicidad({ value, onChange }: { value: Periodicidad; onCh
 export function FeesPage() {
   const { user } = useAuth()
   const isAdmin = user?.rol === 'admin'
+  // F0-12: crear/editar/eliminar cuotas pasó a ser de tesorería (el reglamento, que sigue siendo del
+  // administrador — ver el enlace "cambiar en Reglamento" más abajo — es algo distinto).
+  const esTesorero = user?.rol === 'tesorero'
 
   const [fees, setFees] = useState<Fee[]>([])
   const [reglamento, setReglamento] = useState<Reglamento | null>(null)
@@ -124,7 +127,7 @@ export function FeesPage() {
         </p>
       )}
 
-      {isAdmin && (
+      {esTesorero && (
         <form onSubmit={handleCreate} style={{ display: 'flex', gap: 'var(--space-2)', margin: 'var(--space-3) 0', flexWrap: 'wrap', alignItems: 'center' }}>
           <input
             type="number"
@@ -164,7 +167,7 @@ export function FeesPage() {
               <th>Monto</th>
               <th>Periodicidad</th>
               <th>Activa desde</th>
-              {isAdmin && <th />}
+              {esTesorero && <th />}
             </tr>
           </thead>
           <tbody>
@@ -203,7 +206,7 @@ export function FeesPage() {
                   <td className="mono">${fee.monto.toFixed(2)}</td>
                   <td>{ETIQUETA_PERIODICIDAD[fee.periodicidad]}</td>
                   <td className="mono">{fee.activa_desde}</td>
-                  {isAdmin && (
+                  {esTesorero && (
                     <td>
                       <button onClick={() => startEdit(fee)}>Editar</button>{' '}
                       <button onClick={() => handleDelete(fee.id)} style={{ color: 'var(--brick)' }}>

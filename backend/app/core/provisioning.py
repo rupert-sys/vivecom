@@ -41,7 +41,7 @@ from app.models.vivecom_staff import VivecomStaff  # noqa: F401 — registra en 
 # y 2 casi completas). migrate_add_tables.py sí se había mantenido al día con la
 # lista completa; se copia de ahí en vez de mantener dos listas por separado.
 from app.models import (  # noqa: F401
-    access_log, amenity, announcement, budget, expense, fee, fee_charge, incident, lost_found_item, package,
+    access_log, amenity, announcement, budget, cash_movement, expense, fee, fee_charge, incident, lost_found_item, package,
     payment, payment_agreement, payment_proof, poll, property, reglamento, reservation, resident, stored_file, user, vehicle,
     visitor_qr,
 )

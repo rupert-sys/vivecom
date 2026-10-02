@@ -44,7 +44,7 @@ class AgreementRead(BaseModel):
     causa: str
     propuesta_pagos: int
     propuesta_primer_pago: date
-    capturado_por_admin: bool
+    capturado_por_staff: bool
     created_at: datetime
     decidido_en: datetime | None
     motivo_rechazo: str | None

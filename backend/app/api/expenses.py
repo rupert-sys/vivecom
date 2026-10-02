@@ -16,7 +16,7 @@ from app.services.reglamento_service import get_reglamento
 
 router = APIRouter(prefix="/expenses", tags=["expenses"])
 
-admin_only = [Depends(require_roles(Rol.admin))]
+tesorero_only = [Depends(require_roles(Rol.tesorero))]
 
 
 def _a_lectura(gasto: Expense, schema_name: str) -> ExpenseRead:
@@ -35,7 +35,7 @@ async def _archivo_de_gasto(db: AsyncSession, archivo_id: uuid.UUID) -> str:
     return referencia_interna(archivo_id)
 
 
-@router.post("", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED, dependencies=admin_only)
+@router.post("", response_model=ExpenseRead, status_code=status.HTTP_201_CREATED, dependencies=tesorero_only)
 async def create_expense(
     payload: ExpenseCreate,
     current_user: CurrentUser = Depends(get_current_user),

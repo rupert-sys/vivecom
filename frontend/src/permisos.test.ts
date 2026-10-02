@@ -10,13 +10,16 @@ describe('permisos del panel', () => {
 
   it('tesorería solo ve lo de cobranza y finanzas', () => {
     expect(etiquetas('tesorero')).toEqual([
-      'Dashboard', 'Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Gastos', 'Exportar', 'Reservaciones', 'Reglamento',
+      'Dashboard', 'Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Gastos', 'Caja chica/grande', 'Exportar',
+      'Reservaciones', 'Reglamento',
     ])
   })
 
   it('el comité aprobador ve lo que decide; el de solo lectura, lo mismo salvo reservaciones', () => {
-    expect(etiquetas('comite_aprobador')).toEqual(['Acuerdos', 'Gastos', 'Reservaciones', 'Seguridad', 'Dudas', 'Reglamento'])
-    expect(etiquetas('comite_lectura')).toEqual(['Acuerdos', 'Gastos', 'Seguridad', 'Dudas', 'Reglamento'])
+    expect(etiquetas('comite_aprobador')).toEqual([
+      'Acuerdos', 'Gastos', 'Caja chica/grande', 'Reservaciones', 'Seguridad', 'Dudas', 'Reglamento',
+    ])
+    expect(etiquetas('comite_lectura')).toEqual(['Acuerdos', 'Gastos', 'Caja chica/grande', 'Seguridad', 'Dudas', 'Reglamento'])
   })
 
   it('ni tesorería ni el comité ven la gestión de usuarios, la CLABE, los avisos ni las amenidades', () => {

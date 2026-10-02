@@ -72,8 +72,9 @@ def test_solo_se_adjunta_una_foto_propia_y_de_incidencia(client):
     _como("guardia")  # otro guardia
     assert client.post("/incidents", json={"descripcion": "x", "foto_archivo_id": ajena["id"]}).status_code == 422
 
-    _como("admin")
+    _como("tesorero")  # F0-12: gastos son de tesorería, no del administrador
     de_gasto = _foto(client, kind="gasto")
+    _como("guardia")  # quien crea la incidencia sigue siendo guardia/admin/comité, no tesorería
     assert client.post("/incidents", json={"descripcion": "x", "foto_archivo_id": de_gasto["id"]}).status_code == 422
     assert client.post("/incidents", json={"descripcion": "x", "foto_archivo_id": str(uuid.uuid4())}).status_code == 422
 

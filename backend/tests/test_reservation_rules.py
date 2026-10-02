@@ -179,6 +179,7 @@ def test_la_disponibilidad_del_dia_dice_cuantos_lugares_quedan(client):
 
 def _vivienda_con_cuota_vencida(client) -> str:
     prop = _vivienda(client)
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 750, "periodicidad": "mensual", "activa_desde": "2020-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2020-01-01"})
     return prop

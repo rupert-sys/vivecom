@@ -8,9 +8,25 @@ from app.models.fee_charge import FeeCharge
 from app.services.fee_charge_service import generate_charges_for_period
 
 
+def _como(rol: str) -> None:
+    import uuid
+
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
+
+
 def _setup_fee_and_properties(client, periodicidad="mensual", activa_desde="2026-09-01"):
     client.post("/properties", json={"identificador": "Casa 1"})
     client.post("/properties", json={"identificador": "Casa 2"})
+    _como("tesorero")  # F0-12: crear cuotas es de tesorería, no del administrador
     fee = client.post(
         "/fees", json={"monto": 1500.00, "periodicidad": periodicidad, "activa_desde": activa_desde}
     ).json()
@@ -57,7 +73,9 @@ def test_new_property_gets_charge_on_next_generation(client):
     _setup_fee_and_properties(client)
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
+    _como("admin")  # dar de alta una vivienda sigue siendo del administrador
     client.post("/properties", json={"identificador": "Casa 3 (nueva)"})
+    _como("tesorero")
     second_run = client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
     assert second_run.json()["cargos_generados"] == 1

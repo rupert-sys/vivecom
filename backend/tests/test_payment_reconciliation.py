@@ -49,9 +49,25 @@ async def _cargos_de(client) -> list[FeeCharge]:
         return result.scalars().all()
 
 
+def _como(rol: str) -> None:
+    import uuid
+
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
+
+
 @pytest.mark.asyncio
 async def test_matching_deposit_pays_pending_charge(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
@@ -66,6 +82,7 @@ async def test_matching_deposit_pays_pending_charge(client, deposit_env):
 @pytest.mark.asyncio
 async def test_insufficient_deposit_leaves_charge_pending(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
@@ -80,6 +97,7 @@ async def test_insufficient_deposit_leaves_charge_pending(client, deposit_env):
 @pytest.mark.asyncio
 async def test_deposit_pays_oldest_charge_first(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-08-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-08-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
@@ -97,6 +115,7 @@ async def test_deposit_pays_oldest_charge_first(client, deposit_env):
 @pytest.mark.asyncio
 async def test_deposit_must_cover_recargo_to_settle_overdue_charge(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
     client.post("/fees/apply-late-surcharges", params={"hoy": "2026-09-06"})  # +10% = 1650.00 total
@@ -118,6 +137,7 @@ async def test_deposit_must_cover_recargo_to_settle_overdue_charge(client, depos
 @pytest.mark.asyncio
 async def test_deposit_without_matching_property_does_not_touch_charges(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
@@ -138,6 +158,7 @@ async def test_retrying_same_webhook_does_not_reconcile_twice(client, deposit_en
     duplica el efecto de la conciliación sobre el FeeCharge.
     """
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 

@@ -43,6 +43,15 @@ def _deposito(referencia="0000001", clave="STP-001", monto=1500.00):
     )
 
 
+def _como(rol: str) -> None:
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
+
+
 def _como_residente(property_id: str):
     tenant_id = app.dependency_overrides[get_current_user]().tenant_id
 
@@ -58,6 +67,7 @@ def _como_residente(property_id: str):
 @pytest.mark.asyncio
 async def test_statement_shows_paid_charge_and_payment(client, deposit_env):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
@@ -78,6 +88,7 @@ async def test_statement_shows_paid_charge_and_payment(client, deposit_env):
 @pytest.mark.asyncio
 async def test_statement_reports_debt_for_pending_charge(client):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como("tesorero")
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
@@ -91,6 +102,7 @@ async def test_statement_reports_debt_for_pending_charge(client):
 @pytest.mark.asyncio
 async def test_statement_debt_includes_recargo(client):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como("tesorero")
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
     client.post("/fees/apply-late-surcharges", params={"hoy": "2026-09-06"})

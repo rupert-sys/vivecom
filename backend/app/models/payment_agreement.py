@@ -25,7 +25,7 @@ class PaymentAgreement(TenantBase):
     property_id: Mapped[uuid.UUID] = mapped_column(ForeignKey("property.id"), index=True)
     solicitado_por: Mapped[uuid.UUID] = mapped_column()
     # El escrito llegó en papel y el administrador lo capturó a nombre del vecino.
-    capturado_por_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    capturado_por_staff: Mapped[bool] = mapped_column(Boolean, default=False)
     causa: Mapped[str] = mapped_column(Text)
     archivo_id: Mapped[uuid.UUID | None] = mapped_column(ForeignKey("stored_file.id"), nullable=True)
     # Lo que propone el residente: en cuántos pagos y desde cuándo (mensuales). 1 pago = "nueva fecha".

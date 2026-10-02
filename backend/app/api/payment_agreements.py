@@ -50,7 +50,7 @@ async def _a_lectura(
     lectura = AgreementRead(
         id=acuerdo.id, property_id=acuerdo.property_id, vivienda=propiedad.identificador if propiedad else None,
         estado=acuerdo.estado, causa=acuerdo.causa, propuesta_pagos=acuerdo.propuesta_pagos,
-        propuesta_primer_pago=acuerdo.propuesta_primer_pago, capturado_por_admin=acuerdo.capturado_por_admin,
+        propuesta_primer_pago=acuerdo.propuesta_primer_pago, capturado_por_staff=acuerdo.capturado_por_staff,
         created_at=acuerdo.created_at, decidido_en=acuerdo.decidido_en, motivo_rechazo=acuerdo.motivo_rechazo,
         archivo_url=firmar_url(acuerdo.archivo_id, schema_name) if acuerdo.archivo_id else None,
         vigente_desde=acuerdo.vigente_desde, congela_recargo=acuerdo.congela_recargo if acuerdo.calendario else None,
@@ -84,17 +84,18 @@ async def request_agreement(
     db: AsyncSession = Depends(get_tenant_db),
 ):
     """
-    Solicita un acuerdo de pago por una causa justificada. El residente lo hace para su vivienda; el
-    administrador captura la de un vecino que entregó su escrito en papel (`property_id`). La solicitud
-    pendiente no cambia nada: los efectos empiezan cuando el comité la aprueba.
+    Solicita un acuerdo de pago por una causa justificada. El residente lo hace para su vivienda; tesorería
+    captura la de un vecino que entregó su escrito en papel (`property_id`) — F0-12: antes lo capturaba el
+    administrador, pero tesorería es quien debe modificar acuerdos (autorizar sigue siendo del comité, ver
+    `decide` más abajo). La solicitud pendiente no cambia nada: los efectos empiezan cuando el comité la aprueba.
     """
-    es_admin = current_user.rol == Rol.admin.value
+    es_tesorero = current_user.rol == Rol.tesorero.value
     if current_user.property_id is not None:
         property_id = uuid.UUID(current_user.property_id)
-    elif es_admin and payload.property_id is not None:
+    elif es_tesorero and payload.property_id is not None:
         property_id = payload.property_id
     else:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indica la vivienda del acuerdo (solo el administrador captura por otro).")
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, "Indica la vivienda del acuerdo (solo tesorería captura por otro).")
 
     propiedad = await db.get(Property, property_id)
     if propiedad is None:
@@ -129,13 +130,13 @@ async def request_agreement(
 
     acuerdo = PaymentAgreement(
         property_id=property_id, solicitado_por=uuid.UUID(current_user.user_id),
-        capturado_por_admin=es_admin and current_user.property_id is None, causa=payload.causa.strip(),
+        capturado_por_staff=es_tesorero and current_user.property_id is None, causa=payload.causa.strip(),
         archivo_id=payload.archivo_id, propuesta_pagos=payload.numero_de_pagos, propuesta_primer_pago=payload.primer_pago,
         created_at=_ahora(),
     )
     db.add(acuerdo)
     await db.flush()
-    lectura = await _a_lectura(db, acuerdo, current_user.schema_name, es_admin, hoy)
+    lectura = await _a_lectura(db, acuerdo, current_user.schema_name, es_tesorero, hoy)
     await db.commit()
     return lectura
 

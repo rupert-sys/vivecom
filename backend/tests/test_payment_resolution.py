@@ -73,7 +73,18 @@ async def test_list_payments_filters_by_estado(client, deposit_env):
 
 @pytest.mark.asyncio
 async def test_resolve_pending_payment_assigns_property_and_reconciles(client, deposit_env):
+    import uuid as _uuid
+
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    # F0-12: cuotas y cargos son de tesorería, no del administrador.
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+    app.dependency_overrides[get_current_user] = lambda: CurrentUser(
+        user_id=str(_uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol="tesorero", property_id=None
+    )
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 

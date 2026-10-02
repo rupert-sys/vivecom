@@ -115,6 +115,21 @@ VALORES_ENUM_NUEVOS: list[tuple[str, str]] = [
 ALTERACIONES: list[str] = [
     # Un código de proveedor puede no tener vivienda asociada.
     "ALTER TABLE {schema}.visitor_qr ALTER COLUMN property_id DROP NOT NULL",
+    # F0-12: quien captura la solicitud en papel de un vecino pasó de ser el administrador a ser tesorería —
+    # el nombre de columna se renombra para no quedar mintiendo sobre quién la llena. Un RENAME COLUMN simple
+    # no es idempotente (el segundo intento tronaría porque la columna vieja ya no existe), así que se checa
+    # con to_regclass/pg_attribute antes de intentarlo.
+    """
+    DO $$
+    BEGIN
+      IF EXISTS (
+        SELECT 1 FROM pg_attribute
+        WHERE attrelid = to_regclass('{schema}.payment_agreement') AND attname = 'capturado_por_admin' AND NOT attisdropped
+      ) THEN
+        ALTER TABLE {schema}.payment_agreement RENAME COLUMN capturado_por_admin TO capturado_por_staff;
+      END IF;
+    END $$;
+    """,
 ]
 
 INDICES_NUEVOS: list[str] = [

@@ -33,12 +33,13 @@ function renderEn(ruta: string) {
   )
 }
 
-const menu = () => within(screen.getByRole('navigation')).queryAllByRole('link').map((a) => a.textContent)
+const menu = () =>
+  within(screen.getByRole('navigation', { name: 'Secciones del panel' })).queryAllByRole('link').map((a) => a.textContent)
 
 describe('Layout: el menú muestra solo lo que el rol puede usar', () => {
   beforeEach(() => vi.restoreAllMocks())
 
-  it('el administrador ve las 16 secciones', () => {
+  it('el administrador ve las 17 secciones', () => {
     mockUser('admin')
     renderEn('/properties')
     expect(menu()).toHaveLength(SECCIONES.length)
@@ -48,19 +49,22 @@ describe('Layout: el menú muestra solo lo que el rol puede usar', () => {
   it('tesorería no ve Usuarios, CLABE, Avisos, Amenidades, Seguridad ni Dudas', () => {
     mockUser('tesorero')
     renderEn('/collection')
-    expect(menu()).toEqual(['Dashboard', 'Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Gastos', 'Exportar', 'Reservaciones', 'Reglamento'])
+    expect(menu()).toEqual([
+      'Dashboard', 'Viviendas', 'Cuotas', 'Cobranza', 'Comprobantes', 'Acuerdos', 'Gastos', 'Caja chica/grande', 'Exportar',
+      'Reservaciones', 'Reglamento',
+    ])
   })
 
   it('el comité aprobador ve solo lo suyo', () => {
     mockUser('comite_aprobador')
     renderEn('/payment-agreements')
-    expect(menu()).toEqual(['Acuerdos', 'Gastos', 'Reservaciones', 'Seguridad', 'Dudas', 'Reglamento'])
+    expect(menu()).toEqual(['Acuerdos', 'Gastos', 'Caja chica/grande', 'Reservaciones', 'Seguridad', 'Dudas', 'Reglamento'])
   })
 
   it('el comité de solo lectura no ve Reservaciones', () => {
     mockUser('comite_lectura')
     renderEn('/payment-agreements')
-    expect(menu()).toEqual(['Acuerdos', 'Gastos', 'Seguridad', 'Dudas', 'Reglamento'])
+    expect(menu()).toEqual(['Acuerdos', 'Gastos', 'Caja chica/grande', 'Seguridad', 'Dudas', 'Reglamento'])
   })
 
   it('escribir a mano la dirección de una sección ajena lleva al inicio del rol, sin mostrar su contenido', () => {
@@ -117,7 +121,9 @@ describe('Layout: el nombre y el logo del condominio también se aplican a la pe
 
     renderEn('/properties')
 
-    await screen.findByText('Residencial Las Torres')
+    // El nombre del condominio aparece tanto en la barra lateral como en la
+    // barra superior móvil: con findAllByText basta esperar a que cargue.
+    await screen.findAllByText('Residencial Las Torres')
     expect(document.title).toBe('Residencial Las Torres — Vivecom')
     expect(favicon()).toBe('/favicon.svg') // sin logo, se queda el de Vivecom
   })
@@ -128,7 +134,7 @@ describe('Layout: el nombre y el logo del condominio también se aplican a la pe
 
     renderEn('/properties')
 
-    await screen.findByText('Residencial Las Torres')
+    await screen.findAllByText('Residencial Las Torres')
     expect(favicon()).toBe('blob:logo-del-condominio')
   })
 
@@ -137,7 +143,7 @@ describe('Layout: el nombre y el logo del condominio también se aplican a la pe
     vi.spyOn(tenantApi, 'fetchLogoObjectUrl').mockResolvedValue('blob:logo-del-condominio')
 
     const { unmount } = renderEn('/properties')
-    await screen.findByText('Residencial Las Torres')
+    await screen.findAllByText('Residencial Las Torres')
 
     unmount()
 

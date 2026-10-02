@@ -57,7 +57,8 @@ function money(valor: number): string {
 
 export function ExpensesBudgetPage() {
   const { user } = useAuth()
-  const isAdmin = user?.rol === 'admin'
+  // F0-12: registrar gastos y presupuestos pasó a ser de tesorería, no del administrador.
+  const esTesorero = user?.rol === 'tesorero'
 
   const [expenses, setExpenses] = useState<Expense[]>([])
   const [reporte, setReporte] = useState<BudgetComparison[]>([])
@@ -290,7 +291,7 @@ export function ExpensesBudgetPage() {
       )}
 
       <h3>Gastos</h3>
-      {isAdmin && (
+      {esTesorero && (
         <form onSubmit={handleCreateExpense} style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', margin: 'var(--space-3) 0' }}>
           <select
             aria-label="Categoría del gasto"
@@ -474,7 +475,7 @@ export function ExpensesBudgetPage() {
       )}
 
       <h3>Presupuesto vs. real</h3>
-      {isAdmin && (
+      {esTesorero && (
         <form onSubmit={handleCreateBudget} style={{ display: 'flex', gap: 'var(--space-2)', flexWrap: 'wrap', margin: 'var(--space-3) 0' }}>
           <input
             placeholder="Categoría del presupuesto"

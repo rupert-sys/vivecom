@@ -31,6 +31,7 @@ def _vivienda(client, nombre="Casa 1") -> str:
 
 def _con_cuota_vencida(client, *nombres) -> list[str]:
     ids = [_vivienda(client, n) for n in nombres]
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 750, "periodicidad": "mensual", "activa_desde": "2020-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2020-01-01"})
     return ids
@@ -101,6 +102,7 @@ def _gasto(**extra):
 
 def test_gasto_extraordinario_sobre_el_umbral_requiere_asamblea(client):
     client.patch("/tenant/reglamento", json={"gasto_umbral_asamblea": 10000})
+    _como("tesorero")  # F0-12: gastos son de tesorería, no del administrador
     respuesta = client.post("/expenses", json=_gasto(tipo="extraordinario", cotizaciones=_COTIZACIONES))
     assert respuesta.status_code == 422
     assert "asamblea" in respuesta.json()["detail"]
@@ -108,6 +110,7 @@ def test_gasto_extraordinario_sobre_el_umbral_requiere_asamblea(client):
 
 def test_gasto_sobre_el_umbral_requiere_tres_cotizaciones_distintas(client):
     client.patch("/tenant/reglamento", json={"gasto_umbral_asamblea": 10000})
+    _como("tesorero")
     dos = client.post(
         "/expenses", json=_gasto(tipo="programado", aprobado_en_asamblea=True, cotizaciones=_COTIZACIONES[:2])
     )
@@ -122,6 +125,7 @@ def test_gasto_sobre_el_umbral_requiere_tres_cotizaciones_distintas(client):
 
 def test_gasto_completo_se_registra_con_su_sustento(client):
     client.patch("/tenant/reglamento", json={"gasto_umbral_asamblea": 10000})
+    _como("tesorero")
     respuesta = client.post(
         "/expenses",
         json=_gasto(
@@ -137,17 +141,20 @@ def test_gasto_completo_se_registra_con_su_sustento(client):
 
 def test_gasto_operativo_o_bajo_el_umbral_no_pide_asamblea(client):
     client.patch("/tenant/reglamento", json={"gasto_umbral_asamblea": 10000})
+    _como("tesorero")
     assert client.post("/expenses", json=_gasto(monto=50000)).status_code == 201  # operativo
     assert client.post("/expenses", json=_gasto(monto=9000, tipo="programado")).status_code == 201
 
 
 def test_sin_umbral_configurado_no_se_exige_nada(client):
+    _como("tesorero")
     assert client.post("/expenses", json=_gasto(tipo="extraordinario")).status_code == 201
 
 
 def test_resumen_financiero_da_ingresos_gastos_y_saldo(client):
     client.patch("/tenant/reglamento", json={"acepta_pago_efectivo": True})
     prop = _vivienda(client)
+    _como("tesorero")  # F0-12: cuotas, cargos y gastos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 750, "periodicidad": "mensual", "activa_desde": "2026-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
     client.post("/payments/manual", json={"property_id": prop, "monto": 750})
@@ -165,11 +172,13 @@ def test_resumen_financiero_da_ingresos_gastos_y_saldo(client):
 
 
 def test_resumen_con_mas_gastos_que_ingresos_da_saldo_en_contra(client):
+    _como("tesorero")
     client.post("/expenses", json=_gasto(monto=500))
     assert client.get("/expenses/summary").json()["saldo"] == -500.0
 
 
 def test_resumen_agrupa_los_gastos_por_mes_en_orden_cronologico(client):
+    _como("tesorero")
     client.post("/expenses", json=_gasto(monto=100, fecha="2026-09-05"))
     client.post("/expenses", json=_gasto(monto=50, fecha="2026-09-20"))  # mismo mes, se suma
     client.post("/expenses", json=_gasto(monto=300, fecha="2026-01-10"))  # mes distinto, más viejo
@@ -183,6 +192,7 @@ def test_resumen_agrupa_los_gastos_por_mes_en_orden_cronologico(client):
 
 
 def test_resumen_respeta_el_rango_de_fechas(client):
+    _como("tesorero")
     client.post("/expenses", json=_gasto(monto=100, fecha="2026-01-10"))
     client.post("/expenses", json=_gasto(monto=300, fecha="2026-06-10"))
     assert client.get("/expenses/summary", params={"desde": "2026-06-01"}).json()["gastos"] == 300.0
@@ -283,6 +293,7 @@ def test_una_incidencia_rechaza_tipo_invalido_o_vivienda_inexistente(client):
 def test_el_estatus_de_cobranza_separa_morosos_pendientes_y_al_corriente(client):
     client.patch("/tenant/reglamento", json={"acepta_pago_efectivo": True})
     moroso, pagada, sin_cargos = (_vivienda(client, n) for n in ("Casa 1", "Casa 2", "Casa 3"))
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 750, "periodicidad": "mensual", "activa_desde": "2020-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2020-01-01"})
     # una vivienda futura queda con cargo dentro de plazo (mes siguiente)

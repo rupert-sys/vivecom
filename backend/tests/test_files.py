@@ -92,9 +92,9 @@ def test_quien_puede_subir_cada_tipo_de_archivo(client):
     assert _subir(client, kind="gasto").status_code == 403
     assert _subir(client, kind="incidencia").status_code == 403
 
-    _como("tesorero")
-    assert _subir(client, kind="gasto").status_code == 403  # solo el administrador registra gastos
     _como("admin")
+    assert _subir(client, kind="gasto").status_code == 403  # F0-12: ya no el administrador, ahora solo tesorería
+    _como("tesorero")
     assert _subir(client, kind="gasto").status_code == 201
     _como("guardia")
     assert _subir(client, kind="incidencia").status_code == 201
@@ -105,7 +105,7 @@ def test_quien_puede_subir_cada_tipo_de_archivo(client):
 
 
 def test_un_enlace_firmado_entrega_el_archivo_sin_sesion_y_con_cabeceras_seguras(client):
-    _como("admin")
+    _como("tesorero")
     archivo = _subir(client, PDF, "Factura año.pdf", kind="gasto").json()
     enlace = client.get(f"/files/{archivo['id']}/link").json()
 
@@ -121,6 +121,7 @@ def test_un_enlace_firmado_entrega_el_archivo_sin_sesion_y_con_cabeceras_seguras
 
 
 def test_un_enlace_vencido_o_alterado_se_rechaza(client, monkeypatch):
+    _como("tesorero")
     archivo = _subir(client, kind="gasto").json()
     fid = uuid.UUID(archivo["id"])
 
@@ -153,7 +154,7 @@ def test_un_token_de_sesion_no_sirve_como_enlace_de_archivo_ni_al_reves(client):
 
 
 def test_quien_puede_pedir_el_enlace_de_cada_archivo(client):
-    admin = _como("admin")
+    tesorero = _como("tesorero")
     gasto = _subir(client, kind="gasto").json()
     pago_ajeno = _como("residente", property_id=str(uuid.uuid4()))
     pago = _subir(client, kind="pago").json()
@@ -168,7 +169,7 @@ def test_quien_puede_pedir_el_enlace_de_cada_archivo(client):
 
     _como("tesorero")
     assert client.get(f"/files/{pago['id']}/link").status_code == 200  # tesorería revisa pagos
-    assert admin
+    assert tesorero
     assert otro and client.get(f"/files/{uuid.uuid4()}/link").status_code == 404
 
 

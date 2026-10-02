@@ -42,6 +42,21 @@ def _deposito(referencia="0000001", clave="STP-001", monto=1500.00):
     )
 
 
+def _como(rol: str) -> None:
+    import uuid
+
+    from app.api.deps import get_current_user
+    from app.main import app
+    from app.schemas.auth import CurrentUser
+
+    tenant_id = app.dependency_overrides[get_current_user]().tenant_id
+
+    def override():
+        return CurrentUser(user_id=str(uuid.uuid4()), tenant_id=tenant_id, schema_name="test", rol=rol, property_id=None)
+
+    app.dependency_overrides[get_current_user] = override
+
+
 def _leer_xlsx(response) -> openpyxl.Workbook:
     assert response.status_code == 200
     assert response.headers["content-type"] == "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
@@ -51,6 +66,7 @@ def _leer_xlsx(response) -> openpyxl.Workbook:
 @pytest.mark.asyncio
 async def test_export_account_statements_includes_charges_and_payments(client, deposit_env):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 
@@ -74,6 +90,7 @@ async def test_export_account_statements_includes_charges_and_payments(client, d
 
 
 def test_export_expenses_respects_filters(client):
+    _como("tesorero")  # F0-12: gastos son de tesorería, no del administrador
     client.post(
         "/expenses",
         json={
@@ -98,6 +115,7 @@ def test_export_expenses_respects_filters(client):
 
 
 def test_export_budget_report_shows_planned_vs_actual(client):
+    _como("tesorero")  # F0-12: presupuestos y gastos son de tesorería, no del administrador
     client.post(
         "/budgets",
         json={
@@ -129,6 +147,7 @@ def test_export_endpoints_default_when_no_data(client):
 @pytest.mark.asyncio
 async def test_export_accounting_entries_includes_income_and_expenses(client, deposit_env):
     client.post("/properties", json={"identificador": "Casa 1"})
+    _como("tesorero")  # F0-12: cuotas, cargos y gastos son de tesorería, no del administrador
     client.post("/fees", json={"monto": 1500.00, "periodicidad": "mensual", "activa_desde": "2026-09-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
 

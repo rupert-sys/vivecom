@@ -1,4 +1,4 @@
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 import { beforeEach, describe, expect, it, vi } from 'vitest'
@@ -52,14 +52,14 @@ describe('FeesPage', () => {
       </MemoryRouter>,
     )
 
-    expect(await screen.findByText('$1500.00')).toBeInTheDocument()
-    expect(screen.getByText('Mensual')).toBeInTheDocument()
+    const fila = (await screen.findByText('$1500.00')).closest('tr')!
+    expect(within(fila).getByText('Mensual')).toBeInTheDocument()
     expect(screen.getByText('10%')).toBeInTheDocument()
     expect(screen.getAllByText('6').length).toBeGreaterThan(0)
   })
 
-  it('no muestra el formulario de alta ni el botón de editar si el rol no es admin', async () => {
-    mockUser('tesorero')
+  it('no muestra el formulario de alta ni el botón de editar si el rol no es tesorero', async () => {
+    mockUser('admin')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
     vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
 
@@ -74,8 +74,8 @@ describe('FeesPage', () => {
     expect(screen.queryByRole('button', { name: /editar/i })).not.toBeInTheDocument()
   })
 
-  it('un admin puede crear una cuota nueva', async () => {
-    mockUser('admin')
+  it('tesorería puede crear una cuota nueva', async () => {
+    mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([])
     vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const createSpy = vi.spyOn(feesApi, 'createFee').mockResolvedValue(fee)
@@ -97,8 +97,8 @@ describe('FeesPage', () => {
     )
   })
 
-  it('un admin puede editar una cuota existente', async () => {
-    mockUser('admin')
+  it('tesorería puede editar una cuota existente', async () => {
+    mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
     vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const updateSpy = vi.spyOn(feesApi, 'updateFee').mockResolvedValue(fee)
@@ -171,8 +171,8 @@ describe('FeesPage', () => {
     expect(screen.queryByRole('link', { name: /cambiar en reglamento/i })).not.toBeInTheDocument()
   })
 
-  it('un admin puede eliminar una cuota, con confirmación', async () => {
-    mockUser('admin')
+  it('tesorería puede eliminar una cuota, con confirmación', async () => {
+    mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
     vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const deleteSpy = vi.spyOn(feesApi, 'deleteFee').mockResolvedValue()
@@ -195,7 +195,7 @@ describe('FeesPage', () => {
   })
 
   it('si la cuota ya generó cargos, muestra el motivo del backend en vez de eliminarla', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([fee])
     vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const { ApiError } = await import('../api/client')
@@ -217,7 +217,7 @@ describe('FeesPage', () => {
   })
 
   it('un pago único pide el periodo al que aplica, no una fecha de "activa desde"', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([])
     vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const createSpy = vi.spyOn(feesApi, 'createFee').mockResolvedValue({ ...fee, periodicidad: 'unica' })
@@ -257,7 +257,7 @@ describe('FeesPage', () => {
   })
 
   it('se puede elegir y crear una cuota con periodicidad semanal', async () => {
-    mockUser('admin')
+    mockUser('tesorero')
     vi.spyOn(feesApi, 'listFees').mockResolvedValue([])
     vi.spyOn(reglamentoApi, 'getReglamento').mockResolvedValue(rules)
     const createSpy = vi.spyOn(feesApi, 'createFee').mockResolvedValue({ ...fee, periodicidad: 'semanal' })

@@ -25,6 +25,7 @@ def _como(rol: str, property_id: str | None = None):
 
 def _condominio_con_un_cargo(client, monto=750.0):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como("tesorero")  # F0-12: cuotas y cargos son de tesorería, no del administrador
     client.post("/fees", json={"monto": monto, "periodicidad": "mensual", "activa_desde": "2026-01-01"})
     client.post("/fees/generate-charges", params={"periodo": "2026-09-01"})
     return prop

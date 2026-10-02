@@ -22,7 +22,7 @@ function acuerdo(extra: Partial<PaymentAgreement> = {}): PaymentAgreement {
     causa: 'Perdí mi empleo en agosto y regularizo mis ingresos.',
     propuesta_pagos: 3,
     propuesta_primer_pago: '2026-10-05',
-    capturado_por_admin: false,
+    capturado_por_staff: false,
     created_at: '2026-09-18T15:00:00',
     decidido_en: null,
     motivo_rechazo: null,
@@ -245,13 +245,13 @@ describe('PaymentAgreementsPage', () => {
     expect(screen.getByText('Deuda acordada $900.00')).toBeInTheDocument()
   })
 
-  it('el administrador captura el escrito de un vecino con su documento', async () => {
-    mockUser('admin')
+  it('tesorería captura el escrito de un vecino con su documento', async () => {
+    mockUser('tesorero')
     mockApis([])
     const subir = vi
       .spyOn(filesApi, 'uploadFile')
       .mockResolvedValue({ id: 'arch-1', nombre_original: 'carta.pdf', content_type: 'application/pdf', size: 10, ref: '/files/arch-1' })
-    const solicitar = vi.spyOn(agreementsApi, 'requestPaymentAgreement').mockResolvedValue(acuerdo({ capturado_por_admin: true }))
+    const solicitar = vi.spyOn(agreementsApi, 'requestPaymentAgreement').mockResolvedValue(acuerdo({ capturado_por_staff: true }))
     const user = userEvent.setup({ delay: null })
 
     render(<PaymentAgreementsPage />)
@@ -274,8 +274,18 @@ describe('PaymentAgreementsPage', () => {
     })
   })
 
-  it('solo el administrador ve el formulario de captura', async () => {
+  it('solo tesorería ve el formulario de captura', async () => {
     mockUser('comite_aprobador')
+    mockApis([])
+
+    render(<PaymentAgreementsPage />)
+
+    await screen.findByText('No hay solicitudes por decidir.')
+    expect(screen.queryByText(/capturar la solicitud por escrito/i)).not.toBeInTheDocument()
+  })
+
+  it('el administrador ya no ve el formulario de captura (F0-12: ahora es de tesorería)', async () => {
+    mockUser('admin')
     mockApis([])
 
     render(<PaymentAgreementsPage />)

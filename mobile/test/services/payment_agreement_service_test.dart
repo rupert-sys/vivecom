@@ -8,7 +8,7 @@ import 'package:http/testing.dart';
 
 const _vigente = '''
 {"id": "a1", "property_id": "p1", "vivienda": "Casa 1", "estado": "vigente", "causa": "Perdí mi empleo en agosto.",
- "propuesta_pagos": 3, "propuesta_primer_pago": "2026-10-05", "capturado_por_admin": false, "created_at": "2026-09-18T15:00:00",
+ "propuesta_pagos": 3, "propuesta_primer_pago": "2026-10-05", "capturado_por_staff": false, "created_at": "2026-09-18T15:00:00",
  "decidido_en": "2026-09-19T10:00:00", "motivo_rechazo": null, "archivo_url": null, "vigente_desde": "2026-09-19T10:00:00",
  "calendario": [{"fecha": "2026-10-05", "monto": 250.0}, {"fecha": "2026-11-05", "monto": 250.0}, {"fecha": "2026-12-05", "monto": 250.0}],
  "congela_recargo": true, "deuda_inicial": 750.0, "abonado": 250.0, "pendiente_cubierto": 500.0,
