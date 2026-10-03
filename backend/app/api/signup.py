@@ -24,6 +24,8 @@ async def signup(payload: TenantSignupRequest, control_db: AsyncSession = Depend
     - Se crean de una vez las `cantidad_casas` viviendas ("Casa 1".."Casa N") y, por cada una, una cuenta de
       residente SIN ACTIVAR en casa<n>@<dominio> — el residente la reclama desde la app con sus propios datos
       (nombre, si es dueño o renta, teléfono y contraseña): POST /residents/activar.
+    - También se crea de una vez una cuenta utilizable de tesorería, vigilancia y vocero (misma contraseña
+      inicial que el admin) — ver provision_tenant_con_casas.
     - La CLABE se configura después, desde /clabe (PATCH /tenant/clabe) — el condominio no puede recibir SPEI
       hasta entonces, pero eso no bloquea nada del resto del panel.
 
@@ -34,11 +36,12 @@ async def signup(payload: TenantSignupRequest, control_db: AsyncSession = Depend
     """
     dominio = await generar_dominio_unico(control_db, payload.nombre_condominio)
 
-    tenant, emails_viviendas = await provision_tenant_con_casas(
+    tenant, emails_viviendas, emails_personal = await provision_tenant_con_casas(
         payload.nombre_condominio, payload.cantidad_casas, dominio, payload.nombre_admin, payload.telefono_admin,
     )
 
     return TenantSignupResponse(
         tenant_id=tenant.id, nombre=tenant.nombre, admin_email=f"administracion@{dominio}",
-        emails_viviendas=emails_viviendas,
+        emails_viviendas=emails_viviendas, email_tesorero=emails_personal["tesorero"],
+        email_guardia=emails_personal["guardia"], email_vocero=emails_personal["vocero"],
     )

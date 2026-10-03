@@ -28,6 +28,9 @@ const respuesta = {
   tenant_id: 't1',
   nombre: 'Residencial Las Fuentes',
   admin_email: 'administracion@lasfuentes.com.mx',
+  email_tesorero: 'tesoreria@lasfuentes.com.mx',
+  email_guardia: 'vigilancia@lasfuentes.com.mx',
+  email_vocero: 'vocero@lasfuentes.com.mx',
   emails_viviendas: ['casa1@lasfuentes.com.mx', 'casa2@lasfuentes.com.mx'],
 }
 
@@ -68,6 +71,9 @@ describe('SignupPage', () => {
       }),
     )
     expect(await screen.findByText('administracion@lasfuentes.com.mx')).toBeInTheDocument()
+    expect(screen.getByText('tesoreria@lasfuentes.com.mx')).toBeInTheDocument()
+    expect(screen.getByText('vigilancia@lasfuentes.com.mx')).toBeInTheDocument()
+    expect(screen.getByText('vocero@lasfuentes.com.mx')).toBeInTheDocument()
     expect(screen.getByText('casa1@lasfuentes.com.mx')).toBeInTheDocument()
     expect(screen.getByText('casa2@lasfuentes.com.mx')).toBeInTheDocument()
 

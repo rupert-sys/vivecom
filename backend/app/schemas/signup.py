@@ -18,6 +18,11 @@ class TenantSignupResponse(BaseModel):
     tenant_id: uuid.UUID
     nombre: str
     admin_email: str
+    # Una cuenta utilizable por puesto desde el día uno (F0-12): antes solo existía el admin, y tesorería,
+    # vigilancia y vocero no quedaban utilizables hasta que alguien los daba de alta a mano desde Usuarios.
+    email_tesorero: str
+    email_guardia: str
+    email_vocero: str
     # casa1@dominio, casa2@dominio... el panel se los muestra al admin recién registrado — es la única forma
     # que tiene de dárselos a sus residentes (no hay canal de correo, ver alcance: solo WhatsApp+SMS).
     emails_viviendas: list[str]

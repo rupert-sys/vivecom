@@ -158,6 +158,22 @@ export function SignupPage() {
               Contraseña inicial: el nombre del condominio (te la pedirá cambiar al entrar).
             </p>
             <div>
+              <p style={{ margin: '0 0 4px' }}>
+                También se crearon cuentas listas para usarse (misma contraseña inicial que el admin):
+              </p>
+              <ul style={{ margin: 0, paddingLeft: '1.2em' }}>
+                <li>
+                  Tesorería: <span className="mono">{resultado.email_tesorero}</span>
+                </li>
+                <li>
+                  Vigilancia: <span className="mono">{resultado.email_guardia}</span>
+                </li>
+                <li>
+                  Vocero: <span className="mono">{resultado.email_vocero}</span>
+                </li>
+              </ul>
+            </div>
+            <div>
               <p style={{ margin: '0 0 4px' }}>Accesos para cada vivienda (compártelos con tus residentes):</p>
               <ul style={{ margin: 0, paddingLeft: '1.2em', maxHeight: 180, overflowY: 'auto' }}>
                 {resultado.emails_viviendas.map((email) => (

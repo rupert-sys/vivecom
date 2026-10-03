@@ -251,13 +251,16 @@ async def crear_tenant(
     soporte) en vez de que el propio administrador lo haga desde el link público.
     """
     dominio = await generar_dominio_unico(control_db, payload.nombre_condominio)
-    tenant, emails_viviendas = await provision_tenant_con_casas(
+    tenant, emails_viviendas, emails_personal = await provision_tenant_con_casas(
         payload.nombre_condominio, payload.cantidad_casas, dominio, payload.nombre_admin, payload.telefono_admin,
     )
     return TenantCreateResponse(
         tenant_id=tenant.id,
         nombre=tenant.nombre,
         email_admin=f"administracion@{dominio}",
+        email_tesorero=emails_personal["tesorero"],
+        email_guardia=emails_personal["guardia"],
+        email_vocero=emails_personal["vocero"],
         emails_viviendas=emails_viviendas,
     )
 

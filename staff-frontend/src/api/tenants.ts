@@ -63,6 +63,9 @@ export interface TenantCreateResponse {
   tenant_id: string
   nombre: string
   email_admin: string
+  email_tesorero: string
+  email_guardia: string
+  email_vocero: string
   emails_viviendas: string[]
 }
 

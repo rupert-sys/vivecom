@@ -52,6 +52,18 @@ export function TenantCreatePage() {
           del condominio, y se le pedirá cambiarla al entrar.
         </p>
         <div className="card" style={{ padding: 'var(--space-4)' }}>
+          <h3 style={{ margin: 0, marginBottom: 'var(--space-2)' }}>Cuentas de personal (misma contraseña inicial)</h3>
+          <p style={{ margin: 0 }}>
+            Tesorería: <span className="mono">{resultado.email_tesorero}</span>
+          </p>
+          <p style={{ margin: 0 }}>
+            Vigilancia: <span className="mono">{resultado.email_guardia}</span>
+          </p>
+          <p style={{ margin: 0 }}>
+            Vocero: <span className="mono">{resultado.email_vocero}</span>
+          </p>
+        </div>
+        <div className="card" style={{ padding: 'var(--space-4)' }}>
           <h3 style={{ margin: 0, marginBottom: 'var(--space-2)' }}>Ya está listo para usarse</h3>
           <p style={{ margin: 0 }}>
             Panel del administrador:{' '}

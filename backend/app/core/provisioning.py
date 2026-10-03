@@ -123,7 +123,7 @@ async def provision_tenant(nombre: str, clabe_destino: str, admin_email: str, ad
 
 async def provision_tenant_con_casas(
     nombre_condominio: str, cantidad_casas: int, dominio: str, nombre_admin: str, telefono_admin: str,
-) -> tuple[Tenant, list[str]]:
+) -> tuple[Tenant, list[str], dict[str, str]]:
     """
     Landing de bienvenida (/signup): crea el condominio SIN CLABE (se configura después, desde /clabe — ver
     Tenant.clabe_destino), `cantidad_casas` viviendas ("Casa 1".."Casa N") y, por cada una, una cuenta de
@@ -134,8 +134,16 @@ async def provision_tenant_con_casas(
     debe_cambiar_password=True para que la cambie en cuanto entra. `dominio` ya viene resuelto y único
     (ver tenant_domain.generar_dominio_unico) — provisioning no vuelve a comprobarlo.
 
-    Regresa el tenant y la lista de emails de vivienda generados (casa1@dominio, casa2@dominio, ...) para que
-    el panel se los muestre al admin recién registrado: es la única forma que tiene de dárselos a sus residentes.
+    Además del admin, se crea de una vez UNA cuenta utilizable para cada puesto de personal que todo
+    condominio necesita desde el día uno (retro F0-12: "Tesorería es el único que debe modificar cuotas...",
+    y sin esto nadie podía cobrar, vigilar accesos ni publicar avisos hasta que el admin diera de alta a mano
+    cada rol desde Usuarios) — mismo patrón que el admin: contraseña inicial = nombre del condominio,
+    debe_cambiar_password=True. El admin (o tesorería) puede dar de alta cuentas adicionales de cualquier rol
+    después, desde el panel.
+
+    Regresa el tenant, la lista de emails de vivienda generados (casa1@dominio, casa2@dominio, ...) y el email
+    de cada cuenta de personal nueva ({"tesorero": ..., "guardia": ..., "vocero": ...}) para que el panel se
+    los muestre a quien da de alta el condominio: es la única forma que tiene de dárselos a cada responsable.
     """
     engine = create_async_engine(settings.database_url)
     tenant = await _crear_schema_y_tenant(engine, nombre_condominio, None)
@@ -145,6 +153,15 @@ async def provision_tenant_con_casas(
         password_hash=hash_password(nombre_condominio), rol=Rol.admin, debe_cambiar_password=True,
         nombre=nombre_admin, telefono=telefono_admin,
     )
+
+    emails_personal = {"tesorero": f"tesoreria@{dominio}", "guardia": f"vigilancia@{dominio}", "vocero": f"vocero@{dominio}"}
+    for rol_personal, email_personal in (
+        (Rol.tesorero, emails_personal["tesorero"]), (Rol.guardia, emails_personal["guardia"]), (Rol.vocero, emails_personal["vocero"]),
+    ):
+        await _insertar_cuenta(
+            engine, tenant.schema_name, tenant.id, email=email_personal, password_hash=hash_password(nombre_condominio),
+            rol=rol_personal, debe_cambiar_password=True,
+        )
 
     session_factory = async_sessionmaker(engine, expire_on_commit=False)
     emails_viviendas: list[str] = []
@@ -189,7 +206,8 @@ async def provision_tenant_con_casas(
     await engine.dispose()
     print(f"Tenant creado: id={tenant.id}, schema='{tenant.schema_name}', {cantidad_casas} vivienda(s).")
     print(f"Admin: administracion@{dominio} — contraseña inicial: el nombre del condominio (debe cambiarla al entrar).")
-    return tenant, emails_viviendas
+    print(f"Personal: {', '.join(emails_personal.values())} — misma contraseña inicial que el admin.")
+    return tenant, emails_viviendas, emails_personal
 
 
 async def eliminar_tenant_permanentemente(control_db: AsyncSession, tenant: Tenant) -> None:
