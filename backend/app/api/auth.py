@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.core.config import settings
 from app.core.database import control_session, tenant_session
 from app.core.security import create_access_token, hash_password, verify_password
 from app.models.tenant import Tenant
@@ -69,5 +70,6 @@ async def login(payload: LoginRequest, control_db: AsyncSession = Depends(contro
             rol=user.rol.value,
             property_id=str(user.property_id) if user.property_id else None,
             debe_cambiar_password=user.debe_cambiar_password,
+            expire_minutes=settings.remembered_session_expire_minutes if payload.recordar else None,
         )
         return TokenResponse(access_token=token)

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/auth_service.dart';
 import 'package:flutter_test/flutter_test.dart';
@@ -21,6 +23,28 @@ void main() {
       await auth.login('residente@example.com', 'secret123');
 
       expect(await auth.obtenerToken(), 'abc.def.ghi');
+    });
+
+    test('login sin "recordar" manda recordar:false (sesión normal)', () async {
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['recordar'], false);
+        return http.Response('{"access_token": "abc.def.ghi", "token_type": "bearer"}', 200);
+      });
+      final auth = AuthService(api: ApiClient(client: mockClient));
+
+      await auth.login('residente@example.com', 'secret123');
+    });
+
+    test('login con recordar:true manda recordar:true (F0-12: sesión larga sin guardar la contraseña)', () async {
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        expect(body['recordar'], true);
+        return http.Response('{"access_token": "abc.def.ghi", "token_type": "bearer"}', 200);
+      });
+      final auth = AuthService(api: ApiClient(client: mockClient));
+
+      await auth.login('residente@example.com', 'secret123', recordar: true);
     });
 
     test('login propaga el mensaje de error del backend si las credenciales son inválidas', () async {

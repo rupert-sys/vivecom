@@ -30,6 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   String? _error;
   bool _cargando = false;
+  bool _recordar = false;
   late final BiometricAuthService _biometricService;
 
   @override
@@ -44,7 +45,9 @@ class _LoginScreenState extends State<LoginScreen> {
       _error = null;
     });
     try {
-      await widget.authService.login(_emailController.text.trim(), _passwordController.text);
+      await widget.authService.login(
+        _emailController.text.trim(), _passwordController.text, recordar: _recordar,
+      );
       // _cargando se apaga AQUÍ, no en un finally al final: _ofrecerBiometricos() espera a que el residente
       // conteste un diálogo, y mientras tanto un spinner detrás no tiene sentido — además, gira sin parar
       // (nunca "se asienta"), así que dejarlo prendido colgaría cualquier pumpAndSettle() de las pruebas.
@@ -125,7 +128,15 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: const InputDecoration(labelText: 'Contraseña'),
                     obscureText: true,
                   ),
-                  const SizedBox(height: 24),
+                  CheckboxListTile(
+                    key: const Key('recordar_checkbox'),
+                    value: _recordar,
+                    onChanged: (valor) => setState(() => _recordar = valor ?? false),
+                    title: const Text('Recordarme'),
+                    controlAffinity: ListTileControlAffinity.leading,
+                    contentPadding: EdgeInsets.zero,
+                  ),
+                  const SizedBox(height: 12),
                   _cargando
                       ? const Center(child: CircularProgressIndicator())
                       : ElevatedButton(onPressed: _iniciarSesion, child: const Text('Entrar')),

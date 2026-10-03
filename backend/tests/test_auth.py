@@ -217,6 +217,36 @@ def test_login_a_un_tenant_desactivado_es_rechazado(client):
     assert "suspendido" in response.json()["detail"]
 
 
+def test_login_con_recordar_extiende_la_duracion_de_la_sesion(client):
+    """
+    F0-12: checkbox "Recordarme" en el login — no guarda la contraseña en ningún lado, solo pide
+    una sesión mucho más larga (ver core/config.remembered_session_expire_minutes).
+    """
+    import base64
+    import json
+
+    from app.core.config import settings
+
+    asyncio.run(_seed_login(client))
+    fake_tenant_session = _preparar_login(client)
+
+    def _duracion_en_minutos(token: str) -> float:
+        payload_b64 = token.split(".")[1]
+        payload_b64 += "=" * (-len(payload_b64) % 4)
+        payload = json.loads(base64.urlsafe_b64decode(payload_b64))
+        return (payload["exp"] - payload["iat"]) / 60
+
+    with patch.object(auth_module, "tenant_session", fake_tenant_session):
+        normal = client.post("/auth/login", json={"email": TEST_EMAIL, "password": TEST_PASSWORD})
+        recordado = client.post(
+            "/auth/login", json={"email": TEST_EMAIL, "password": TEST_PASSWORD, "recordar": True}
+        )
+
+    assert normal.status_code == 200 and recordado.status_code == 200
+    assert _duracion_en_minutos(normal.json()["access_token"]) == settings.access_token_expire_minutes
+    assert _duracion_en_minutos(recordado.json()["access_token"]) == settings.remembered_session_expire_minutes
+
+
 def test_a_nonexistent_email_still_runs_a_bcrypt_verification(client):
     """
     F2-21: antes, un email inexistente respondía 401 de inmediato SIN correr

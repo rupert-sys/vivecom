@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../services/amenity_service.dart';
 import '../services/announcement_service.dart';
+import '../services/cash_movement_service.dart';
 import '../services/clabe_service.dart';
 import '../services/expense_service.dart';
 import '../services/fee_service.dart';
@@ -17,6 +18,7 @@ import '../services/tenant_service.dart';
 import '../services/visit_service.dart';
 import 'clabe_screen.dart';
 import 'community_screen.dart';
+import 'dashboard_screen.dart';
 import 'expenses_screen.dart';
 import 'payment_history_screen.dart';
 import 'payment_screen.dart';
@@ -37,6 +39,7 @@ class ResidenteHomeScreen extends StatefulWidget {
   final FeeService feeService;
   final ReceiptService receiptService;
   final ExpenseService expenseService;
+  final CashMovementService cashMovementService;
   final AnnouncementService announcementService;
   final PollService pollService;
   final LostFoundService lostFoundService;
@@ -58,6 +61,7 @@ class ResidenteHomeScreen extends StatefulWidget {
     required this.feeService,
     required this.receiptService,
     required this.expenseService,
+    required this.cashMovementService,
     required this.announcementService,
     required this.pollService,
     required this.lostFoundService,
@@ -110,13 +114,23 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
   Widget build(BuildContext context) {
     final pantallas = [
       StatementScreen(
+        key: const PageStorageKey('estado_de_cuenta'),
         propertyId: widget.propertyId,
         token: widget.token,
         statementService: widget.statementService,
         tenantService: widget.tenantService,
         onLogout: widget.onLogout,
       ),
+      DashboardScreen(
+        key: const PageStorageKey('dashboard'),
+        propertyId: widget.propertyId,
+        token: widget.token,
+        statementService: widget.statementService,
+        expenseService: widget.expenseService,
+        cashMovementService: widget.cashMovementService,
+      ),
       PaymentScreen(
+        key: const PageStorageKey('pago'),
         propertyId: widget.propertyId,
         token: widget.token,
         statementService: widget.statementService,
@@ -127,13 +141,15 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         agreementService: widget.agreementService,
       ),
       PaymentHistoryScreen(
+        key: const PageStorageKey('historial'),
         propertyId: widget.propertyId,
         token: widget.token,
         statementService: widget.statementService,
         receiptService: widget.receiptService,
       ),
-      ExpensesScreen(token: widget.token, expenseService: widget.expenseService),
+      ExpensesScreen(key: const PageStorageKey('gastos'), token: widget.token, expenseService: widget.expenseService),
       CommunityScreen(
+        key: const PageStorageKey('comunidad'),
         token: widget.token,
         announcementService: widget.announcementService,
         pollService: widget.pollService,
@@ -150,7 +166,7 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
           if (n != _respuestasNuevas) setState(() => _respuestasNuevas = n);
         },
       ),
-      ClabeScreen(token: widget.token, clabeService: widget.clabeService),
+      ClabeScreen(key: const PageStorageKey('clabe'), token: widget.token, clabeService: widget.clabeService),
     ];
 
     return Scaffold(
@@ -164,6 +180,7 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         },
         destinations: [
           NavigationDestination(icon: Icon(Icons.account_balance_wallet), label: 'Estado de cuenta'),
+          NavigationDestination(icon: Icon(Icons.dashboard), label: 'Dashboard'),
           NavigationDestination(icon: Icon(Icons.payments), label: 'Pago'),
           NavigationDestination(icon: Icon(Icons.history), label: 'Historial'),
           NavigationDestination(icon: Icon(Icons.receipt_long), label: 'Gastos'),

@@ -8,6 +8,7 @@ import 'screens/residente_home_screen.dart';
 import 'services/amenity_service.dart';
 import 'services/announcement_service.dart';
 import 'services/auth_service.dart';
+import 'services/cash_movement_service.dart';
 import 'services/clabe_service.dart';
 import 'services/expense_service.dart';
 import 'services/fee_service.dart';
@@ -43,6 +44,7 @@ class _VivecomAppState extends State<VivecomApp> {
   final FeeService _feeService = FeeService();
   final ReceiptService _receiptService = ReceiptService();
   final ExpenseService _expenseService = ExpenseService();
+  final CashMovementService _cashMovementService = CashMovementService();
   final AnnouncementService _announcementService = AnnouncementService();
   final PollService _pollService = PollService();
   final LostFoundService _lostFoundService = LostFoundService();
@@ -147,6 +149,7 @@ class _VivecomAppState extends State<VivecomApp> {
       feeService: _feeService,
       receiptService: _receiptService,
       expenseService: _expenseService,
+      cashMovementService: _cashMovementService,
       announcementService: _announcementService,
       pollService: _pollService,
       lostFoundService: _lostFoundService,

@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 import 'package:app_residente/screens/login_screen.dart';
 import 'package:app_residente/services/api_client.dart';
 import 'package:app_residente/services/auth_service.dart';
@@ -63,6 +65,41 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(loginExitosoLlamado, isTrue);
+  });
+
+  testWidgets('sin marcar "Recordarme", el login manda recordar:false', (tester) async {
+    var recordarMandado = true; // valor imposible: si no se sobrescribe, la prueba falla de forma obvia
+    final mockClient = MockClient((request) async {
+      recordarMandado = (jsonDecode(request.body) as Map<String, dynamic>)['recordar'] as bool;
+      return http.Response('{"access_token": "abc.def.ghi", "token_type": "bearer"}', 200);
+    });
+    final auth = AuthService(api: ApiClient(client: mockClient));
+
+    await pumpLogin(tester, auth, () {});
+    await tester.enterText(find.byKey(const Key('email_field')), 'residente@example.com');
+    await tester.enterText(find.byKey(const Key('password_field')), 'secret123');
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Entrar'));
+    await tester.pumpAndSettle();
+
+    expect(recordarMandado, isFalse);
+  });
+
+  testWidgets('marcar "Recordarme" manda recordar:true al backend', (tester) async {
+    var recordarMandado = false;
+    final mockClient = MockClient((request) async {
+      recordarMandado = (jsonDecode(request.body) as Map<String, dynamic>)['recordar'] as bool;
+      return http.Response('{"access_token": "abc.def.ghi", "token_type": "bearer"}', 200);
+    });
+    final auth = AuthService(api: ApiClient(client: mockClient));
+
+    await pumpLogin(tester, auth, () {});
+    await tester.enterText(find.byKey(const Key('email_field')), 'residente@example.com');
+    await tester.enterText(find.byKey(const Key('password_field')), 'secret123');
+    await tester.tap(find.byKey(const Key('recordar_checkbox')));
+    await tester.tap(find.widgetWithText(ElevatedButton, 'Entrar'));
+    await tester.pumpAndSettle();
+
+    expect(recordarMandado, isTrue);
   });
 
   testWidgets('con biométricos disponibles, un login exitoso ofrece activarlos', (tester) async {

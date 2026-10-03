@@ -2,6 +2,7 @@ import 'package:app_residente/screens/residente_home_screen.dart';
 import 'package:app_residente/services/amenity_service.dart';
 import 'package:app_residente/services/announcement_service.dart';
 import 'package:app_residente/services/api_client.dart';
+import 'package:app_residente/services/cash_movement_service.dart';
 import 'package:app_residente/services/clabe_service.dart';
 import 'package:app_residente/services/expense_service.dart';
 import 'package:app_residente/services/fee_service.dart';
@@ -21,7 +22,7 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 void main() {
-  testWidgets('navega entre Estado de cuenta, Pago, Historial, Gastos, Comunidad y CLABE sin perder cada pantalla', (
+  testWidgets('navega entre Estado de cuenta, Dashboard, Pago, Historial, Gastos, Comunidad y CLABE sin perder cada pantalla', (
     tester,
   ) async {
     final mockClient = MockClient((request) async {
@@ -65,6 +66,15 @@ void main() {
       if (path == '/polls' || path == '/lost-found' || path == '/amenities' || path == '/reservations') {
         return http.Response('[]', 200);
       }
+      if (path == '/expenses/summary') {
+        return http.Response(
+          '{"ingresos": 5000.0, "gastos": 1200.0, "saldo": 3800.0, "por_cobrar": 0.0, "gastos_por_categoria": []}',
+          200,
+        );
+      }
+      if (path == '/cash-movements/balance') {
+        return http.Response('{"chica": 1500.0, "grande": 48000.0}', 200);
+      }
       return http.Response('not found', 404);
     });
 
@@ -80,6 +90,7 @@ void main() {
           feeService: FeeService(api: ApiClient(client: mockClient)),
           receiptService: ReceiptService(api: ApiClient(client: mockClient)),
           expenseService: ExpenseService(api: ApiClient(client: mockClient)),
+          cashMovementService: CashMovementService(api: ApiClient(client: mockClient)),
           announcementService: AnnouncementService(api: ApiClient(client: mockClient)),
           pollService: PollService(api: ApiClient(client: mockClient)),
           lostFoundService: LostFoundService(api: ApiClient(client: mockClient)),
@@ -97,6 +108,12 @@ void main() {
     expect(find.text('Casa 1'), findsOneWidget);
     expect(find.text('646180157012345678'), findsNothing);
 
+    await tester.tap(find.text('Dashboard'));
+    await tester.pumpAndSettle();
+    expect(find.byKey(const Key('dashboard_estado_de_cuenta')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard_resumen_condominio')), findsOneWidget);
+    expect(find.byKey(const Key('dashboard_caja')), findsOneWidget);
+
     await tester.tap(find.text('Pago'));
     await tester.pumpAndSettle();
 
@@ -109,6 +126,10 @@ void main() {
 
     await tester.tap(find.text('Gastos'));
     await tester.pumpAndSettle();
+
+    // La tarjeta de resumen financiero empuja la lista de gastos fuera del área
+    // de caché del ListView, así que hay que desplazarse para que se construya.
+    await tester.dragUntilVisible(find.text('Jardinería'), find.byType(ListView), const Offset(0, -300));
 
     expect(find.text('Jardinería'), findsOneWidget);
 
@@ -158,6 +179,7 @@ void main() {
           feeService: FeeService(api: api),
           receiptService: ReceiptService(api: api),
           expenseService: ExpenseService(api: api),
+          cashMovementService: CashMovementService(api: api),
           announcementService: AnnouncementService(api: api),
           pollService: PollService(api: api),
           lostFoundService: LostFoundService(api: api),
@@ -216,6 +238,7 @@ void main() {
           feeService: FeeService(api: api),
           receiptService: ReceiptService(api: api),
           expenseService: ExpenseService(api: api),
+          cashMovementService: CashMovementService(api: api),
           announcementService: AnnouncementService(api: api),
           pollService: PollService(api: api),
           lostFoundService: LostFoundService(api: api),

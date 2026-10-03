@@ -17,6 +17,10 @@ class Settings(BaseSettings):
     jwt_secret: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 60 * 12  # 12 horas
+    # F0-12: "Recordarme" en el login — sin guardar la contraseña en ningún lado, solo una sesión
+    # mucho más larga (ver LoginRequest.recordar / create_access_token). 30 días, no indefinido:
+    # un dispositivo perdido con la sesión abierta sigue expirando solo en algún momento.
+    remembered_session_expire_minutes: int = 60 * 24 * 30  # 30 días
 
     # Cola/jobs periódicos
     redis_url: str = "redis://localhost:6379/0"

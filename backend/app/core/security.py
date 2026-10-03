@@ -19,7 +19,7 @@ def verify_password(plain: str, hashed: str) -> bool:
 
 def create_access_token(
     *, subject: str, tenant_id: str, schema_name: str, rol: str, property_id: str | None,
-    debe_cambiar_password: bool = False,
+    debe_cambiar_password: bool = False, expire_minutes: int | None = None,
 ) -> str:
     """
     El JWT lleva todo lo necesario para resolver el tenant y el rol sin volver a
@@ -31,6 +31,10 @@ def create_access_token(
     inicial del admin es el nombre del condominio, temporal por diseño) — es una
     señal solo de UI, igual que rol/property_id (ver decodeToken en el frontend):
     el backend nunca la usa para bloquear otros endpoints.
+
+    expire_minutes: None usa la duración normal (settings.access_token_expire_minutes,
+    12h) — "Recordarme" en el login (F0-12) manda una duración más larga en su lugar,
+    sin guardar la contraseña en ningún lado: solo cambia cuánto dura la sesión.
     """
     now = datetime.now(timezone.utc)
     payload: dict[str, Any] = {
@@ -41,7 +45,7 @@ def create_access_token(
         "property_id": property_id,
         "debe_cambiar_password": debe_cambiar_password,
         "iat": now,
-        "exp": now + timedelta(minutes=settings.access_token_expire_minutes),
+        "exp": now + timedelta(minutes=expire_minutes if expire_minutes is not None else settings.access_token_expire_minutes),
     }
     return jwt.encode(payload, settings.jwt_secret, algorithm=settings.jwt_algorithm)
 

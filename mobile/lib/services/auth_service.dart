@@ -49,8 +49,10 @@ class AuthService {
     return prefs.getString(_tokenKey);
   }
 
-  Future<void> login(String email, String password) async {
-    final data = await _api.post('/auth/login', {'email': email, 'password': password});
+  // recordar: checkbox "Recordarme" del login (F0-12) — no guarda la contraseña en ningún lado,
+  // solo le pide al backend un token de sesión mucho más largo (ver LoginRequest.recordar).
+  Future<void> login(String email, String password, {bool recordar = false}) async {
+    final data = await _api.post('/auth/login', {'email': email, 'password': password, 'recordar': recordar});
     await guardarToken(data['access_token'] as String);
   }
 
