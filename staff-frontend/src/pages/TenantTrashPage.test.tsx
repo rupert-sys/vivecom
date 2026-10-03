@@ -41,7 +41,9 @@ describe('TenantTrashPage', () => {
       .mockResolvedValueOnce([TENANT_EN_PAPELERA])
       .mockResolvedValueOnce([])
     const restaurar = vi.spyOn(tenantsApi, 'restaurarDePapelera').mockResolvedValue({
-      ...TENANT_EN_PAPELERA, en_papelera: false, papelera_en: null, activo: true, email_admin: null,
+      ...TENANT_EN_PAPELERA, en_papelera: false, papelera_en: null, activo: true,
+      email_admin: null, nombre_admin: null, telefono_admin: null,
+      ocupacion: { total: 40, propietario: 0, inquilino: 0, sin_residente: 40 },
     })
 
     render(

@@ -76,7 +76,10 @@ def _staff_headers(client) -> dict[str, str]:
     return {"Authorization": f"Bearer {response.json()['access_token']}"}
 
 
-async def _sembrar_tenant(client, *, nombre="Condominio de prueba", schema_name="test", activo=True) -> uuid.UUID:
+async def _sembrar_tenant(
+    client, *, nombre="Condominio de prueba", schema_name="test", activo=True,
+    nombre_admin: str | None = None, telefono_admin: str | None = None,
+) -> uuid.UUID:
     tenant_id = uuid.uuid4()
     async with client.db_session_factory() as db:
         db.add(
@@ -88,6 +91,7 @@ async def _sembrar_tenant(client, *, nombre="Condominio de prueba", schema_name=
         db.add(
             UserAccount(
                 email=f"administracion@{schema_name}.mx", password_hash=hash_password("lo-que-sea"), rol="admin",
+                nombre=nombre_admin, telefono=telefono_admin,
             )
         )
         await db.commit()
@@ -132,7 +136,158 @@ def test_obtener_tenant_incluye_el_email_del_admin(client):
         response = client.get(f"/staff/tenants/{tenant_id}", headers=headers)
 
     assert response.status_code == 200, response.json()
-    assert response.json()["email_admin"] == "administracion@arequipa.mx"
+    body = response.json()
+    assert body["email_admin"] == "administracion@arequipa.mx"
+    # Sin viviendas con residentes en el fixture: toda la casa cae en "sin_residente".
+    assert body["ocupacion"] == {"total": 1, "propietario": 0, "inquilino": 0, "sin_residente": 1}
+
+
+def test_obtener_tenant_incluye_nombre_y_telefono_del_admin(client):
+    """F0-12: antes solo se exponía el correo del admin — el nombre y el teléfono ya se guardaban al dar
+    de alta el condominio (ver provisioning.py) pero ningún endpoint los mostraba hasta ahora."""
+
+    async def _preparar():
+        await _crear_cuenta_staff(client)
+        return await _sembrar_tenant(
+            client, schema_name="arequipa", nombre_admin="Ruperto Villalobos", telefono_admin="5555555555",
+        )
+
+    tenant_id = asyncio.run(_preparar())
+    fake_tenant_session = _preparar_staff(client)
+    headers = _staff_headers(client)
+
+    with patch.object(staff_tenants_module, "tenant_session", fake_tenant_session):
+        response = client.get(f"/staff/tenants/{tenant_id}", headers=headers)
+
+    assert response.status_code == 200, response.json()
+    body = response.json()
+    assert body["nombre_admin"] == "Ruperto Villalobos"
+    assert body["telefono_admin"] == "5555555555"
+
+
+def test_cambiar_password_del_admin_permite_entrar_con_la_nueva(client):
+    import app.api.auth as auth_module
+    from app.api.deps import get_current_user
+
+    async def _preparar():
+        await _crear_cuenta_staff(client)
+        tenant_id = await _sembrar_tenant(client)
+        async with client.db_session_factory() as db:
+            db.add(UserLookup(email="administracion@test.mx", tenant_id=tenant_id, user_id=uuid.uuid4()))
+            await db.commit()
+        return tenant_id
+
+    tenant_id = asyncio.run(_preparar())
+    fake_tenant_session = _preparar_staff(client)
+    headers = _staff_headers(client)
+
+    with patch.object(staff_tenants_module, "tenant_session", fake_tenant_session):
+        response = client.post(
+            f"/staff/tenants/{tenant_id}/admin/password", json={"password": "la-nueva-contrasena"}, headers=headers,
+        )
+    assert response.status_code == 204, response.text
+
+    del app.dependency_overrides[get_current_user]
+    with patch.object(auth_module, "tenant_session", fake_tenant_session):
+        login_viejo = client.post("/auth/login", json={"email": "administracion@test.mx", "password": "lo-que-sea"})
+        assert login_viejo.status_code == 401
+
+        login_nuevo = client.post(
+            "/auth/login", json={"email": "administracion@test.mx", "password": "la-nueva-contrasena"}
+        )
+    assert login_nuevo.status_code == 200, login_nuevo.json()
+
+
+def test_cambiar_password_del_admin_404_si_el_tenant_no_tiene_cuenta_admin(client):
+    async def _preparar():
+        await _crear_cuenta_staff(client)
+        tenant_id = uuid.uuid4()
+        async with client.db_session_factory() as db:
+            db.add(Tenant(id=tenant_id, nombre="Sin admin", precio_por_vivienda=25.00, schema_name="sinadmin"))
+            await db.commit()
+        return tenant_id
+
+    tenant_id = asyncio.run(_preparar())
+    fake_tenant_session = _preparar_staff(client)
+    headers = _staff_headers(client)
+
+    with patch.object(staff_tenants_module, "tenant_session", fake_tenant_session):
+        response = client.post(
+            f"/staff/tenants/{tenant_id}/admin/password", json={"password": "la-nueva-contrasena"}, headers=headers,
+        )
+    assert response.status_code == 404
+
+
+def test_registrar_y_listar_pagos_de_un_tenant(client):
+    """Historial de pagos del condominio A Vivecom (no de residentes al condominio) — F0-12."""
+
+    async def _preparar():
+        await _crear_cuenta_staff(client)
+        return await _sembrar_tenant(client)
+
+    tenant_id = asyncio.run(_preparar())
+    fake_tenant_session = _preparar_staff(client)
+    headers = _staff_headers(client)
+
+    with patch.object(staff_tenants_module, "tenant_session", fake_tenant_session):
+        creado = client.post(
+            f"/staff/tenants/{tenant_id}/payments",
+            data={"fecha": "2026-09-01", "monto": "1500.00", "tipo_pago": "transferencia", "notas": "Septiembre"},
+            headers=headers,
+        )
+        assert creado.status_code == 201, creado.json()
+        body = creado.json()
+        assert body["tenant_id"] == str(tenant_id)
+        assert body["monto"] == 1500.00
+        assert body["tipo_pago"] == "transferencia"
+        assert body["tiene_recibo"] is False
+
+        listado = client.get(f"/staff/tenants/{tenant_id}/payments", headers=headers)
+        assert listado.status_code == 200, listado.json()
+        assert len(listado.json()) == 1
+        assert listado.json()[0]["id"] == body["id"]
+
+
+def test_registrar_pago_con_recibo_y_descargarlo(client):
+    async def _preparar():
+        await _crear_cuenta_staff(client)
+        return await _sembrar_tenant(client)
+
+    tenant_id = asyncio.run(_preparar())
+    fake_tenant_session = _preparar_staff(client)
+    headers = _staff_headers(client)
+
+    # Mismos bytes mínimos de un PNG real que ya usa el resto del proyecto para probar subidas de archivos
+    # (ver test_files.py/test_comprobantes.py) — el backend detecta el tipo por los bytes, no por el nombre.
+    png = (
+        b"\x89PNG\r\n\x1a\n\x00\x00\x00\rIHDR\x00\x00\x00\x01\x00\x00\x00\x01\x08\x06\x00\x00\x00\x1f\x15\xc4\x89"
+        b"\x00\x00\x00\nIDATx\x9cc\x00\x01\x00\x00\x05\x00\x01\r\n\x2d\xb4\x00\x00\x00\x00IEND\xaeB`\x82"
+    )
+
+    with patch.object(staff_tenants_module, "tenant_session", fake_tenant_session):
+        creado = client.post(
+            f"/staff/tenants/{tenant_id}/payments",
+            data={"fecha": "2026-09-01", "monto": "1500.00", "tipo_pago": "efectivo"},
+            files={"recibo": ("recibo.png", png, "image/png")},
+            headers=headers,
+        )
+        assert creado.status_code == 201, creado.json()
+        body = creado.json()
+        assert body["tiene_recibo"] is True
+
+        descargado = client.get(f"/staff/tenants/{tenant_id}/payments/{body['id']}/recibo", headers=headers)
+        assert descargado.status_code == 200
+        assert descargado.content == png
+        assert descargado.headers["content-type"] == "image/png"
+
+
+def test_pagos_de_tenant_inexistente_da_404(client):
+    asyncio.run(_crear_cuenta_staff(client))
+    _preparar_staff(client)
+    headers = _staff_headers(client)
+
+    response = client.get(f"/staff/tenants/{uuid.uuid4()}/payments", headers=headers)
+    assert response.status_code == 404
 
 
 def test_obtener_un_tenant_inexistente_da_404(client):

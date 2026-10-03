@@ -18,7 +18,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, create_async_engine
 
 from app.core.config import settings
 from app.core.database_base import ControlBase
-from app.models import clabe_change_log, tenant, user_lookup, vivecom_staff  # noqa: F401  (registran sus tablas)
+from app.models import clabe_change_log, tenant, tenant_payment, user_lookup, vivecom_staff  # noqa: F401  (registran sus tablas)
 
 
 async def init_control_schema(engine: AsyncEngine) -> None:

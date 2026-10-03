@@ -38,6 +38,40 @@ function extraerMensajeDeError(detail: unknown): string {
   return 'Ocurrió un error inesperado.'
 }
 
+// Subida de un archivo (multipart/form-data). No se fija Content-Type a mano: el navegador lo arma
+// con el boundary correcto. Mismo patrón que frontend/src/api/client.ts.
+export async function apiUpload<T>(path: string, formData: FormData): Promise<T> {
+  const headers: Record<string, string> = {}
+  const token = getToken()
+  if (token) headers.Authorization = `Bearer ${token}`
+
+  const response = await fetch(`${API_URL}${path}`, { method: 'POST', headers, body: formData })
+  const isJson = response.headers.get('content-type')?.includes('application/json')
+  const data = isJson ? await response.json() : undefined
+  if (!response.ok) {
+    throw new ApiError(response.status, extraerMensajeDeError(data?.detail))
+  }
+  return data as T
+}
+
+// Descarga binaria con el token de staff como credencial (el recibo no es un enlace firmado anónimo —
+// ver api/staff_tenants.py). Mismo patrón que frontend/src/api/downloadFile.ts.
+export async function apiDownload(path: string): Promise<Blob> {
+  const token = getToken()
+  const response = await fetch(`${API_URL}${path}`, {
+    headers: token ? { Authorization: `Bearer ${token}` } : {},
+  })
+  if (!response.ok) {
+    let message = 'No se pudo descargar el archivo.'
+    if (response.headers.get('content-type')?.includes('application/json')) {
+      const data = await response.json()
+      if (typeof data?.detail === 'string') message = data.detail
+    }
+    throw new ApiError(response.status, message)
+  }
+  return response.blob()
+}
+
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
   const { method = 'GET', body, auth = true } = options
 

@@ -1,12 +1,13 @@
 """Portal de administrador principal (staff Vivecom): listar/crear/editar condominios. Ver api/staff_tenants.py."""
 
 import uuid
-from datetime import datetime
+from datetime import date, datetime
 
 from pydantic import BaseModel, Field
 
 # Mismo tope que la landing pública (/signup, ver schemas/signup.py) — el equipo de Vivecom crea condominios
 # de 30 a 80 viviendas, no hay motivo para permitir más desde aquí que desde el propio /signup.
+from app.models.tenant_payment import TipoPagoTenant
 from app.schemas.signup import MAX_CASAS_POR_SIGNUP
 
 
@@ -21,8 +22,22 @@ class TenantListItem(BaseModel):
     papelera_en: datetime | None
 
 
+class OcupacionResumen(BaseModel):
+    """Igual al "resumen de ocupación" que ya ve un admin dentro de su propio panel (PropertiesPage),
+    reproducido aquí porque el staff no tiene sesión de tenant para llamar GET /properties directo."""
+
+    total: int
+    propietario: int
+    inquilino: int
+    sin_residente: int
+
+
 class TenantDetail(TenantListItem):
-    email_admin: str | None  # None si el tenant no tiene ningún UserAccount con rol=admin todavía
+    # Los tres son None si el tenant no tiene ningún UserAccount con rol=admin todavía.
+    email_admin: str | None
+    nombre_admin: str | None
+    telefono_admin: str | None
+    ocupacion: OcupacionResumen
 
 
 class TenantUpdate(BaseModel):
@@ -51,3 +66,20 @@ class TenantDeleteRequest(BaseModel):
     # La contraseña de quien está pidiendo el borrado (el staff logueado, NO la del condominio) — confirma
     # que de verdad es él antes de una acción irreversible. Ver api/staff_tenants.py.
     password: str = Field(min_length=1)
+
+
+class AdminPasswordChangeRequest(BaseModel):
+    # La contraseña NUEVA del administrador del condominio (no la del staff que la está fijando).
+    # Mismo mínimo que UserAccountUpdate.password (schemas/user_account.py).
+    password: str = Field(min_length=8)
+
+
+class TenantPaymentRead(BaseModel):
+    id: uuid.UUID
+    tenant_id: uuid.UUID
+    fecha: date
+    monto: float
+    tipo_pago: TipoPagoTenant
+    notas: str | None
+    tiene_recibo: bool
+    registrado_en: datetime

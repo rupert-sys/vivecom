@@ -1,4 +1,4 @@
-import { apiFetch } from './client'
+import { apiDownload, apiFetch, apiUpload } from './client'
 
 export interface TenantListItem {
   tenant_id: string
@@ -11,8 +11,39 @@ export interface TenantListItem {
   papelera_en: string | null
 }
 
+export interface OcupacionResumen {
+  total: number
+  propietario: number
+  inquilino: number
+  sin_residente: number
+}
+
 export interface TenantDetail extends TenantListItem {
   email_admin: string | null
+  nombre_admin: string | null
+  telefono_admin: string | null
+  ocupacion: OcupacionResumen
+}
+
+export type TipoPagoTenant = 'efectivo' | 'transferencia'
+
+export interface TenantPayment {
+  id: string
+  tenant_id: string
+  fecha: string
+  monto: number
+  tipo_pago: TipoPagoTenant
+  notas: string | null
+  tiene_recibo: boolean
+  registrado_en: string
+}
+
+export interface TenantPaymentInput {
+  fecha: string
+  monto: number
+  tipo_pago: TipoPagoTenant
+  notas?: string
+  recibo?: File
 }
 
 export interface TenantUpdate {
@@ -65,4 +96,26 @@ export function restaurarDePapelera(tenantId: string): Promise<TenantDetail> {
 
 export function borrarPermanentemente(tenantId: string, password: string): Promise<void> {
   return apiFetch<void>(`/staff/tenants/${tenantId}`, { method: 'DELETE', body: { password } })
+}
+
+export function cambiarPasswordDelAdmin(tenantId: string, password: string): Promise<void> {
+  return apiFetch<void>(`/staff/tenants/${tenantId}/admin/password`, { method: 'POST', body: { password } })
+}
+
+export function listarPagos(tenantId: string): Promise<TenantPayment[]> {
+  return apiFetch<TenantPayment[]>(`/staff/tenants/${tenantId}/payments`)
+}
+
+export function registrarPago(tenantId: string, datos: TenantPaymentInput): Promise<TenantPayment> {
+  const formData = new FormData()
+  formData.append('fecha', datos.fecha)
+  formData.append('monto', String(datos.monto))
+  formData.append('tipo_pago', datos.tipo_pago)
+  if (datos.notas) formData.append('notas', datos.notas)
+  if (datos.recibo) formData.append('recibo', datos.recibo)
+  return apiUpload<TenantPayment>(`/staff/tenants/${tenantId}/payments`, formData)
+}
+
+export function descargarRecibo(tenantId: string, paymentId: string): Promise<Blob> {
+  return apiDownload(`/staff/tenants/${tenantId}/payments/${paymentId}/recibo`)
 }

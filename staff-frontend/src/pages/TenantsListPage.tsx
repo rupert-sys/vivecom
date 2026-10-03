@@ -54,7 +54,7 @@ export function TenantsListPage() {
               <tr>
                 <th>Nombre</th>
                 <th>Viviendas</th>
-                <th>Cuota/vivienda</th>
+                <th>Cuota del condominio</th>
                 <th>Alta</th>
                 <th>Estado</th>
               </tr>
@@ -66,7 +66,7 @@ export function TenantsListPage() {
                     <Link to={`/${t.tenant_id}`}>{t.nombre}</Link>
                   </td>
                   <td className="mono">{t.viviendas}</td>
-                  <td className="mono">${t.precio_por_vivienda.toFixed(2)}</td>
+                  <td className="mono">${(t.precio_por_vivienda * t.viviendas).toFixed(2)}</td>
                   <td className="mono">{new Date(t.fecha_creacion).toLocaleDateString('es-MX')}</td>
                   <td>
                     <span className={t.activo ? 'chip chip-teal' : 'chip chip-brick'}>
