@@ -1,10 +1,13 @@
 import { useEffect, useState } from 'react'
 import { getCollectionsSummary } from '../api/reports'
 import { listProperties } from '../api/properties'
+import { getFinancialSummary } from '../api/expenses'
+import { getCashBalance } from '../api/cashMovements'
+import { listReservations } from '../api/reservations'
 import { ApiError } from '../api/client'
 import { useAuth } from '../auth/AuthContext'
 import { StatCard } from '../components/StatCard'
-import type { CollectionsSummary, Property, PropertyCollectionsSummary } from '../types'
+import type { CashBalance, CollectionsSummary, FinancialSummary, Property, PropertyCollectionsSummary, Reservation } from '../types'
 import { rolesDe } from '../permisos'
 
 const ROLES_CON_ACCESO = new Set<string>(rolesDe('/dashboard'))
@@ -38,12 +41,40 @@ function filasDelDetalle(porVivienda: PropertyCollectionsSummary[], filtro: Filt
   return porVivienda
 }
 
+// Último día de un mes "YYYY-MM", para pedirle a /expenses/summary el mismo rango que el selector de periodo.
+function finDeMes(mes: string): string {
+  const [anio, numeroMes] = mes.split('-').map(Number)
+  const ultimoDia = new Date(anio, numeroMes, 0).getDate()
+  return `${mes}-${String(ultimoDia).padStart(2, '0')}`
+}
+
+function fecha(iso: string): string {
+  return new Date(iso.endsWith('Z') ? iso : `${iso}Z`).toLocaleDateString('es-MX')
+}
+
+// Reservaciones de amenidades con cuota a cobrar, en el mismo periodo/vivienda que el resto del Dashboard —
+// mismo filtro (mes calendario de fecha_inicio, property_id exacto) que ya usa el backend para "Amenidades"
+// en collections_summary_service.py, para que el detalle cuadre con la tarjeta de ese concepto.
+function reservacionesDelPeriodo(reservations: Reservation[], mes: string, propertyId: string): Reservation[] {
+  let filtradas = reservations.filter((r) => r.cuota > 0)
+  if (mes) {
+    const [anio, numeroMes] = mes.split('-').map(Number)
+    const finExclusivo = numeroMes === 12 ? `${anio + 1}-01-01` : `${anio}-${String(numeroMes + 1).padStart(2, '0')}-01`
+    filtradas = filtradas.filter((r) => r.fecha_inicio >= `${mes}-01` && r.fecha_inicio < finExclusivo)
+  }
+  if (propertyId) filtradas = filtradas.filter((r) => r.property_id === propertyId)
+  return filtradas
+}
+
 export function DashboardPage() {
   const { user } = useAuth()
   const tieneAcceso = user !== null && ROLES_CON_ACCESO.has(user.rol)
 
   const [properties, setProperties] = useState<Property[]>([])
   const [summary, setSummary] = useState<CollectionsSummary | null>(null)
+  const [financial, setFinancial] = useState<FinancialSummary | null>(null)
+  const [cashBalance, setCashBalance] = useState<CashBalance | null>(null)
+  const [reservations, setReservations] = useState<Reservation[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -57,12 +88,19 @@ export function DashboardPage() {
   async function reload() {
     setLoading(true)
     try {
-      const [propertiesResult, summaryResult] = await Promise.all([
+      const [propertiesResult, summaryResult, financialResult, cashBalanceResult, reservationsResult] = await Promise.all([
         listProperties(),
         getCollectionsSummary({ periodo: mes ? `${mes}-01` : undefined, propertyId: propertyId || undefined }),
+        // Los egresos no son por vivienda (un gasto es del condominio, no de una casa), así que solo respetan el periodo.
+        getFinancialSummary(mes ? `${mes}-01` : undefined, mes ? finDeMes(mes) : undefined),
+        getCashBalance(), // saldo acumulado de toda la vida de la caja: no se filtra por periodo ni por vivienda.
+        listReservations(),
       ])
       setProperties(propertiesResult)
       setSummary(summaryResult)
+      setFinancial(financialResult)
+      setCashBalance(cashBalanceResult)
+      setReservations(reservationsResult)
       setError(null)
     } catch (err) {
       setError(err instanceof ApiError ? err.message : 'No se pudo cargar el dashboard financiero.')
@@ -140,8 +178,24 @@ export function DashboardPage() {
               >
                 {formatoDinero(summary.pendiente_total)}
               </StatCard>
+              {financial && (
+                <StatCard label="Egresos" color="var(--brick)" tint="var(--brick-tint)">
+                  {formatoDinero(financial.gastos)}
+                </StatCard>
+              )}
             </div>
             <p style={{ color: 'var(--ink-soft)', marginTop: 0 }}>Pincha una tarjeta para ver el detalle por vivienda.</p>
+
+            {cashBalance && (
+              <div role="group" aria-label="Caja chica y grande" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
+                <StatCard label="Caja chica" color="var(--dustblue)" tint="var(--dustblue-tint)">
+                  {formatoDinero(cashBalance.chica)}
+                </StatCard>
+                <StatCard label="Caja grande" color="var(--dustblue)" tint="var(--dustblue-tint)">
+                  {formatoDinero(cashBalance.grande)}
+                </StatCard>
+              </div>
+            )}
 
             <div role="group" aria-label="Cobrado por concepto" style={{ display: 'flex', flexWrap: 'wrap', gap: 'var(--space-3)', marginBottom: 'var(--space-3)' }}>
               {summary.por_origen.map((origen, i) => {
@@ -170,6 +224,9 @@ export function DashboardPage() {
               (() => {
                 const origen = summary.por_origen.find((o) => o.concepto === conceptoAbierto)
                 if (!origen) return null
+                const viviendaPorId = new Map(properties.map((p) => [p.id, p.identificador]))
+                const detalleReservaciones =
+                  origen.concepto === 'Amenidades' ? reservacionesDelPeriodo(reservations, mes, propertyId) : []
                 return (
                   <div className="card" style={{ padding: 'var(--space-3)', marginBottom: 'var(--space-4)' }}>
                     <strong>{origen.concepto}</strong>
@@ -181,6 +238,31 @@ export function DashboardPage() {
                         {formatoDinero(origen.pendiente)}
                       </span>
                     </p>
+                    {origen.concepto === 'Amenidades' &&
+                      (detalleReservaciones.length === 0 ? (
+                        <p style={{ color: 'var(--ink-soft)' }}>No hay reservaciones con cuota en estos filtros.</p>
+                      ) : (
+                        <table style={{ width: '100%', borderCollapse: 'collapse', marginTop: 'var(--space-2)' }}>
+                          <thead>
+                            <tr style={{ textAlign: 'left', borderBottom: '1px solid var(--border)' }}>
+                              <th>Vivienda</th>
+                              <th>Fecha</th>
+                              <th>Pago</th>
+                            </tr>
+                          </thead>
+                          <tbody>
+                            {detalleReservaciones.map((r) => (
+                              <tr key={r.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                                <td>{viviendaPorId.get(r.property_id) ?? '—'}</td>
+                                <td className="mono">{fecha(r.fecha_inicio)}</td>
+                                <td className="mono" style={{ color: r.cuota_pagada ? 'var(--teal)' : 'var(--amber)' }}>
+                                  {formatoDinero(r.cuota)}
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      ))}
                   </div>
                 )
               })()}
