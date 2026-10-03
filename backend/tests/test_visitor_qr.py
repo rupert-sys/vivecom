@@ -86,6 +86,27 @@ def test_guard_validates_qr_successfully(client):
     assert body["nombre_visitante"] == "Juan Pérez"
 
 
+def test_validar_un_qr_abre_su_acceso_en_la_bitacora(client):
+    """Bug real encontrado probando en dispositivo: confirmar el QR marcaba el código como usado y
+    mostraba "Acceso autorizado" en pantalla, pero nunca creaba nada en la bitácora — el visitante no
+    aparecía después en "accesos abiertos". Ver la nota en visitor_qr_service.validate_and_consume_qr."""
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    _como_residente(prop["id"])
+    qr = client.post("/visitor-qr", json={"nombre_visitante": "Juan Pérez", "numero_personas": 3}).json()
+
+    _como_guardia()
+    client.post(f"/visitor-qr/{qr['codigo']}/validate")
+
+    abiertos = client.get("/access-log").json()
+    assert len(abiertos) == 1
+    acceso = abiertos[0]
+    assert acceso["property_id"] == prop["id"]
+    assert acceso["tipo"] == "visitante"
+    assert acceso["nombre_visitante"] == "Juan Pérez"
+    assert acceso["acompanantes"] == 3
+    assert acceso["hora_salida"] is None
+
+
 def test_qr_cannot_be_used_twice(client):
     prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
     _como_residente(prop["id"])

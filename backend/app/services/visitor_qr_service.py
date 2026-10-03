@@ -11,6 +11,7 @@ from datetime import datetime, timezone
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from app.models.access_log import AccessLog, TipoAcceso
 from app.models.property import Property
 from app.models.visitor_qr import VisitorQR
 
@@ -94,6 +95,25 @@ async def validate_and_consume_qr(db: AsyncSession, codigo: str) -> ResultadoVal
     datos_payload: dict = json.loads(qr.qr_payload) if qr.qr_payload else {}
     qr.usado = True
     qr.fecha_usado = datetime.now(timezone.utc).replace(tzinfo=None)
+
+    # HU-S01: confirmar el QR SÍ es la entrada — abre su registro en la bitácora de accesos, igual que
+    # "Registrar entrada" a mano (POST /access-log), para que aparezca en "accesos abiertos" y alguien
+    # pueda marcarle la salida después. Bug real encontrado probando en dispositivo: antes de esto,
+    # validar un QR solo marcaba el código como usado y mostraba "Acceso autorizado" en pantalla, sin
+    # dejar ningún rastro en la bitácora — el visitante nunca quedaba con un acceso abierto.
+    # autorizado_por = quien generó el código con anticipación (reglamento Art. 17 V.1): es la propia
+    # autorización previa, a diferencia del registro manual donde el guardia la captura en el momento.
+    db.add(
+        AccessLog(
+            property_id=qr.property_id,
+            tipo=TipoAcceso(qr.tipo),
+            hora_entrada=datetime.now(timezone.utc).replace(tzinfo=None),
+            nombre_visitante=qr.nombre_visitante,
+            acompanantes=qr.numero_personas or 0,
+            autorizado_por=datos_payload.get("nombre_residente"),
+        )
+    )
+
     resultado = ResultadoValidacionQR(
         valido=True,
         property_id=qr.property_id,

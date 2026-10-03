@@ -4,6 +4,8 @@ import { fetchLogoObjectUrl, getTenantConfig } from '../api/tenant'
 import { useAuth } from '../auth/AuthContext'
 import { aplicarFaviconDelDocumento, aplicarTituloDelDocumento, restablecerBrandingDelDocumento } from '../utils/documentBranding'
 import { inicioDe, puedeVer, seccionesDe } from '../permisos'
+import { useLiveAlerts } from '../services/liveAlerts'
+import { LiveAlertBanner } from './LiveAlertBanner'
 
 const ETIQUETAS_DE_ROL: Record<string, string> = {
   admin: 'Administrador',
@@ -45,6 +47,7 @@ export function Layout() {
   const { pathname } = useLocation()
   const secciones = seccionesDe(user?.rol)
   const inicio = inicioDe(user?.rol)
+  const { alertas, descartar } = useLiveAlerts(user?.rol)
 
   const [nombreCondominio, setNombreCondominio] = useState('Vivecom')
   const [logoUrl, setLogoUrl] = useState<string | null>(null)
@@ -93,6 +96,8 @@ export function Layout() {
 
   return (
     <div>
+      <LiveAlertBanner alertas={alertas} onDescartar={descartar} />
+
       {/* Fuera del contenedor de abajo a propósito: ese es un flex ROW (sidebar + contenido lado a lado) —
           meterla ahí adentro la vuelve un flex item más y hereda align-items:stretch (la altura de TODA la
           fila, no una franja delgada arriba). Bug real: encontrado en vivo en producción, 2026-09-29. */}
