@@ -28,8 +28,10 @@ class _LoginScreenState extends State<LoginScreen> {
       await widget.authService.login(_emailController.text.trim(), _passwordController.text);
       widget.onLoginSuccess();
     } catch (err) {
+      // Si no es un ApiException, no hubo respuesta del backend (sin conexión, TLS, timeout) — se muestra
+      // el detalle real en vez de un mensaje fijo, para poder diagnosticar fallas de red en el dispositivo.
       setState(() {
-        _error = err is ApiException ? err.message : 'No se pudo iniciar sesión.';
+        _error = err is ApiException ? err.message : 'No se pudo conectar con el servidor: $err';
       });
     } finally {
       if (mounted) setState(() => _cargando = false);
