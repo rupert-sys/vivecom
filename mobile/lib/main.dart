@@ -88,6 +88,17 @@ class _VivecomAppState extends State<VivecomApp> {
     });
   }
 
+  Future<void> _onEliminarCuenta() async {
+    final token = _token;
+    if (token == null) return;
+    await _authService.eliminarCuenta(token);
+    setState(() {
+      _token = null;
+      _usuario = null;
+      _necesitaDesbloqueo = false;
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
@@ -159,6 +170,7 @@ class _VivecomAppState extends State<VivecomApp> {
       proofService: _proofService,
       agreementService: _agreementService,
       onLogout: _onLogout,
+      onEliminarCuenta: _onEliminarCuenta,
     );
   }
 }

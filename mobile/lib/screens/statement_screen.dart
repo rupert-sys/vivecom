@@ -14,6 +14,8 @@ class StatementScreen extends StatefulWidget {
   final StatementService statementService;
   final TenantService tenantService;
   final VoidCallback onLogout;
+  // Opcional: sin él no se muestra el menú con "Eliminar mi cuenta".
+  final Future<void> Function()? onEliminarCuenta;
   // Bajar el APK (Android) o añadir la app a la pantalla de inicio (iPhone): solo en la versión web. Va aquí y no solo
   // en el inicio de sesión porque la sesión se guarda: quien ya entró no vuelve a ver esa pantalla.
   final Widget instalarApp;
@@ -25,6 +27,7 @@ class StatementScreen extends StatefulWidget {
     required this.statementService,
     required this.tenantService,
     required this.onLogout,
+    this.onEliminarCuenta,
     this.instalarApp = const InstalarApp(),
   });
 
@@ -73,6 +76,33 @@ class _StatementScreenState extends State<StatementScreen> {
     }
   }
 
+  Future<void> _confirmarEliminarCuenta() async {
+    final confirmado = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('¿Eliminar tu cuenta?'),
+        content: const Text(
+          'Se borran tu nombre, teléfono y correo, y se cierra tu sesión. Tu vivienda queda libre para registrarse '
+          'de nuevo. Los pagos y cargos de la vivienda se conservan, porque la ley obliga a guardar los registros '
+          'contables.',
+        ),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancelar')),
+          TextButton(onPressed: () => Navigator.pop(context, true), child: const Text('Eliminar')),
+        ],
+      ),
+    );
+    if (confirmado != true || !mounted) return;
+    try {
+      await widget.onEliminarCuenta!();
+    } catch (err) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(err is ApiException ? err.message : 'No se pudo eliminar la cuenta. Intenta de nuevo.')),
+      );
+    }
+  }
+
   String _formatoMoneda(double valor) => '\$${valor.toStringAsFixed(2)}';
 
   @override
@@ -80,7 +110,15 @@ class _StatementScreenState extends State<StatementScreen> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Estado de cuenta'),
-        actions: [IconButton(icon: const Icon(Icons.logout), tooltip: 'Cerrar sesión', onPressed: widget.onLogout)],
+        actions: [
+          IconButton(icon: const Icon(Icons.logout), tooltip: 'Cerrar sesión', onPressed: widget.onLogout),
+          if (widget.onEliminarCuenta != null)
+            PopupMenuButton<String>(
+              tooltip: 'Más opciones',
+              onSelected: (_) => _confirmarEliminarCuenta(),
+              itemBuilder: (context) => const [PopupMenuItem(value: 'eliminar', child: Text('Eliminar mi cuenta'))],
+            ),
+        ],
       ),
       body: RefreshIndicator(onRefresh: _cargar, child: _buildBody()),
     );
