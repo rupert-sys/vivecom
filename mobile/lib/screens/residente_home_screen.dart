@@ -49,6 +49,7 @@ class ResidenteHomeScreen extends StatefulWidget {
   final PaymentProofService proofService;
   final PaymentAgreementService agreementService;
   final VoidCallback onLogout;
+  final Future<void> Function()? onEliminarCuenta;
 
   const ResidenteHomeScreen({
     super.key,
@@ -71,6 +72,7 @@ class ResidenteHomeScreen extends StatefulWidget {
     required this.proofService,
     required this.agreementService,
     required this.onLogout,
+    this.onEliminarCuenta,
   });
 
   @override
@@ -120,6 +122,7 @@ class _ResidenteHomeScreenState extends State<ResidenteHomeScreen> {
         statementService: widget.statementService,
         tenantService: widget.tenantService,
         onLogout: widget.onLogout,
+        onEliminarCuenta: widget.onEliminarCuenta,
       ),
       DashboardScreen(
         key: const PageStorageKey('dashboard'),

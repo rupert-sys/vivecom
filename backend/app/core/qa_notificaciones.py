@@ -32,7 +32,7 @@ import json
 import sys
 import threading
 import time
-from datetime import date, datetime, timezone
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs
 

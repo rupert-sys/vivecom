@@ -64,6 +64,13 @@ class AuthService {
     await prefs.setString(_tokenKey, token);
   }
 
+  // "Eliminar mi cuenta" (lo exige Google Play a toda app donde el usuario crea su cuenta): el backend anonimiza
+  // sus datos y regresa la vivienda a "sin activar" (ver POST /me/request-erasure), y aquí se cierra la sesión.
+  Future<void> eliminarCuenta(String token) async {
+    await _api.post('/me/request-erasure', {}, token: token);
+    await logout();
+  }
+
   Future<void> logout() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_tokenKey);

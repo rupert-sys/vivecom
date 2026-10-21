@@ -103,3 +103,27 @@ async def test_erasure_anonymizes_resident_but_keeps_the_row(client):
     # residente, ya que esa ya no es una ruta de acceso legítima para él.
     _como("admin", user_id)
     assert client.get(f"/residents/{resident['id']}").status_code == 200
+
+
+@pytest.mark.asyncio
+async def test_erasure_frees_the_house_account_so_it_can_be_claimed_again(client):
+    resident, user_id = await _crear_residente_con_cuenta(client)
+    prop = client.post("/properties", json={"identificador": "Casa 1"}).json()
+    client.post(f"/properties/{prop['id']}/residents", json={"resident_id": resident["id"], "rol": "propietario"})
+    async with client.db_session_factory() as db:
+        cuenta = await db.get(UserAccount, uuid.UUID(user_id))
+        cuenta.property_id = uuid.UUID(prop["id"])
+        await db.commit()
+
+    _como("residente", user_id, property_id=prop["id"])
+    assert client.post("/me/request-erasure").status_code == 200
+
+    async with client.db_session_factory() as db:
+        cuenta = await db.get(UserAccount, uuid.UUID(user_id))
+        assert cuenta.activada is False
+        assert cuenta.resident_id is None
+        assert cuenta.password_hash != "x"
+        assert cuenta.property_id == uuid.UUID(prop["id"])
+
+    _como("admin", user_id)
+    assert client.get(f"/properties/{prop['id']}/residents").json() == []

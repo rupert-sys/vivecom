@@ -1,10 +1,14 @@
+import secrets
 import uuid
 
 from fastapi import APIRouter, Depends, HTTPException, status
+from sqlalchemy import delete
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.api.deps import CurrentUser, get_current_user, get_tenant_db
-from app.models.user import UserAccount
+from app.core.security import hash_password
+from app.models.resident import ResidentProperty
+from app.models.user import Rol, UserAccount
 from app.schemas.privacy import PrivacyAcceptanceRead, PrivacyNoticeRead
 from app.schemas.resident import ResidentRead
 from app.services.privacy_service import PRIVACY_NOTICE_TEXT, accept_privacy_notice, erase_personal_data, export_personal_data
@@ -51,4 +55,18 @@ async def request_erasure(current_user: CurrentUser = Depends(get_current_user),
     resident = await erase_personal_data(db, resident_id)
     if resident is None:
         raise HTTPException(status.HTTP_404_NOT_FOUND, "Perfil de residente no encontrado")
+
+    # "Eliminar mi cuenta" de la app residente (Google Play lo exige): además de anonimizar, la cuenta de
+    # vivienda vuelve a "sin activar", como recién aprovisionada (ver provisioning.py): ya no se puede iniciar
+    # sesión con ella y la vivienda queda libre para que la reclame quien viva ahí (POST /residents/activar).
+    # Los pagos y cargos cuelgan de Property, así que no se tocan. Solo aplica a cuentas de residente: una
+    # cuenta de personal sigue siendo del condominio.
+    cuenta = await db.get(UserAccount, uuid.UUID(current_user.user_id))
+    if cuenta is not None and cuenta.rol == Rol.residente:
+        await db.execute(delete(ResidentProperty).where(ResidentProperty.resident_id == resident_id))
+        cuenta.resident_id = None
+        cuenta.password_hash = hash_password(secrets.token_hex(32))
+        cuenta.activada = False
+        await db.commit()
+        await db.refresh(resident)
     return resident
